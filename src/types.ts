@@ -25,3 +25,63 @@ export interface MemoPage {
   metricLabel?: string;
   metricVal?: string;
 }
+
+export interface FellowshipApplication {
+  id: string;
+  fullName: string;
+  mobileNumber: string;
+  email: string;
+  linkedinUrl: string;
+  city: string;
+  currentStatus: string;
+  
+  // Student conditional fields
+  collegeName?: string;
+  degree?: string;
+  graduationYear?: string;
+  
+  // Recent Graduate conditional fields
+  currentRole?: string;
+  companyName?: string;
+  degreeEducationalBackground?: string;
+  
+  // Working Professional conditional fields
+  yearsOfExperience?: string;
+  
+  // Founder conditional fields
+  startupName?: string;
+  industrySector?: string;
+  startupLinkedinProfile?: string;
+  
+  // Freelancer conditional fields
+  areaOfWork?: string;
+  freelancerLinkedinProfile?: string;
+  
+  // Other conditional fields
+  otherStatusSpecify?: string;
+  
+  primaryReason: string;
+  primaryReasonOther?: string;
+  
+  assessmentQ1: string;
+  assessmentQ2: string;
+  assessmentQ3: string;
+  
+  resumeUrl: string;
+  discoverySource: string;
+  discoverySourceOther?: string;
+  
+  status: "pending" | "under_review" | "interview_invited" | "accepted" | "declined";
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: "unread" | "read" | "archived";
+  createdAt: any;
+}

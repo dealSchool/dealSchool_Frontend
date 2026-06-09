@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "Application": {
+      "title": "Application",
+      "description": "Fellowship enrollment request submitted by a candidate with updated 2026 admissions flow",
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "description": "The candidate's legal full name"
+        },
+        "mobileNumber": {
+          "type": "string",
+          "description": "Mobile target phone contact record"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The candidate's enterprise or university email"
+        },
+        "linkedinUrl": {
+          "type": "string",
+          "description": "Candidate's personal LinkedIn URL"
+        },
+        "city": {
+          "type": "string",
+          "description": "City of residence"
+        },
+        "currentStatus": {
+          "type": "string",
+          "enum": [
+            "Student",
+            "Recent Graduate (0–2 years of experience)",
+            "Working Professional",
+            "Founder",
+            "Freelancer",
+            "Other"
+          ],
+          "description": "Current professional alignment status"
+        },
+        "collegeName": {
+          "type": "string",
+          "description": "Academic College name"
+        },
+        "degree": {
+          "type": "string",
+          "description": "Degree profile"
+        },
+        "graduationYear": {
+          "type": "string",
+          "description": "Year of graduation"
+        },
+        "currentRole": {
+          "type": "string",
+          "description": "Current role title"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Company affiliation name"
+        },
+        "degreeEducationalBackground": {
+          "type": "string",
+          "description": "Educational background profile description"
+        },
+        "yearsOfExperience": {
+          "type": "string",
+          "description": "Experience years value"
+        },
+        "startupName": {
+          "type": "string",
+          "description": "Name of founded startup"
+        },
+        "industrySector": {
+          "type": "string",
+          "description": "Industry domain segment"
+        },
+        "startupLinkedinProfile": {
+          "type": "string",
+          "description": "LinkedIn profile link of founded startup"
+        },
+        "areaOfWork": {
+          "type": "string",
+          "description": "Field / Area of freelance operations"
+        },
+        "freelancerLinkedinProfile": {
+          "type": "string",
+          "description": "Freelancer profile web link"
+        },
+        "otherStatusSpecify": {
+          "type": "string",
+          "description": "Description specifying unlisted current status"
+        },
+        "primaryReason": {
+          "type": "string",
+          "description": "Primary reason selection value for joining DealSchool"
+        },
+        "primaryReasonOther": {
+          "type": "string",
+          "description": "If reason was set to Other, the free-text description"
+        },
+        "assessmentQ1": {
+          "type": "string",
+          "description": "Response to marketing cash-burn evaluation scenario"
+        },
+        "assessmentQ2": {
+          "type": "string",
+          "description": "10-year sectoral thesis answer for 10 lakhs"
+        },
+        "assessmentQ3": {
+          "type": "string",
+          "enum": ["Founder", "Product", "Market"],
+          "description": "Key success attribute choice"
+        },
+        "resumeUrl": {
+          "type": "string",
+          "description": "Download link to candidate's compiled PDF resume in Firebase Storage"
+        },
+        "discoverySource": {
+          "type": "string",
+          "description": "How the candidate heard about DealSchool"
+        },
+        "discoverySourceOther": {
+          "type": "string",
+          "description": "Additional discovery text details if Other was picked"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "under_review",
+            "interview_invited",
+            "accepted",
+            "declined"
+          ],
+          "description": "Current status of the application"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of application submission"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update"
+        }
+      },
+      "required": [
+        "fullName",
+        "mobileNumber",
+        "email",
+        "linkedinUrl",
+        "city",
+        "currentStatus",
+        "primaryReason",
+        "assessmentQ1",
+        "assessmentQ2",
+        "assessmentQ3",
+        "resumeUrl",
+        "discoverySource",
+        "status",
+        "createdAt"
+      ]
+    },
+    "Contact": {
+      "title": "Contact Message",
+      "description": "Contact or inquiry form submission from a user",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the sender"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of the sender"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Inquiry subject line"
+        },
+        "message": {
+          "type": "string",
+          "description": "Content of the inquiries"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "unread",
+            "read",
+            "archived"
+          ],
+          "description": "Status of the contact message"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of message submission"
+        }
+      },
+      "required": [
+        "name",
+        "email",
+        "subject",
+        "message",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "User fellowship applications"
+    },
+    "/contacts/{contactId}": {
+      "schema": "Contact",
+      "description": "User support or general dynamic inquiries messages"
+    }
+  }
+}

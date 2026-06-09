@@ -112,8 +112,19 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
 
         {/* Footer Base copyright metadata */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 text-[10px] font-mono text-[#FAFAF8]/40 uppercase tracking-widest leading-none">
-          <div>
-            &copy; {new Date().getFullYear()} DEALSCHOOL. AN INITIATIVE BY MIDDHA VENTURES. ALL RIGHTS RESERVED.
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <span>&copy; {new Date().getFullYear()} DEALSCHOOL. AN INITIATIVE BY MIDDHA VENTURES. ALL RIGHTS RESERVED.</span>
+            <button
+              onClick={() => {
+                if (onChangePage) {
+                  onChangePage("admin" as any);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="text-[#FAFAF8]/25 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0"
+            >
+              [Admin Portal]
+            </button>
           </div>
           <button
             onClick={scrollHeightTop}

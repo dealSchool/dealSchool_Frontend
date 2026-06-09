@@ -5,6 +5,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { db, handleFirestoreError, OperationType, auth, signInAdminWithGoogle, logOutAdmin } from "./firebase";
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   StaircaseIllustration,
   CertificateKeyIllustration,
@@ -15,6 +18,7 @@ import {
 import { ApplyModal } from "./components/ApplyModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
+import { AdminDashboard } from "./components/AdminDashboard";
 import { JOURNEY_STAGES, MENTORS, MEMO_SUB_PAGES, FOUNDER_DATA } from "./data";
 import { 
   Compass, 
@@ -72,14 +76,31 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setContactSubmitting(true);
-    setTimeout(() => {
+    try {
+      const contactCollRef = collection(db, "contacts");
+      const docRef = doc(contactCollRef); // Auto id
+      
+      const payload = {
+        name: contactForm.name,
+        email: contactForm.email,
+        subject: contactForm.subject,
+        message: contactForm.message,
+        status: "unread",
+        createdAt: serverTimestamp()
+      };
+      
+      await setDoc(docRef, payload);
       setContactSubmitting(false);
       setContactSubmitted(true);
       setContactForm({ name: "", email: "", subject: "Application Inquiry", message: "" });
-    }, 1200);
+    } catch (error) {
+      setContactSubmitting(false);
+      console.error("Firestore Contact Message Submission Error:", error);
+      handleFirestoreError(error, OperationType.WRITE, "contacts");
+    }
   };
 
   return (
@@ -961,6 +982,10 @@ export default function App() {
 
                 </div>
               </div>
+            )}
+
+            {activePage === "admin" as any && (
+              <AdminDashboard />
             )}
 
           </motion.div>
