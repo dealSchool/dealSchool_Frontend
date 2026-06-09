@@ -1,0 +1,978 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  StaircaseIllustration,
+  CertificateKeyIllustration,
+  MarketAnalysisIllustration,
+  CollaborationIllustration,
+  CirclePersonIllustration,
+} from "./components/SVGIllustrations";
+import { ApplyModal } from "./components/ApplyModal";
+import { HeaderNavbar } from "./components/HeaderNavbar";
+import { FooterPanel } from "./components/FooterPanel";
+import { JOURNEY_STAGES, MENTORS, MEMO_SUB_PAGES, FOUNDER_DATA } from "./data";
+import { 
+  Compass, 
+  Search, 
+  BarChart4, 
+  UserCheck, 
+  FolderPlus, 
+  Globe, 
+  ChevronRight, 
+  Bookmark, 
+  Target, 
+  FileSpreadsheet, 
+  Users2, 
+  Megaphone,
+  Briefcase,
+  Play,
+  ArrowRight,
+  TrendingUp,
+  Sparkles,
+  MapPin,
+  Mail,
+  Phone,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  User,
+  ExternalLink,
+  Award,
+  HelpCircle
+} from "lucide-react";
+
+export default function App() {
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [activePage, setActivePage] = useState<"home" | "about" | "program" | "team" | "contact">("home");
+  
+  // Section 7: Memo Process page state (used on About Page or Program Page)
+  const [activeMemoPage, setActiveMemoPage] = useState(0);
+
+  // Stateful contact form
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    subject: "Application Inquiry",
+    message: ""
+  });
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+
+  const handleApplyClick = () => {
+    setIsApplyModalOpen(true);
+  };
+
+  const handlePageChange = (pageId: "home" | "about" | "program" | "team" | "contact") => {
+    setActivePage(pageId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactSubmitting(true);
+    setTimeout(() => {
+      setContactSubmitting(false);
+      setContactSubmitted(true);
+      setContactForm({ name: "", email: "", subject: "Application Inquiry", message: "" });
+    }, 1200);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-brand-dark-blue relative overflow-x-hidden bg-[#FCFAF6] text-[#111111]">
+      
+      {/* Decorative Background Textures - Artistic Flair Branding Watermark */}
+      <div className="fixed bottom-12 left-12 pointer-events-none opacity-[0.025] select-none -z-10 hidden xl:block">
+        <h2 className="text-[180px] font-serif font-black italic -mb-[50px] leading-none text-brand-text">Insight</h2>
+        <h2 className="text-[180px] font-serif font-black italic leading-none text-brand-text">Conviction</h2>
+      </div>
+
+      {/* Premium Top Navigation */}
+      <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
+
+      {/* RENDER PAGES DYNAMICALLY USING SMOOTH TRANSITIONS */}
+      <main className="flex-grow">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activePage}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            {/* ----------------- PAGE 1: HOMEPAGE ----------------- */}
+            {activePage === "home" && (
+              <>
+                {/* HERO SECTION */}
+                <section className="relative overflow-hidden pt-12 pb-16 md:py-24 border-b border-[#111111]/10">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-accent/[0.03] via-transparent to-transparent pointer-events-none" />
+                  
+                  <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                      {/* Left Column 60% */}
+                      <div className="lg:col-span-7 space-y-6">
+                        <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-1">
+                          An Initiative by Middha Ventures
+                        </span>
+                        
+                        <h1 className="font-serif text-5xl sm:text-6xl md:text-[68px] leading-[0.95] md:leading-[0.9] font-serif italic text-brand-text tracking-tight mb-8">
+                          Built for those who want a <span className="text-brand-accent">seat at the table</span>, <span className="block font-sans not-italic font-bold text-brand-text mt-3 md:mt-4">not a seat in the classroom.</span>
+                        </h1>
+                        
+                        <p className="font-serif text-base md:text-lg text-brand-neutral leading-relaxed max-w-xl opacity-90">
+                          DealSchool is an 8-week, cohort-based VC fellowship. You won&apos;t be taught about startups — you&apos;ll screen them, sit inside pitch calls, run due diligence, talk directly to founders, and make actual investment calls. Not slides. Not theory. The real thing.
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4">
+                          <button
+                            onClick={handleApplyClick}
+                            className="bg-brand-secondary text-brand-bg px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-brand-secondary/25 hover:bg-brand-dark-blue transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                          >
+                            Apply for the Next Cohort <ArrowRight className="h-4 w-4 text-brand-accent" />
+                          </button>
+                          <button
+                            onClick={() => handlePageChange("program")}
+                            className="border border-brand-secondary/35 px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider text-brand-secondary hover:bg-brand-secondary hover:text-brand-bg transition-colors duration-300 text-center cursor-pointer"
+                          >
+                            See the Program
+                          </button>
+                        </div>
+
+                        {/* VC Trajectory Badge Metrics - family office styled */}
+                        <div className="grid grid-cols-3 gap-6 pt-8 border-t border-brand-secondary/10 max-w-md">
+                          <div className="space-y-1">
+                            <span className="block font-mono text-[10px] text-brand-neutral tracking-wider uppercase">Venture Backer</span>
+                            <span className="block font-mono text-xs font-bold text-brand-text">MIDDHA VENTURES</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="block font-mono text-[10px] text-brand-neutral tracking-wider uppercase">Cohort Seats</span>
+                            <span className="block font-mono text-xs font-bold text-brand-accent">CAPPED AT 20</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="block font-mono text-[10px] text-brand-neutral tracking-wider uppercase">Program Term</span>
+                            <span className="block font-mono text-xs font-bold text-brand-text">8 WEEKS</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column 40% - Staircase Illustration */}
+                      <div className="lg:col-span-5 flex justify-center items-center pb-8 lg:pb-12">
+                        <div className="relative w-full flex justify-center items-center">
+                          <StaircaseIllustration />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* STATISTICS SECTION */}
+                <section className="py-16 bg-brand-secondary/5 border-b border-brand-secondary/10">
+                  <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                      <div className="p-6 space-y-2 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
+                        <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">20</div>
+                        <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">Fellows per cohort</div>
+                        <p className="font-serif text-xs text-brand-neutral max-w-xs mx-auto">
+                          Small enough that you get face time, not front-row seats.
+                        </p>
+                      </div>
+
+                      <div className="p-6 space-y-2 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
+                        <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">₹12K</div>
+                        <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">Student Pricing</div>
+                        <p className="font-serif text-xs text-brand-neutral max-w-xs mx-auto">
+                          Priced for students. Not professionals. Not webinars.
+                        </p>
+                      </div>
+
+                      <div className="p-6 space-y-2 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
+                        <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">8 Weeks</div>
+                        <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">Weekend Sessions</div>
+                        <p className="font-serif text-xs text-brand-neutral max-w-xs mx-auto">
+                          Fits around your college. Fits around your job.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* WHAT THIS IS NOT SECTION */}
+                <section className="py-20 border-b border-brand-secondary/10 bg-[#FAF7F0]">
+                  <div className="max-w-4xl mx-auto px-4 md:px-8">
+                    <div className="text-center max-w-2xl mx-auto mb-12">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
+                        Philosophy of Education
+                      </span>
+                      <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text tracking-tight">
+                        What This Is Not
+                      </h2>
+                      <p className="font-serif italic text-sm text-brand-neutral mt-2">
+                        Venture capital cannot be mastered through standard decks or recorded coursework.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {[
+                        "Another CFA prep class dressed up as startup education",
+                        "A 3-hour YouTube masterclass you'll never finish",
+                        "A placement guarantee wrapped in a certificate",
+                        "Taught by people who've never written a cheque",
+                        "A lecture series about what VCs do. You'll be doing it."
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-4 p-5 bg-brand-bg border border-brand-secondary/10 rounded-sm shadow-xs hover:border-brand-accent/40 transition-all">
+                          <XCircle className="h-5 w-5 text-brand-accent mt-0.5 flex-shrink-0" />
+                          <p className="font-serif text-sm md:text-base text-brand-secondary font-medium uppercase tracking-wide">
+                            {item}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-center mt-12 bg-brand-secondary text-brand-bg rounded-sm p-8 border border-brand-accent/20">
+                      <p className="font-serif italic text-lg md:text-xl font-bold">
+                        &ldquo;It&apos;s a fellowship. With real investors. Real startups. Real decisions.&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* SOCIAL PROOF (TESTIMONIALS) */}
+                <section className="py-20 border-b border-brand-secondary/10 bg-brand-bg/50">
+                  <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="text-center max-w-2xl mx-auto mb-16">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
+                        Fellow Testimonials
+                      </span>
+                      <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text tracking-tight">
+                        Tested in the Field
+                      </h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Testimonial 1 */}
+                      <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-8 md:p-10 shadow-sm relative space-y-6 flex flex-col justify-between">
+                        <span className="absolute top-4 right-6 text-7xl font-serif text-brand-accent/10 pointer-events-none select-none font-bold">&ldquo;</span>
+                        <p className="font-serif italic text-sm md:text-base text-brand-secondary leading-relaxed relative z-10">
+                          &ldquo;I&apos;d spent two years studying valuation models. DealSchool taught me what a founder actually sounds like in a pitch call — and how an investor decides in 20 minutes.&rdquo;
+                        </p>
+                        <div className="border-t border-brand-secondary/10 pt-4 font-mono text-[11px] font-bold text-brand-accent uppercase tracking-widest">
+                          &mdash; Cohort 1 Fellow, MBA Finance, Pune
+                        </div>
+                      </div>
+
+                      {/* Testimonial 2 */}
+                      <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-8 md:p-10 shadow-sm relative space-y-6 flex flex-col justify-between">
+                        <span className="absolute top-4 right-6 text-7xl font-serif text-brand-accent/10 pointer-events-none select-none font-bold">&ldquo;</span>
+                        <p className="font-serif italic text-sm md:text-base text-brand-secondary leading-relaxed relative z-10">
+                          &ldquo;The due diligence week changed how I think about financial analysis entirely. Numbers don&apos;t lie, but founders do — and I learned to tell the difference.&rdquo;
+                        </p>
+                        <div className="border-t border-brand-secondary/10 pt-4 font-mono text-[11px] font-bold text-brand-accent uppercase tracking-widest">
+                          &mdash; Cohort 1 Fellow, CA Finalist, Mumbai
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* IDEAL PARTICIPANT SECTION */}
+                <section className="py-20 border-b border-brand-secondary/10">
+                  <div className="max-w-4xl mx-auto px-4 md:px-8">
+                    <div className="text-center max-w-2xl mx-auto mb-14">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
+                        Admission Matrix
+                      </span>
+                      <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text tracking-tight">
+                        Ideal Participants
+                      </h2>
+                      <p className="font-serif italic text-sm text-brand-neutral mt-2">
+                        DealSchool is built specifically for:
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {[
+                        "Students trying to break into venture capital",
+                        "MBA, Finance, CA, CFA and Economics students",
+                        "Professionals transitioning toward VC",
+                        "Startup founders wanting to understand investors",
+                        "Founder’s Office aspirants"
+                      ].map((desc, idx) => (
+                        <div key={idx} className="bg-brand-bg p-5 border border-brand-secondary/10 rounded-sm hover:shadow-xs transition-all flex items-center gap-3">
+                          <CheckCircle2 className="h-5 w-5 text-brand-accent flex-shrink-0" />
+                          <span className="font-mono text-xs font-bold text-brand-secondary uppercase tracking-wider">
+                            {desc}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-center mt-10">
+                      <p className="font-serif italic text-sm text-brand-neutral">
+                        If any of these sound like you, you belong here.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* HOW IT WORKS SECTION */}
+                <section className="py-20 bg-[#FAF7F0] border-b border-brand-secondary/10">
+                  <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="text-center max-w-2xl mx-auto mb-16">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
+                        Methodology
+                      </span>
+                      <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#111111]">
+                        How It Works
+                      </h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm space-y-4">
+                        <div className="font-mono text-xs font-bold text-brand-accent block">STEP 01</div>
+                        <h4 className="font-serif text-base font-bold text-brand-text">Apply</h4>
+                        <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                          Short application. We screen for curiosity, not credentials. 20 seats per cohort.
+                        </p>
+                      </div>
+
+                      <div className="bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm space-y-4">
+                        <div className="font-mono text-xs font-bold text-brand-accent block">STEP 02</div>
+                        <h4 className="font-serif text-base font-bold text-brand-text">Get Access</h4>
+                        <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                          Weekend sessions over 8 weeks. Structured around your schedule. Fits college & work.
+                        </p>
+                      </div>
+
+                      <div className="bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm space-y-4">
+                        <div className="font-mono text-xs font-bold text-brand-accent block">STEP 03</div>
+                        <h4 className="font-serif text-base font-bold text-brand-text">Do The Work</h4>
+                        <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                          Sit in real pitch calls, shadow due diligence, talk to founders, build investment theses, and debate mentors.
+                        </p>
+                      </div>
+
+                      <div className="bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm space-y-4">
+                        <div className="font-mono text-xs font-bold text-brand-accent block">STEP 04</div>
+                        <h4 className="font-serif text-base font-bold text-brand-text">Take Your Seat</h4>
+                        <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                          Graduate with a comprehensive investment thesis, DealSchool certificate, and real venture capital experience.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* MIDDHA VENTURES FAMILY OFFICE SECTION */}
+                <section className="py-24 border-b border-brand-secondary/10">
+                  <div className="max-w-7xl mx-auto px-4 md:px-8">
+                    <div className="max-w-[750px] text-left">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-4">
+                        An Initiative by Middha Ventures
+                      </span>
+                      <p className="font-serif text-lg md:text-xl text-brand-secondary leading-relaxed">
+                        DealSchool is built within the <span className="font-bold text-brand-text">Middha Ventures</span> ecosystem, drawing practical insights from active participation in portfolio companies including <span className="text-brand-accent font-serif font-bold italic">Sochu</span>, <span className="text-brand-accent font-serif font-bold italic">Fitreak</span>, and <span className="text-brand-accent font-serif font-bold italic">Ruskle</span>. The platform reflects real-world experience in sourcing, evaluating, and supporting early-stage ventures.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* FINAL CTA SECTION */}
+                <section className="py-24 bg-brand-dark-blue text-brand-bg relative overflow-hidden">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 bg-brand-accent/10 rounded-full filter blur-3xl select-none pointer-events-none"></div>
+
+                  <div className="max-w-4xl mx-auto px-4 text-center relative z-10 space-y-8">
+                    <div className="flex justify-center">
+                      <div className="h-4 w-4 bg-brand-accent rounded-full animate-orb-glow" />
+                    </div>
+
+                    <div className="space-y-4">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.3em] uppercase block">
+                        Cohort seats fill fast. We cap it at 20.
+                      </span>
+                      <h2 className="font-serif text-4xl sm:text-5xl md:text-5.5xl font-black tracking-tight leading-[1.05] !font-medium text-white">
+                        Applications for Cohort 1 <br />are now open.
+                      </h2>
+                      <p className="font-serif text-sm sm:text-base text-brand-bg/70 max-w-lg mx-auto leading-relaxed">
+                        If you&apos;ve been waiting for the right moment to step into venture capital — this is it.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                      <button
+                        onClick={handleApplyClick}
+                        className="px-10 py-5 bg-brand-accent hover:bg-[#B24122] text-white font-mono text-xs font-bold tracking-widest uppercase rounded-sm transition-all shadow-md inline-flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0 z-20 cursor-pointer"
+                      >
+                        Apply Now <Sparkles className="h-4 w-4 text-white" />
+                      </button>
+                      <button
+                        onClick={() => handlePageChange("program")}
+                        className="px-10 py-5 bg-transparent hover:bg-brand-bg/5 text-white border border-white/20 font-mono text-xs font-bold tracking-widest uppercase rounded-sm transition-all inline-flex items-center justify-center cursor-pointer"
+                      >
+                        See the Program
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* ----------------- PAGE 2: ABOUT PAGE ----------------- */}
+            {activePage === "about" && (
+              <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8 space-y-16">
+                
+                {/* Intro block */}
+                <div className="max-w-3xl space-y-6">
+                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                    Why We Built DealSchool
+                  </span>
+                  
+                  <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-brand-text">
+                    Bridging the Exposure Gap in <span className="text-brand-accent font-serif italic font-medium">Venture Capital.</span>
+                  </h1>
+
+                  <p className="font-serif text-base md:text-lg text-brand-secondary leading-relaxed">
+                    The Indian VC ecosystem is growing rapidly. Most finance graduates have little exposure to how venture capital actually works in practice.
+                  </p>
+                </div>
+
+                {/* Comparative Matrix Section */}
+                <section className="py-8">
+                  <div className="mb-6">
+                    <span className="font-mono text-[10px] text-brand-accent font-bold tracking-widest uppercase block mb-1">
+                      CURRICULUM BENCHMARKS
+                    </span>
+                    <h3 className="font-serif text-2xl font-bold text-brand-text mb-4">How We Compare</h3>
+                  </div>
+
+                  <div className="max-w-[800px] text-left">
+                    <p className="font-serif text-base md:text-lg leading-relaxed text-brand-secondary">
+                      While traditional programs such as the <span className="font-bold text-brand-text">CFA®</span> focus on public markets and portfolio management, and <span className="font-bold text-brand-text">MBA Finance</span> programs emphasize corporate finance and business administration, <span className="text-brand-accent font-bold">DealSchool</span> is designed around the realities of early-stage investing. The curriculum focuses on founder evaluation, technical diligence, venture economics, and live deal execution—providing practical exposure to how venture capital decisions are made.
+                    </p>
+                  </div>
+                </section>
+
+                {/* Core Insight Split Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-[#FAF7F0] p-8 rounded-sm border border-brand-secondary/10">
+                  <div className="lg:col-span-7 space-y-4">
+                    <h3 className="font-serif text-xl md:text-2xl font-bold text-brand-text">The Core Insight</h3>
+                    <p className="font-serif text-sm leading-relaxed text-brand-neutral">
+                      Anyone can study standard valuation models, read startup case studies, and watch static analysis webinars. But very few ever see real pitch calls, actual startup evaluations, term sheets, or general partner investment committee sessions. DealSchool provides that exact operational exposure.
+                    </p>
+                  </div>
+                  <div className="lg:col-span-5">
+                    <CertificateKeyIllustration />
+                  </div>
+                </div>
+
+                {/* Philosophy Pillars */}
+                <div className="space-y-10">
+                  <div className="text-center max-w-xl mx-auto">
+                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-1">
+                      Sovereign Principles
+                    </span>
+                    <h2 className="font-serif text-2xl md:text-3xl font-bold text-brand-text">Our Philosophy</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-3 bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm">
+                      <div className="font-mono text-xs text-brand-accent font-bold">01 / EXPOSURE OVER EXPLANATION</div>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Exposure Over Explanation</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        The best way to understand venture capital is to be inside it. The discomfort of evaluating real, raw, messy startup pipelines with ambiguous data is the actual curriculum.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm">
+                      <div className="font-mono text-xs text-brand-accent font-bold">02 / SMALL ROOMS, REAL ACCESS</div>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Small Rooms, Real Access</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        Each cohort is strictly capped at 20 fellows. High-quality professional development doesn&apos;t happen in 500-person webinars. Learning occurs through real conversation and participation.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3 bg-brand-bg border border-brand-secondary/10 p-6 rounded-sm">
+                      <div className="font-mono text-xs text-brand-accent font-bold">03 / BUILT BY PRACTITIONERS</div>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Built By Practitioners</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        Say goodbye to purely academic lecturers. DealSchool is developed and delivered by active venture capitalists, founders, and operating general partners from the Middha Ventures ecosystem.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Call to action */}
+                <div className="bg-brand-secondary text-brand-bg p-8 md:p-12 text-center rounded-sm border border-brand-accent/20">
+                  <h3 className="font-serif text-xl md:text-2xl font-bold text-white mb-2">Claim Your Seat At The Table</h3>
+                  <p className="font-serif italic text-xs md:text-sm text-brand-bg opacity-80 max-w-md mx-auto mb-6">
+                    Join an elite cohort of mathematical founders, CA finalists, and technology-driven analysts.
+                  </p>
+                  <button
+                    onClick={handleApplyClick}
+                    className="px-8 py-4 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer"
+                  >
+                    Apply for Next Cohort
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+            {/* ----------------- PAGE 3: PROGRAM PAGE ----------------- */}
+            {activePage === "program" && (
+              <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8 space-y-16">
+                
+                {/* Intro block */}
+                <div className="max-w-3xl space-y-4">
+                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                    Curriculum Map & Frameworks
+                  </span>
+                  
+                  <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-brand-text">
+                    8 weeks. One complete view of <span className="font-serif italic font-medium text-brand-accent">how a VC thinks.</span>
+                  </h1>
+
+                  <p className="font-serif text-base md:text-lg text-brand-secondary leading-relaxed">
+                    The fellowship follows the exact process used by actual venture funds. Participants move sequentially through the investment lifecycle rather than studying it academically.
+                  </p>
+                </div>
+
+                {/* Sequential Phase Syllabus Grid */}
+                <section className="space-y-6">
+                  <h3 className="font-serif text-xl font-bold text-brand-text border-b border-brand-secondary/10 pb-2">The Four Phases</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Phase 1 */}
+                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
+                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">01</div>
+                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 1 - 2</span>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 1 — The Ecosystem</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        Build the map before evaluating deals. Understand startups, markets, and macroeconomic venture ecosystems inside robust frameworks.
+                      </p>
+                    </div>
+
+                    {/* Phase 2 */}
+                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
+                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">02</div>
+                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 3 - 4</span>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 2 — Sourcing & Evaluation</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        Shadow real pitch calls. Develop rigorous qualitative screening instincts. Learn exactly how professional investors evaluate opportunities in under 20 minutes.
+                      </p>
+                    </div>
+
+                    {/* Phase 3 */}
+                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
+                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">03</div>
+                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 5 - 6</span>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 3 — The Founder Side</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        Understand founders deeply. Shift from evaluating standard slide decks to assessing raw human capabilities, executive limits, and conviction drivers.
+                      </p>
+                    </div>
+
+                    {/* Phase 4 */}
+                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
+                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">04</div>
+                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 7 - 8</span>
+                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 4 — Due Diligence & Deal Mechanics</h4>
+                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
+                        The critical work between the pitch and the investment. Deep dive into raw financial data rooms, custom reference calls, Cap Table dilution, and term sheet mechanics.
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* Week 8 Specific Box */}
+                  <div className="bg-brand-secondary text-brand-bg rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 border border-brand-accent/15">
+                    <div className="space-y-2 max-w-xl">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-widest block uppercase">WEEK 8 SPECIAL</span>
+                      <h4 className="font-serif text-lg font-bold text-white">Week 8 — Something You Must Experience Yourself</h4>
+                      <p className="font-serif text-xs text-brand-bg opacity-85 leading-relaxed">
+                        A secretive, immersive concluding weekend. Details of syllabus graduation exercises, live boardroom defensibility scenarios, and network operations are strictly available inside our program brochure.
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <button
+                        onClick={handleApplyClick}
+                        className="px-6 py-3.5 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Request Program Brochure
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+
+
+
+
+              </div>
+            )}
+
+            {/* ----------------- PAGE 4: TEAM PAGE ----------------- */}
+            {activePage === "team" && (
+              <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8 space-y-16">
+                
+                {/* Intro Block */}
+                <div className="max-w-3xl space-y-4 text-center md:text-left mx-auto md:mx-0">
+                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                    Advisors & General Partners
+                  </span>
+                  
+                  <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-brand-text">
+                    The people inside <span className="font-serif italic font-medium text-brand-accent">the room.</span>
+                  </h1>
+
+                  <p className="font-serif text-base md:text-lg text-brand-secondary leading-relaxed max-w-xl">
+                    DealSchool is run by active investors, founders, and operating partners who are still practicing what they teach.
+                  </p>
+                </div>
+
+                {/* Founder Chirag Thakker Profile */}
+                <section className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 md:p-10 shadow-sm">
+                  <span className="font-mono text-[9px] text-brand-accent font-bold tracking-widest uppercase block mb-3">
+                    FOUNDER PROFILE
+                  </span>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    
+                    {/* Left Column (Biographical Details) */}
+                    <div className="lg:col-span-8 space-y-6">
+                      <div>
+                        <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text">{FOUNDER_DATA.name}</h2>
+                        <span className="font-mono text-xs font-bold text-brand-accent uppercase tracking-widest mt-1 block">
+                          {FOUNDER_DATA.role}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-widest block font-extrabold pb-1">
+                          BACKGROUND ARCHITECTURE
+                        </span>
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs md:text-sm font-serif italic text-brand-secondary">
+                          {FOUNDER_DATA.background.map((item, idx) => (
+                            <li key={idx} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 bg-brand-accent rounded-full" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-widest block font-extrabold mb-2">
+                            PREVIOUS STRATEGIC ENGAGEMENT
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {FOUNDER_DATA.companies.map((co) => (
+                              <span key={co} className="bg-[#FAF7F0] border border-brand-secondary/10 text-brand-text px-3 py-1.5 rounded-sm text-xs font-sans font-medium">
+                                {co}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                          <div className="p-4 border border-brand-secondary/10 rounded-sm bg-[#FAF7F0]">
+                            <span className="font-mono text-[9px] text-[#D4A62A] tracking-wider uppercase font-bold block mb-1">
+                              PORTFOLIO INVESTMENTS
+                            </span>
+                            <span className="block font-sans text-xs font-bold text-brand-text leading-relaxed">
+                              {FOUNDER_DATA.investments.join(", ")}
+                            </span>
+                          </div>
+                          
+                          <div className="p-4 border border-brand-secondary/10 rounded-sm bg-[#FAF7F0]">
+                            <span className="font-mono text-[9px] text-[#D4A62A] tracking-wider uppercase font-bold block mb-1">
+                              COMMUNITY EXPANSION
+                            </span>
+                            <span className="block font-sans text-xs font-bold text-brand-text leading-relaxed">
+                              {FOUNDER_DATA.community}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column (Education & Motif Illustration) */}
+                    <div className="lg:col-span-4 bg-brand-secondary/5 border border-brand-secondary/10 p-6 rounded-sm space-y-6">
+                      
+                      <div className="flex flex-col items-center text-center">
+                        <div className="h-20 w-20 rounded-full border border-brand-accent flex items-center justify-center font-mono text-2xl font-bold bg-brand-bg text-brand-secondary tracking-widest">
+                          CT
+                        </div>
+                        <span className="font-serif italic text-xs text-brand-neutral mt-3">Family Office Capital</span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <span className="font-mono text-[9px] text-brand-neutral uppercase tracking-widest font-extrabold block border-b border-brand-secondary/10 pb-1">
+                          ACADEMIC DECORATION
+                        </span>
+                        <ul className="space-y-2 text-xs font-mono text-brand-secondary uppercase">
+                          {FOUNDER_DATA.education.map((edu, idx) => (
+                            <li key={idx} className="flex items-start gap-1.5">
+                              <Award className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                              <span>{edu}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                    </div>
+                  </div>
+                </section>
+
+                {/* Rotating Ecosystem Mentors Block */}
+                <section className="space-y-8">
+                  <div>
+                    <h3 className="font-serif text-2xl font-bold text-brand-text">Ecosystem Mentors</h3>
+                    <p className="font-serif italic text-sm text-brand-neutral mt-1">
+                      Guest mentors include: Practicing VCs, startup founders, and operators. Mentors rotate by cohort. Participants receive direct access to active ecosystem participants.
+                    </p>
+                  </div>
+
+                  <div className="divide-y divide-brand-secondary/15 border-t border-b border-brand-secondary/15">
+                    {MENTORS.map((m, idx) => (
+                      <div key={idx} className="py-6 md:py-8 flex flex-col md:flex-row items-start justify-between gap-6 hover:bg-brand-secondary/5 transition-all">
+                        <div className="flex items-center gap-4 md:w-1/3">
+                          <div className="h-12 w-12 rounded-sm border border-brand-secondary flex items-center justify-center font-mono text-sm font-bold fg-brand-text bg-brand-bg select-none">
+                            {m.monochromeImage}
+                          </div>
+                          <div>
+                            <h4 className="font-serif font-bold text-brand-text text-sm md:text-base">{m.name}</h4>
+                            <span className="font-mono text-[9px] text-brand-neutral uppercase tracking-widest block font-bold">
+                              {m.role} &mdash; {m.firm}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="font-serif italic text-xs md:text-sm text-brand-neutral md:w-1/3 leading-relaxed">
+                          {m.background}
+                        </p>
+
+                        <p className="font-sans text-xs text-brand-secondary md:w-1/3 leading-relaxed">
+                          {m.details}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+              </div>
+            )}
+
+            {/* ----------------- PAGE 5: CONTACT PAGE ----------------- */}
+            {activePage === "contact" && (
+              <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                  
+                  {/* Left Column (Details & Info) */}
+                  <div className="lg:col-span-5 space-y-8">
+                    <div className="space-y-4">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                        Direct Inquiry Portal
+                      </span>
+                      
+                      <h1 className="font-serif text-4xl sm:text-5xl font-bold tracking-tight text-brand-text">
+                        Got questions? <br />
+                        We&apos;re <span className="font-serif italic text-brand-accent font-medium">easy to reach.</span>
+                      </h1>
+
+                      <p className="font-serif text-sm md:text-base text-brand-neutral leading-relaxed">
+                        Applications, mentor collaborations, or simply understanding whether DealSchool is the right fit.
+                      </p>
+                    </div>
+
+                    {/* Operational Details Docket card */}
+                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 shadow-xs space-y-4">
+                      <div className="font-mono text-[9px] text-brand-accent font-bold tracking-widest block uppercase border-b border-brand-secondary/5 pb-1">
+                        DOCKET NO: DS-CONTACT-HQ
+                      </div>
+
+                      <div className="space-y-3 font-sans text-xs">
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">EMAIL ADMISSIONS DESK</span>
+                            <a href="mailto:hello@dealschool.in" className="font-bold text-brand-text underline hover:text-brand-accent transition-colors">
+                              hello@dealschool.in
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Phone className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">TELEPHONE LINE</span>
+                            <span className="font-mono font-bold text-brand-text">+91 91361 51361</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <MapPin className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">FAMILY OFFICE HEADQUARTERS</span>
+                            <span className="font-bold text-brand-text">Navi Mumbai, Maharashtra, India</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <Globe className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">PROGRAM STRUCTURE</span>
+                            <span className="font-bold text-brand-text">Online-First, Multi-Channel Hybrid Cohort</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column (The Actual Stateful Inquiry Form) */}
+                  <div className="lg:col-span-7 bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 md:p-8 shadow-sm">
+                    <span className="font-mono text-[9px] text-brand-accent font-bold tracking-widest uppercase block mb-2">
+                      TRANSACTION FORM
+                    </span>
+                    <h3 className="font-serif text-xl font-bold text-brand-text mb-4">Submit Your Inquiry</h3>
+
+                    <AnimatePresence mode="wait">
+                      {!contactSubmitted ? (
+                        <motion.form
+                          key="form"
+                          onSubmit={handleContactSubmit}
+                          className="space-y-4"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          {/* Name \& Email row */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
+                                Full Name *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={contactForm.name}
+                                onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                                placeholder="Your Name"
+                                className="w-full bg-brand-bg text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
+                                Email Address *
+                              </label>
+                              <input
+                                type="email"
+                                required
+                                value={contactForm.email}
+                                onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                                placeholder="name@domain.com"
+                                className="w-full bg-brand-bg text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Subject Select */}
+                          <div className="space-y-1">
+                            <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
+                              Subject Focus
+                            </label>
+                            <select
+                              value={contactForm.subject}
+                              onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                              className="w-full bg-brand-bg text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
+                            >
+                              <option value="Application Inquiry">Cohort 1 Application Inquiry</option>
+                              <option value="Syllabus/Brochure Request">Venture Curriculum Specs</option>
+                              <option value="Operator Collaboration">Partner / Mentor Engagement</option>
+                              <option value="Other">Custom Question Desk</option>
+                            </select>
+                          </div>
+
+                          {/* Message Textarea */}
+                          <div className="space-y-1">
+                            <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
+                              Message Content *
+                            </label>
+                            <textarea
+                              rows={5}
+                              required
+                              value={contactForm.message}
+                              onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                              placeholder="Describe your question or thesis background briefly..."
+                              className="w-full bg-brand-bg text-brand-text px-3 py-2.5 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm leading-relaxed"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={contactSubmitting}
+                            className="w-full py-4 bg-brand-secondary hover:bg-brand-dark-blue text-brand-bg font-mono text-xs font-bold tracking-widest uppercase rounded-sm transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            {contactSubmitting ? (
+                              <span>Routing Message Pipeline...</span>
+                            ) : (
+                              <>
+                                Submit Secure Query <ArrowRight className="h-4 w-4 text-brand-accent" />
+                              </>
+                            )}
+                          </button>
+                        </motion.form>
+                      ) : (
+                        <motion.div
+                          key="success"
+                          className="py-10 text-center space-y-4"
+                          initial={{ opacity: 0, scale: 0.98 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                        >
+                          <div className="mx-auto h-12 w-12 bg-brand-accent/10 border border-brand-accent rounded-full flex items-center justify-center text-brand-accent">
+                            <CheckCircle2 className="h-6 w-6" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="font-serif text-lg font-bold text-brand-text">Message routed successfully</h4>
+                            <p className="font-serif italic text-xs text-brand-neutral">
+                              Our DealSchool admissions and operating desk has logged your ticket.
+                            </p>
+                          </div>
+                          
+                          <div className="bg-[#FAF7F0] p-4 rounded-sm border border-brand-secondary/10 max-w-sm mx-auto text-left font-mono text-[9px] leading-relaxed text-brand-secondary">
+                            We will compile adjacent metrics and send diagnostic responses to your email within 24 to 48 hours. Thank you for your inquiry interest.
+                          </div>
+
+                          <button
+                            onClick={() => setContactSubmitted(false)}
+                            className="px-6 py-2 bg-brand-secondary text-brand-bg font-mono text-[10px] font-bold uppercase rounded-sm hover:bg-brand-text transition-colors cursor-pointer"
+                          >
+                            Submit Another Query
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* GLOBAL FOOTER REFERENCES */}
+      <FooterPanel onChangePage={handlePageChange} />
+
+      {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
+      <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+
+    </div>
+  );
+}

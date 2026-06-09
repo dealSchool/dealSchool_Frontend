@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Lora:ital,wght@0,400..700;1,400..700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", "Lora", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-brand-bg: #FAFAF8;
+  --color-brand-text: #111111;
+  --color-brand-accent: #D4A62A;
+  --color-brand-secondary: #0D3B8E;
+  --color-brand-dark-blue: #082C6C;
+  --color-brand-neutral: #5F6368;
+}
+
+@layer base {
+  body {
+    background-color: #FAFAF8;
+    color: #111111;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom premium animations matching the design brief */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes orb-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 166, 42, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(212, 166, 42, 0.75);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes line-upward {
+  from {
+    stroke-dashoffset: 600;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes grid-drift {
+  0% {
+    transform: translateY(0px) rotate(15deg);
+  }
+  100% {
+    transform: translateY(-40px) rotate(15deg);
+  }
+}
+
+/* Scroll support styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(44, 44, 44, 0.15);
+  border-radius: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(44, 44, 44, 0.3);
+}
+
