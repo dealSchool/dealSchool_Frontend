@@ -67,7 +67,8 @@ export interface FellowshipApplication {
   assessmentQ2: string;
   assessmentQ3: string;
   
-  resumeUrl: string;
+  resumeUrl?: string; // Backward compatibility with older records
+  resumeLink: string; // The user-provided URL to their resume
   discoverySource: string;
   discoverySourceOther?: string;
   

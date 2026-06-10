@@ -5,7 +5,7 @@ This specification outlines the data invariants, threat-model payloads, and vali
 ## 1. Data Invariants
 
 1. **Unregistered Admissions/Inquiries**: Unauthenticated users can create applications and contact requests, but they cannot read, write, update, or delete any of them afterwards.
-2. **System-wide Admin Boundaries**: Only authenticated admin users (with emails matching `sachdevadev0512@gmail.com` or configured in the `admins` collection) have full access to view, search, filter, and modify document statuses.
+2. **System-wide Admin Boundaries**: Only authenticated admin users (with emails matching `admin@dealschool.in` or configured in the `admins` collection) have full access to view, search, filter, and modify document statuses.
 3. **Application Immutability for Admins**: Admins can change status of applications, but core fields from the initial applicant (`fullName`, `email`, `motivation`, etc.) are not mutable after submission.
 4. **Id Validation & Size Enforcement**: Document IDs, strings, and inputs must match size constraints to prevent Denial-of-Wallet (DoW) and character injection attacks. All text inputs are size-capped.
 
@@ -17,7 +17,7 @@ The following 12 payloads are designed to challenge and test the security rules:
 
 ### Vulnerability Tier A: Identity Spoofing & Escalation
 1. **P1 (Self-Elevation)**: Attempting to create or modify an admin role entry in `admins` as an unauthenticated or standard user.
-2. **P2 (Unverified Email Admin Hijack)**: Attempting to bypass authorization by providing a token containing the email `sachdevadev0512@gmail.com` but with `email_verified` as `false`.
+2. **P2 (Unverified Email Admin Hijack)**: Attempting to bypass authorization by providing a token containing the email `admin@dealschool.in` but with `email_verified` as `false`.
 3. **P3 (Direct App Read by Non-Admin)**: Attempting to fetch lists of other users' applications as an unauthenticated or standard authenticated user.
 
 ### Vulnerability Tier B: Client Integrity & State Shortcutting
@@ -68,7 +68,7 @@ describe("DealSchool Fortress Rule Verification", () => {
 
   it("P2 (Unverified Email Admin Hijack): Should fail admin functions", async () => {
     const fakeAdminDb = testEnv.authenticatedContext("hack_1", {
-      email: "sachdevadev0512@gmail.com",
+      email: "admin@dealschool.in",
       email_verified: false,
     }).firestore();
     await assertFails(getDoc(doc(fakeAdminDb, "applications/any_id")));

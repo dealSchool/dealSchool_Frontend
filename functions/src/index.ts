@@ -26,7 +26,7 @@ export const onNewApplication = functions.firestore
       degreeEducationalBackground, yearsOfExperience, startupName,
       industrySector, startupLinkedinProfile, areaOfWork, freelancerLinkedinProfile,
       otherStatusSpecify, primaryReason, primaryReasonOther,
-      assessmentQ1, assessmentQ2, assessmentQ3, resumeUrl, discoverySource, discoverySourceOther
+      assessmentQ1, assessmentQ2, assessmentQ3, resumeLink, resumeUrl, discoverySource, discoverySourceOther
     } = data;
 
     let affiliationLabel = "Affiliation Detail";
@@ -160,7 +160,7 @@ export const onNewApplication = functions.firestore
             <h4 style="margin: 20px 0 5px 0; color: #152238; border-bottom: 1px solid #f0f0f0; padding-bottom: 3px; font-size:12px; text-transform:uppercase;">3. Objective & Support</h4>
             <p style="font-size:13px; margin:4px 0;"><strong>Primary Reason:</strong> ${primaryReason === "Other" ? primaryReasonOther : primaryReason}</p>
             <p style="font-size:13px; margin:4px 0;"><strong>Discovery Channel:</strong> ${discoverySource === "Other" ? discoverySourceOther : discoverySource}</p>
-            <p style="font-size:13px; margin:4px 0;"><strong>Resume Upload:</strong> <a href="${resumeUrl}" style="color:#d4a62a; font-weight:bold;" target="_blank">View PDF Application Portfolio</a></p>
+            <p style="font-size:13px; margin:4px 0;"><strong>Resume Link:</strong> <a href="${resumeLink || resumeUrl}" style="color:#d4a62a; font-weight:bold;" target="_blank">View Candidate Resume</a></p>
             
             <h4 style="margin: 20px 0 5px 0; color: #152238; border-bottom: 1px solid #f0f0f0; padding-bottom: 3px; font-size:12px; text-transform:uppercase;">4. Underwriting Assessments</h4>
             

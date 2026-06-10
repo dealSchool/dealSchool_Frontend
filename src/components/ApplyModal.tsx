@@ -9,9 +9,8 @@ import {
   X, Check, ArrowRight, Sparkles, User, Mail, FileText, 
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
-import { db, storage, handleFirestoreError, OperationType } from "../firebase";
+import { db, handleFirestoreError, OperationType } from "../firebase";
 import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -23,12 +22,8 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Attachment/Resume State
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [resumeFileName, setResumeFileName] = useState<string>("");
-  const [isDragActive, setIsDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Resume Link State
+  const [resumeLinkError, setResumeLinkError] = useState<string | null>(null);
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -73,8 +68,8 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     assessmentQ2: "",
     assessmentQ3: "",
 
-    // Upload & discovery
-    resumeUrl: "",
+    // Link & discovery
+    resumeLink: "",
     discoverySource: "",
     discoverySourceOther: ""
   });
@@ -84,59 +79,13 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Resume File Upload Process
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
-    setUploadError(null);
-
-    // Limit to PDF
-    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setUploadError("Only PDF documents are allowed.");
-      return;
-    }
-
-    // Limit to 5 MB
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("File exceeds the 5MB limit. Please upload a smaller PDF.");
-      return;
-    }
-
-    setUploading(true);
-    setResumeFileName(file.name);
-
+  const isValidUrl = (urlStr: string) => {
     try {
-      const storageRef = ref(storage, `resumes/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`);
-      await uploadBytes(storageRef, file);
-      const downloadUrl = await getDownloadURL(storageRef);
-      setFormData(prev => ({ ...prev, resumeUrl: downloadUrl }));
-    } catch (err: any) {
-      console.error("Storage upload failure: ", err);
-      setUploadError("Upload failed. Place your file again or try another PDF.");
-    } finally {
-      setUploading(false);
+      const url = new URL(urlStr);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch (err) {
+      return false;
     }
-  };
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragActive(true);
-  };
-
-  const onDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragActive(false);
-  };
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
-    }
-  };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
   };
 
   // Step validation check gates
@@ -203,7 +152,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }
 
     if (step === 5) {
-      const resumeOk = formData.resumeUrl !== "";
+      const resumeOk = isValidUrl(formData.resumeLink) && formData.resumeLink.trim() !== "";
       const sourceOk = formData.discoverySource !== "" && (formData.discoverySource !== "Other" || formData.discoverySourceOther.trim() !== "");
       return resumeOk && sourceOk;
     }
@@ -279,7 +228,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         assessmentQ2: formData.assessmentQ2,
         assessmentQ3: formData.assessmentQ3,
 
-        resumeUrl: formData.resumeUrl,
+        resumeLink: formData.resumeLink,
         discoverySource: formData.discoverySource,
         ...(formData.discoverySource === "Other" && {
           discoverySourceOther: formData.discoverySourceOther,
@@ -308,8 +257,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     // Wait for exit transition to clean up state
     setTimeout(() => {
       setStep(1);
-      setResumeFileName("");
-      setUploadError(null);
+      setResumeLinkError(null);
       setErrorMessage(null);
       setFormData({
         fullName: "",
@@ -336,7 +284,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         assessmentQ1: "",
         assessmentQ2: "",
         assessmentQ3: "",
-        resumeUrl: "",
+        resumeLink: "",
         discoverySource: "",
         discoverySourceOther: ""
       });
@@ -1027,13 +975,13 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       disabled={!isStepValid()}
                       className="flex-1 py-3 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-50 text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      Proceed to Resume Upload <ArrowRight className="h-4 w-4" />
+                      Proceed to Resume Link <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* STEP 5: Resume PDF Storage Upload & Discovery Source */}
+              {/* STEP 5: Resume URL input & Discovery Source */}
               {step === 5 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
                   <div>
@@ -1041,64 +989,58 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       RESUME HANDSHAKE
                     </span>
                     <h4 className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
-                      Upload Your Resume
+                      Resume Link
                     </h4>
                     <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
-                      Upload your compiled, professional PDF resume and indicate your discovery origin.
+                      Please provide a shareable Google Drive, Dropbox, OneDrive, Notion, or direct PDF link to your resume. Make sure the link is publicly accessible and does not require access approval.
                     </p>
                   </div>
 
                   <div className="space-y-4">
-                    {/* File Upload Dropzone with drag & drop & click triggers */}
+                    {/* Resume URL Field with real-time UI validation */}
                     <div className="space-y-1">
-                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
-                        Resume Upload <span className="text-brand-accent">*</span> (PDF only, max 5MB)
+                      <label htmlFor="resumeLink" className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                        Resume Link <span className="text-brand-accent">*</span>
                       </label>
-                      
-                      <div
-                        onDragOver={onDragOver}
-                        onDragLeave={onDragLeave}
-                        onDrop={onDrop}
-                        onClick={triggerFileSelect}
-                        className={`border-2 border-dashed rounded-sm p-5 text-center flex flex-col items-center justify-center cursor-pointer transition-all ${
-                          isDragActive ? "border-brand-accent bg-brand-accent/5" : "border-brand-secondary/20 hover:border-brand-accent/60 bg-[#FAFAF8]"
-                        } ${formData.resumeUrl ? "border-green-600 bg-green-50/10" : ""}`}
-                      >
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Globe className="h-4 w-4 text-brand-neutral/60" />
+                        </div>
                         <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".pdf"
-                          onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
-                          className="hidden"
-                          id="resume-file-input"
+                          id="resumeLink"
+                          type="url"
+                          name="resumeLink"
+                          required
+                          value={formData.resumeLink}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            if (e.target.value.trim() !== "" && !isValidUrl(e.target.value)) {
+                              setResumeLinkError("Please enter a valid URL starting with http:// or https://");
+                            } else {
+                              setResumeLinkError(null);
+                            }
+                          }}
+                          placeholder="https://drive.google.com/..."
+                          className={`w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border focus:outline-none text-xs md:text-sm h-11 transition-all ${
+                            formData.resumeLink.trim() === ""
+                              ? "border-brand-secondary/15 focus:border-brand-accent"
+                              : isValidUrl(formData.resumeLink)
+                              ? "border-green-600 bg-green-50/5 focus:border-green-600"
+                              : "border-red-600 bg-red-50/5 focus:border-red-600"
+                          }`}
                         />
-
-                        {uploading ? (
-                          <div className="space-y-2 py-2">
-                            <div className="animate-spin h-5 w-5 border-2 border-brand-accent border-t-transparent rounded-full mx-auto" />
-                            <p className="font-mono text-[9px] text-brand-accent font-bold uppercase">Streaming credentials to cloud node...</p>
-                          </div>
-                        ) : formData.resumeUrl ? (
-                          <div className="space-y-2 py-1 flex flex-col items-center">
-                            <CheckCircle2 className="h-7 w-7 text-green-600" />
-                            <p className="font-mono text-[10px] text-green-700 font-bold uppercase">Resume Secured Successfully</p>
-                            <p className="font-sans text-[10px] text-brand-neutral truncate max-w-sm italic">{resumeFileName}</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-1.5 py-1 flex flex-col items-center">
-                            <UploadCloud className="h-8 w-8 text-brand-neutral/80" />
-                            <p className="font-sans text-xs text-brand-text font-semibold">
-                              Drag & Drop PDF or <span className="text-brand-accent underline">browse</span>
-                            </p>
-                            <p className="font-mono text-[8.5px] text-brand-neutral uppercase tracking-widest">Supports optimized PDF vectors</p>
-                          </div>
-                        )}
                       </div>
-
-                      {uploadError && (
+                      
+                      {resumeLinkError && (
                         <p className="text-red-700 text-[10px] font-semibold mt-1 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3 shrink-0" />
-                          {uploadError}
+                          {resumeLinkError}
+                        </p>
+                      )}
+                      {formData.resumeLink.trim() !== "" && isValidUrl(formData.resumeLink) && (
+                        <p className="text-green-700 text-[10px] font-semibold mt-1 flex items-center gap-1">
+                          <Check className="h-3 w-3 shrink-0" />
+                          Resume link formatted successfully
                         </p>
                       )}
                     </div>
@@ -1181,7 +1123,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       Credentials Received
                     </span>
                     <h3 className="font-serif text-xl md:text-2xl font-bold text-brand-text">
-                      Resume Uploaded
+                      Resume Link Received
                     </h3>
                     <p className="font-serif italic text-xs md:text-sm text-brand-neutral">
                       Welcome to the DealSchool Sourcing Hub, {formData.fullName}.

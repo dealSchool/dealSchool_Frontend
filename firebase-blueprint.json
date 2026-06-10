@@ -111,9 +111,13 @@
           "enum": ["Founder", "Product", "Market"],
           "description": "Key success attribute choice"
         },
+        "resumeLink": {
+          "type": "string",
+          "description": "The user-provided URL link to their resume (e.g. Google Drive, Dropbox)"
+        },
         "resumeUrl": {
           "type": "string",
-          "description": "Download link to candidate's compiled PDF resume in Firebase Storage"
+          "description": "Download link to candidate's compiled PDF resume in Firebase Storage (for legacy records)"
         },
         "discoverySource": {
           "type": "string",
@@ -156,7 +160,7 @@
         "assessmentQ1",
         "assessmentQ2",
         "assessmentQ3",
-        "resumeUrl",
+        "resumeLink",
         "discoverySource",
         "status",
         "createdAt"

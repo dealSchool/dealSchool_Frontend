@@ -20,7 +20,6 @@ service cloud.firestore {
     function isAdmin() {
       return isEmailVerified() && (
         request.auth.token.email == "admin@dealschool.in" ||
-        request.auth.token.email == "sachdevadev0512@gmail.com" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -66,7 +65,10 @@ service cloud.firestore {
              data.assessmentQ2 is string && data.assessmentQ2.size() > 0 && data.assessmentQ2.size() <= 20000 &&
              data.assessmentQ3 is string && (data.assessmentQ3 == 'Founder' || data.assessmentQ3 == 'Product' || data.assessmentQ3 == 'Market') &&
              
-             data.resumeUrl is string && data.resumeUrl.size() > 0 && data.resumeUrl.size() <= 2083 &&
+             (
+                ('resumeLink' in data && data.resumeLink is string && data.resumeLink.size() > 0 && data.resumeLink.size() <= 2083) ||
+                ('resumeUrl' in data && data.resumeUrl is string && data.resumeUrl.size() > 0 && data.resumeUrl.size() <= 2083)
+              ) &&
              data.discoverySource is string && data.discoverySource.size() > 0 && data.discoverySource.size() <= 200 &&
              (!('discoverySourceOther' in data) || (data.discoverySourceOther is string && data.discoverySourceOther.size() <= 1000)) &&
              

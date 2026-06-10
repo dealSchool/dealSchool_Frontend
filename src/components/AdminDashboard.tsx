@@ -173,7 +173,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Delete Record Handler for Applications
   const handleDeleteApplication = async (appId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this application and resume?")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this application record?")) return;
     try {
       await deleteDoc(doc(db, "applications", appId));
       setSelectedApp(null);
@@ -294,8 +294,8 @@ export const AdminDashboard: React.FC = () => {
           {isUsingPlaceholder && (
             <div className="bg-[#FAF7F0] border border-[#D4A62A]/30 p-4 rounded-sm text-left font-mono text-[9px] text-brand-secondary space-y-1">
               <span className="font-bold block uppercase text-[#D4A62A]">🚀 SDK Placement Info:</span>
-              <p>Firebase configuration is currently using placeholder mocks in `firebase-applet-config.json`.</p>
-              <p className="font-bold text-brand-neutral mt-1">To finalize: please direct the workspace to configure Google cloud metadata credentials.</p>
+              <p>Firebase configuration is currently using placeholder fallback parameters. Please ensure your environment credentials (VITE_FIREBASE_*) are set in `.env.local`.</p>
+              <p className="font-bold text-brand-neutral mt-1">To finalize: please direct the workspace to configure your local or Cloud environment variables.</p>
             </div>
           )}
 
@@ -841,18 +841,30 @@ export const AdminDashboard: React.FC = () => {
 
                     <div>
                       <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-accent font-bold mb-1">
-                        CANDIDATE RESUME PORTFOLIO (PDF):
+                        CANDIDATE RESUME URL:
                       </span>
-                      {selectedApp.resumeUrl ? (
-                        <a
-                          href={selectedApp.resumeUrl}
-                          target="_blank"
-                          referrerPolicy="no-referrer"
-                          rel="noopener noreferrer"
-                          className="font-mono text-xs text-brand-accent hover:underline flex items-center gap-1 font-bold bg-[#FAF8F5] p-3 border border-brand-accent/20 rounded-sm justify-center shadow-xs cursor-pointer group"
-                        >
-                          <Building className="h-4 w-4 text-brand-accent group-hover:scale-105 transition-transform shrink-0" /> VIEW SUBMITTED PDF RESUME
-                        </a>
+                      {selectedApp.resumeLink || selectedApp.resumeUrl ? (
+                        <div className="space-y-2">
+                          <a
+                            href={selectedApp.resumeLink || selectedApp.resumeUrl}
+                            target="_blank"
+                            referrerPolicy="no-referrer"
+                            rel="noopener noreferrer"
+                            className="font-mono text-xs text-brand-accent hover:underline flex items-center gap-1.5 font-bold bg-[#FAF8F5] p-3 border border-brand-accent/20 rounded-sm justify-center shadow-xs cursor-pointer group"
+                          >
+                            <ExternalLink className="h-4 w-4 text-brand-accent group-hover:scale-105 transition-transform shrink-0" /> OPEN RESUME
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(selectedApp.resumeLink || selectedApp.resumeUrl || "");
+                              alert("Resume link copied to clipboard!");
+                            }}
+                            className="w-full font-mono text-[10px] text-brand-text hover:bg-brand-secondary/5 flex items-center gap-1.5 font-bold bg-[#FAF8F5] p-2 border border-brand-secondary/10 rounded-sm justify-center shadow-xs cursor-pointer"
+                          >
+                            COPY RESUME LINK
+                          </button>
+                        </div>
                       ) : (
                         <p className="text-xs text-brand-neutral italic">None provided</p>
                       )}
@@ -916,7 +928,7 @@ export const AdminDashboard: React.FC = () => {
                         onClick={() => handleDeleteApplication(selectedApp.id)}
                         className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-mono text-[9px] font-bold uppercase rounded-sm border border-red-200 transition-all cursor-pointer flex items-center justify-center gap-1"
                       >
-                        <Trash2 className="h-3 w-3" /> Purge Candidate & Resume
+                        <Trash2 className="h-3 w-3" /> Purge Candidate Record
                       </button>
                     </div>
                   </div>

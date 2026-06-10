@@ -1,15 +1,34 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import firebaseConfig from "./firebase-applet-config.json";
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+
+// Check if credentials are properly provided
+const isValidConfig = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 
 // Dynamic initialization to avoid re-binding errors across HMR refresh
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app = getApps().length === 0 
+  ? initializeApp(isValidConfig ? firebaseConfig : {
+      apiKey: "AIzaSyPlaceholderKeyForDealSchoolCompilation",
+      authDomain: "dealschool-placeholder.firebaseapp.com",
+      projectId: "dealschool-placeholder",
+      storageBucket: "dealschool-placeholder.appspot.com",
+      messagingSenderId: "123456789012",
+      appId: "1:123456789012:web:abcdef1234567890"
+    })
+  : getApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || "(default)");
-export const storage = getStorage(app);
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export enum OperationType {
@@ -60,7 +79,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 // Check for placeholder profile to notify developer or UI if needed
-export const isUsingPlaceholder = firebaseConfig.projectId.includes("placeholder");
+export const isUsingPlaceholder = !isValidConfig || firebaseConfig.projectId.includes("placeholder");
 
 // Google login utility matching DealSchool admin specs
 export async function signInAdminWithGoogle() {
