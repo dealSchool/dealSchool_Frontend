@@ -462,7 +462,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             required
                             value={formData.email}
                             onChange={handleInputChange}
-                            placeholder="admin@dealschool.in"
+                            placeholder="yourname@example.com"
                             className="w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
                           />
                         </div>

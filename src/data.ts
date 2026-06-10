@@ -58,34 +58,26 @@ export interface FounderProfile {
   education: string[];
 }
 
-export const FOUNDER_DATA: FounderProfile = {
-  name: "Chirag Thakker",
-  role: "Founder, DealSchool & Managing Partner, Middha Ventures",
-  background: [
-    "Venture investor",
-    "Community builder",
-    "HR professional",
-    "15+ years in Indian startup ecosystem"
-  ],
-  companies: [
-    "Infibeam",
-    "CarWale",
-    "upGrad",
-    "Paysense",
-    "Livspace",
-    "Emeritus"
-  ],
-  investments: [
-    "Sochu",
-    "Fitreak",
-    "Ruskle"
-  ],
-  community: "Built Navi Mumbai Startup Community to 300+ founders.",
-  education: [
-    "MBA (HR), DY Patil University",
-    "Strategic Performance Management, XLRI Jamshedpur"
-  ]
-};
+export const FOUNDERS_DATA: FounderProfile[] = [
+  {
+    name: "Rishab Agrawal",
+    role: "",
+    background: [],
+    companies: [],
+    investments: [],
+    community: "",
+    education: []
+  },
+  {
+    name: "Tusshaar Chawla",
+    role: "",
+    background: [],
+    companies: [],
+    investments: [],
+    community: "",
+    education: []
+  }
+];
 
 export const MENTORS: Mentor[] = [
   {

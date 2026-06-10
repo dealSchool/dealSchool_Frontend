@@ -5,6 +5,7 @@
 
 import React from "react";
 import { motion, useTime, useTransform } from "motion/react";
+import logoImage from "../assets/images/dealschool_logo_1781074477214.png";
 
 // Shared micro-floating motion animation props
 export const floatingYAnimation = {
@@ -529,47 +530,13 @@ export const CirclePersonIllustration: React.FC = () => {
 export const DealSchoolLogo: React.FC<{ className?: string }> = ({ className = "h-10 w-auto" }) => {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      {/* High precision modern logo vector */}
-      <svg
-        viewBox="0 0 500 500"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-10 w-10 flex-shrink-0"
-      >
-        {/* Soft shadow background circle - dark blue now */}
-        <circle cx="250" cy="250" r="235" fill="#082C6C" />
-
-        {/* Mortarboard styled with a strong premium upward VC arrow in Gold */}
-        <g transform="translate(70, 100)">
-          {/* Mortarboard cap diamond bottom support */}
-          <path d="M 50,150 L 180,210 L 180,270 L 50,210 Z" fill="#0D3B8E" fillOpacity="0.4" />
-          
-          {/* Main diamond top */}
-          <polygon points="180,80 340,140 180,200 20,140" fill="#0D3B8E" stroke="#E2DCD2" strokeWidth="6" />
-          
-          {/* Dynamic Upward Arrow pushing through model cap in gold */}
-          <path
-            d="M 140,240 L 220,140 L 220,180 L 320,110 L 345,180 L 255,200 L 255,240 Z"
-            fill="#D4A62A"
-            stroke="#FAFAF8"
-            strokeWidth="3.5"
-          />
-          {/* Giant VC Trajectory Arrow cap pointing to top-right */}
-          <polygon points="310,105 350,90 338,135" fill="#D4A62A" stroke="#FAFAF8" strokeWidth="2" />
-
-          {/* Tassel */}
-          <path d="M 180,140 C 120,150 70,165 72,210" stroke="#D4A62A" strokeWidth="4" strokeLinecap="round" />
-          <circle cx="72" cy="216" r="8" fill="#D4A62A" />
-          
-          {/* Modern abstract Linked Chain signifying deals */}
-          <g transform="translate(230, 210)" stroke="#E2DCD2" strokeWidth="4.5">
-            {/* Chain link 1 */}
-            <rect x="0" y="10" width="35" height="15" rx="7.5" transform="rotate(-30)" fill="none" />
-            {/* Chain link 2 in gold to interlock */}
-            <rect x="20" y="0" width="35" height="15" rx="7.5" transform="rotate(-30)" stroke="#D4A62A" fill="none" />
-          </g>
-        </g>
-      </svg>
+      {/* High precision logo image asset replacing previous SVG */}
+      <img
+        src={logoImage}
+        alt="DealSchool Logo"
+        className="h-9 w-9 md:h-10 md:w-10 rounded-sm object-contain flex-shrink-0"
+        referrerPolicy="no-referrer"
+      />
       
       {/* Brand Text styling - Sequoia / McKinsey premium report look */}
       <div className="flex flex-col select-none">

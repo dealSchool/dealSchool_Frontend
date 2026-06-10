@@ -4,6 +4,8 @@ import { Resend } from "resend";
 
 admin.initializeApp();
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@dealschool.in";
+
 // Triggered on new Fellowship Applications
 export const onNewApplication = functions.firestore
   .document("applications/{applicationId}")
@@ -134,7 +136,7 @@ export const onNewApplication = functions.firestore
       // 2. Notify GP Supervisor
       await resend.emails.send({
         from: "DealSchool Engine <alerts@dealschool.in>",
-        to: "sachdevadev0512@gmail.com",
+        to: ADMIN_EMAIL,
         subject: `[Admissions] New Fellowship Application: ${fullName}`,
         html: `
           <div style="font-family: sans-serif; padding: 24px; color: #111111; max-width: 650px; border: 1px solid #ddd; border-radius: 4px;">
@@ -180,7 +182,7 @@ export const onNewApplication = functions.firestore
           </div>
         `,
       });
-      console.log(`Dispatched alerts to candidate email and sachdevadev0512@gmail.com successfully.`);
+      console.log(`Dispatched alerts to candidate email and ${ADMIN_EMAIL} successfully.`);
     } catch (err) {
       console.error("Cloud Function failed during Resend dispatch:", err);
     }
@@ -205,7 +207,7 @@ export const onNewContactMessage = functions.firestore
     try {
       await resend.emails.send({
         from: "DealSchool HelpDesk <alerts@dealschool.in>",
-        to: "sachdevadev0512@gmail.com",
+        to: ADMIN_EMAIL,
         subject: `[Inquiry Ticket] From ${name}: ${subject}`,
         html: `
           <div style="font-family: sans-serif; padding: 24px; color: #111111;">
@@ -227,7 +229,7 @@ export const onNewContactMessage = functions.firestore
           </div>
         `,
       });
-      console.log(`Dispatched inquiry alert to sachdevadev0512@gmail.com successfully.`);
+      console.log(`Dispatched inquiry alert to ${ADMIN_EMAIL} successfully.`);
     } catch (err) {
       console.error("Cloud Function failed during Resend contact dispatch:", err);
     }

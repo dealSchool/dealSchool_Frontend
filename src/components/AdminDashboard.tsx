@@ -61,7 +61,8 @@ export const AdminDashboard: React.FC = () => {
       // Check if user is the authorized admin email
       if (user) {
         const email = user.email || "";
-        const authorized = email === "sachdevadev0512@gmail.com";
+        const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || "admin@dealschool.in";
+        const authorized = email === adminEmail;
         setIsAdminAuthorized(authorized);
       } else {
         setIsAdminAuthorized(false);
@@ -333,7 +334,7 @@ export const AdminDashboard: React.FC = () => {
               Signed in as: <span className="font-bold not-italic text-brand-text">{currentUser.email}</span>
             </p>
             <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-              Your email is not validated in our active secure directory of GPs. Access is strictly audited and limited to authorized family-office members: <code className="bg-gray-100 px-1 py-0.5 rounded text-red-600 font-bold">sachdevadev0512@gmail.com</code>.
+              Your email is not validated in our active secure directory of GPs. Access is strictly audited and limited to authorized family-office members: <code className="bg-gray-100 px-1 py-0.5 rounded text-red-600 font-bold">{import.meta.env.VITE_ADMIN_EMAIL || "admin@dealschool.in"}</code>.
             </p>
           </div>
 

@@ -16,9 +16,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
-    // sachdevadev0512@gmail.com is bootstrapped securely as the primary system admin
+    // admin@dealschool.in is bootstrapped securely as the primary system admin
     function isAdmin() {
       return isEmailVerified() && (
+        request.auth.token.email == "admin@dealschool.in" ||
         request.auth.token.email == "sachdevadev0512@gmail.com" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );

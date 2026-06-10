@@ -5,7 +5,7 @@
 
 import React from "react";
 import { DealSchoolLogo } from "./SVGIllustrations";
-import { Mail, Shield, BookOpen, MapPin, ExternalLink, ArrowUp, Phone } from "lucide-react";
+import { Mail, MapPin, ArrowUp, Phone } from "lucide-react";
 
 interface FooterPanelProps {
   onChangePage?: (page: "home" | "about" | "program" | "team" | "contact") => void;
@@ -48,56 +48,8 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
             </div>
           </div>
 
-          {/* Sourcing/Resources links */}
-          <div className="space-y-3">
-            <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase">
-              RESOURCES & RESEARCH
-            </h5>
-            <ul className="space-y-2 font-mono text-[10px] text-[#FAFAF8]/70 uppercase font-semibold">
-              <li>
-                <button 
-                  onClick={() => {
-                    if (onChangePage) {
-                      onChangePage("program");
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                  className="hover:text-brand-accent transition-all flex items-center gap-1.5 cursor-pointer text-left bg-transparent border-none p-0 text-[10px]"
-                >
-                  <BookOpen className="h-3 w-3" /> Core Syllabus
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => {
-                    if (onChangePage) {
-                      onChangePage("program");
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                  className="hover:text-brand-accent transition-all flex items-center gap-1.5 cursor-pointer text-left bg-transparent border-none p-0 text-[10px]"
-                >
-                  <Shield className="h-3 w-3" /> Case Archive
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => {
-                    if (onChangePage) {
-                      onChangePage("about");
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                  className="hover:text-brand-accent transition-all flex items-center gap-1.5 cursor-pointer text-left bg-transparent border-none p-0 text-[10px]"
-                >
-                  <BookOpen className="h-3 w-3" /> Philosophy
-                </button>
-              </li>
-            </ul>
-          </div>
-
           {/* Underwriting credits */}
-          <div className="space-y-3">
+          <div className="space-y-3 md:col-span-2">
             <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase">
               UNDERWRITTEN BY
             </h5>

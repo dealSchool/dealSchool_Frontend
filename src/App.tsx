@@ -19,7 +19,7 @@ import { ApplyModal } from "./components/ApplyModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
 import { AdminDashboard } from "./components/AdminDashboard";
-import { JOURNEY_STAGES, MENTORS, MEMO_SUB_PAGES, FOUNDER_DATA } from "./data";
+import { JOURNEY_STAGES, MENTORS, MEMO_SUB_PAGES, FOUNDERS_DATA } from "./data";
 import { 
   Compass, 
   Search, 
@@ -148,7 +148,7 @@ export default function App() {
                           DealSchool is an 8-week, cohort-based VC fellowship. You won&apos;t be taught about startups — you&apos;ll screen them, sit inside pitch calls, run due diligence, talk directly to founders, and make actual investment calls. Not slides. Not theory. The real thing.
                         </p>
                         
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-6">
                           <button
                             onClick={handleApplyClick}
                             className="bg-brand-secondary text-brand-bg px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-brand-secondary/25 hover:bg-brand-dark-blue transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
@@ -161,22 +161,6 @@ export default function App() {
                           >
                             See the Program
                           </button>
-                        </div>
-
-                        {/* VC Trajectory Badge Metrics - family office styled */}
-                        <div className="grid grid-cols-3 gap-6 pt-8 border-t border-brand-secondary/10 max-w-md">
-                          <div className="space-y-1">
-                            <span className="block font-mono text-[10px] text-brand-neutral tracking-wider uppercase">Venture Backer</span>
-                            <span className="block font-mono text-xs font-bold text-brand-text">MIDDHA VENTURES</span>
-                          </div>
-                          <div className="space-y-1">
-                            <span className="block font-mono text-[10px] text-brand-neutral tracking-wider uppercase">Cohort Seats</span>
-                            <span className="block font-mono text-xs font-bold text-brand-accent">CAPPED AT 20</span>
-                          </div>
-                          <div className="space-y-1">
-                            <span className="block font-mono text-[10px] text-brand-neutral tracking-wider uppercase">Program Term</span>
-                            <span className="block font-mono text-xs font-bold text-brand-text">8 WEEKS</span>
-                          </div>
                         </div>
                       </div>
 
@@ -655,100 +639,128 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Founder Chirag Thakker Profile */}
-                <section className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 md:p-10 shadow-sm">
-                  <span className="font-mono text-[9px] text-brand-accent font-bold tracking-widest uppercase block mb-3">
-                    FOUNDER PROFILE
-                  </span>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    
-                    {/* Left Column (Biographical Details) */}
-                    <div className="lg:col-span-8 space-y-6">
-                      <div>
-                        <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text">{FOUNDER_DATA.name}</h2>
-                        <span className="font-mono text-xs font-bold text-brand-accent uppercase tracking-widest mt-1 block">
-                          {FOUNDER_DATA.role}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-widest block font-extrabold pb-1">
-                          BACKGROUND ARCHITECTURE
-                        </span>
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs md:text-sm font-serif italic text-brand-secondary">
-                          {FOUNDER_DATA.background.map((item, idx) => (
-                            <li key={idx} className="flex items-center gap-2">
-                              <span className="h-1.5 w-1.5 bg-brand-accent rounded-full" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-widest block font-extrabold mb-2">
-                            PREVIOUS STRATEGIC ENGAGEMENT
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {FOUNDER_DATA.companies.map((co) => (
-                              <span key={co} className="bg-[#FAF7F0] border border-brand-secondary/10 text-brand-text px-3 py-1.5 rounded-sm text-xs font-sans font-medium">
-                                {co}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                          <div className="p-4 border border-brand-secondary/10 rounded-sm bg-[#FAF7F0]">
-                            <span className="font-mono text-[9px] text-[#D4A62A] tracking-wider uppercase font-bold block mb-1">
-                              PORTFOLIO INVESTMENTS
-                            </span>
-                            <span className="block font-sans text-xs font-bold text-brand-text leading-relaxed">
-                              {FOUNDER_DATA.investments.join(", ")}
-                            </span>
-                          </div>
-                          
-                          <div className="p-4 border border-brand-secondary/10 rounded-sm bg-[#FAF7F0]">
-                            <span className="font-mono text-[9px] text-[#D4A62A] tracking-wider uppercase font-bold block mb-1">
-                              COMMUNITY EXPANSION
-                            </span>
-                            <span className="block font-sans text-xs font-bold text-brand-text leading-relaxed">
-                              {FOUNDER_DATA.community}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column (Education & Motif Illustration) */}
-                    <div className="lg:col-span-4 bg-brand-secondary/5 border border-brand-secondary/10 p-6 rounded-sm space-y-6">
+                {/* Two Identical Founder Profile Cards */}
+                <div className="grid grid-cols-1 gap-8 md:gap-12">
+                  {FOUNDERS_DATA.map((founder, index) => (
+                    <section key={index} className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 md:p-10 shadow-sm">
+                      <span className="font-mono text-[9px] text-brand-accent font-bold tracking-widest uppercase block mb-3">
+                        FOUNDER PROFILE
+                      </span>
                       
-                      <div className="flex flex-col items-center text-center">
-                        <div className="h-20 w-20 rounded-full border border-brand-accent flex items-center justify-center font-mono text-2xl font-bold bg-brand-bg text-brand-secondary tracking-widest">
-                          CT
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                        
+                        {/* Left Column (Biographical Details) */}
+                        <div className="lg:col-span-8 space-y-6">
+                          <div>
+                            <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text">{founder.name}</h2>
+                            {founder.role ? (
+                              <span className="font-mono text-xs font-bold text-brand-accent uppercase tracking-widest mt-1 block">
+                                {founder.role}
+                              </span>
+                            ) : (
+                              <span className="font-mono text-xs font-bold text-brand-accent uppercase tracking-widest mt-1 block h-4">
+                                {/* Role Placeholder */}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-widest block font-extrabold pb-1">
+                              BACKGROUND ARCHITECTURE
+                            </span>
+                            {founder.background.length > 0 ? (
+                              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs md:text-sm font-serif italic text-brand-secondary">
+                                {founder.background.map((item, idx) => (
+                                  <li key={idx} className="flex items-center gap-2">
+                                    <span className="h-1.5 w-1.5 bg-brand-accent rounded-full" />
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-xs font-serif italic text-brand-neutral/60 py-1">
+                                Details to be supplemented
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-4">
+                            <div>
+                              <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-widest block font-extrabold mb-2">
+                                PREVIOUS STRATEGIC ENGAGEMENT
+                              </span>
+                              {founder.companies.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {founder.companies.map((co) => (
+                                    <span key={co} className="bg-[#FAF7F0] border border-brand-secondary/10 text-brand-text px-3 py-1.5 rounded-sm text-xs font-sans font-medium">
+                                      {co}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-xs font-sans text-brand-neutral/60 italic py-1">
+                                  Information pending
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                              <div className="p-4 border border-brand-secondary/10 rounded-sm bg-[#FAF7F0]">
+                                <span className="font-mono text-[9px] text-[#D4A62A] tracking-wider uppercase font-bold block mb-1">
+                                  PORTFOLIO INVESTMENTS
+                                </span>
+                                <span className="block font-sans text-xs font-bold text-brand-text leading-relaxed">
+                                  {founder.investments.length > 0 ? founder.investments.join(", ") : "No prior disclosure"}
+                                </span>
+                              </div>
+                              
+                              <div className="p-4 border border-brand-secondary/10 rounded-sm bg-[#FAF7F0]">
+                                <span className="font-mono text-[9px] text-[#D4A62A] tracking-wider uppercase font-bold block mb-1">
+                                  COMMUNITY EXPANSION
+                                </span>
+                                <span className="block font-sans text-xs font-bold text-brand-text leading-relaxed">
+                                  {founder.community || "Operational data pending"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-serif italic text-xs text-brand-neutral mt-3">Family Office Capital</span>
-                      </div>
 
-                      <div className="space-y-2.5">
-                        <span className="font-mono text-[9px] text-brand-neutral uppercase tracking-widest font-extrabold block border-b border-brand-secondary/10 pb-1">
-                          ACADEMIC DECORATION
-                        </span>
-                        <ul className="space-y-2 text-xs font-mono text-brand-secondary uppercase">
-                          {FOUNDER_DATA.education.map((edu, idx) => (
-                            <li key={idx} className="flex items-start gap-1.5">
-                              <Award className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
-                              <span>{edu}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                        {/* Right Column (Education & Motif Illustration) */}
+                        <div className="lg:col-span-4 bg-brand-secondary/5 border border-brand-secondary/10 p-6 rounded-sm space-y-6">
+                          
+                          <div className="flex flex-col items-center text-center">
+                            <div className="h-20 w-20 rounded-full border border-brand-accent flex items-center justify-center font-mono text-2xl font-bold bg-brand-bg text-brand-secondary tracking-widest">
+                              {founder.name.split(" ").map(n => n[0]).join("")}
+                            </div>
+                            <span className="font-serif italic text-xs text-brand-neutral mt-3">Family Office Capital</span>
+                          </div>
 
-                    </div>
-                  </div>
-                </section>
+                          <div className="space-y-2.5">
+                            <span className="font-mono text-[9px] text-brand-neutral uppercase tracking-widest font-extrabold block border-b border-brand-secondary/10 pb-1">
+                              ACADEMIC DECORATION
+                            </span>
+                            {founder.education.length > 0 ? (
+                              <ul className="space-y-2 text-xs font-mono text-brand-secondary uppercase">
+                                {founder.education.map((edu, idx) => (
+                                  <li key={idx} className="flex items-start gap-1.5">
+                                    <Award className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                                    <span>{edu}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-[10px] font-mono text-brand-neutral/60 uppercase">
+                                Credentials pending
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+                      </div>
+                    </section>
+                  ))}
+                </div>
 
                 {/* Rotating Ecosystem Mentors Block */}
                 <section className="space-y-8">
