@@ -1,3 +1,4 @@
+
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -12,25 +13,43 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Check if credentials are properly provided
-const isValidConfig = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-// Dynamic initialization to avoid re-binding errors across HMR refresh
-export const app = getApps().length === 0 
-  ? initializeApp(isValidConfig ? firebaseConfig : {
-      apiKey: "AIzaSyPlaceholderKeyForDealSchoolCompilation",
-      authDomain: "dealschool-placeholder.firebaseapp.com",
-      projectId: "dealschool-placeholder",
-      storageBucket: "dealschool-placeholder.appspot.com",
-      messagingSenderId: "123456789012",
-      appId: "1:123456789012:web:abcdef1234567890"
-    })
-  : getApp();
+// Strict validation
+const missingVars: string[] = [];
+
+if (!firebaseConfig.apiKey)
+  missingVars.push("VITE_FIREBASE_API_KEY");
+
+if (!firebaseConfig.authDomain)
+  missingVars.push("VITE_FIREBASE_AUTH_DOMAIN");
+
+if (!firebaseConfig.projectId)
+  missingVars.push("VITE_FIREBASE_PROJECT_ID");
+
+if (!firebaseConfig.storageBucket)
+  missingVars.push("VITE_FIREBASE_STORAGE_BUCKET");
+
+if (!firebaseConfig.messagingSenderId)
+  missingVars.push("VITE_FIREBASE_MESSAGING_SENDER_ID");
+
+if (!firebaseConfig.appId)
+  missingVars.push("VITE_FIREBASE_APP_ID");
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Firebase configuration missing: ${missingVars.join(", ")}`
+  );
+}
+
+// Initialize Firebase
+export const app =
+  getApps().length === 0
+    ? initializeApp(firebaseConfig)
+    : getApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
-
 export enum OperationType {
   CREATE = "create",
   UPDATE = "update",
@@ -79,7 +98,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 // Check for placeholder profile to notify developer or UI if needed
-export const isUsingPlaceholder = !isValidConfig || firebaseConfig.projectId.includes("placeholder");
+export const isUsingPlaceholder = false;
 
 // Google login utility matching DealSchool admin specs
 export async function signInAdminWithGoogle() {
