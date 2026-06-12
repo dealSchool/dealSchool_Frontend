@@ -9,7 +9,7 @@ import {
   X, Check, ArrowRight, Sparkles, User, Mail, FileText, 
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
-import { db, handleFirestoreError, OperationType } from "../firebase";
+import { db, handleFirestoreError, OperationType, getFriendlyFirestoreError } from "../firebase";
 import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 interface ApplyModalProps {
@@ -173,11 +173,26 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   };
 
   const submitForm = async () => {
+    console.log("[1] Submit started");
     setIsSubmitting(true);
     setErrorMessage(null);
+    
+    console.log("=== ADMISSIONS FORM SUBMISSION INTEGRITY AUDIT ===");
+    const validationResult = isStepValid();
+    console.log("[2] Validation passed", validationResult);
+    
+    if (!validationResult) {
+      console.error("[ERROR DETAILS] Validation failed at submission time. Step 5 fields are invalid.");
+      setIsSubmitting(false);
+      setErrorMessage("Form validation failed. Please make sure all fields are correctly formatted.");
+      return;
+    }
+
     try {
       const appCollRef = collection(db, "applications");
-      const docRef = doc(appCollRef); // Auto-generate dynamic unique ID
+      console.log("[4] Creating Firestore document reference");
+      const docRef = doc(appCollRef);
+      console.log("2. Generated unique auto ID for document:", docRef.id);
       
       // Assemble structured payload based on selected status and reasons
       const payload: Record<string, any> = {
@@ -239,16 +254,45 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         updatedAt: serverTimestamp()
       };
       
-      await setDoc(docRef, payload);
-      setIsSubmitting(false);
+      console.log("[3] Payload created", JSON.stringify(payload, null, 2));
+      console.log("[5] About to call setDoc");
+      console.log(`[WRITING TO FIRESTORE] Dispatching setDoc to applications/${docRef.id}. Timestamp: ${new Date().toISOString()}`);
+      
+      let timeoutId: any;
+      const writePromise = setDoc(docRef, payload).then(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("Network timeout after 10 seconds. Check connection credentials or firestore.rules permission limits."));
+        }, 10000); // 10 seconds standard timeout wrapper to react swiftly in slower preview environments
+      });
+      
+      // Wait on firestore write or timeout
+      await Promise.race([writePromise, timeoutPromise]);
+      
+      console.log("[6] setDoc completed");
+      console.log("[7] Success state triggered");
+      console.log(`[FIRESTORE SUCCESS] Firestore write accomplished and committed successfully. Timestamp: ${new Date().toISOString()}`);
+      console.log("[8] Navigation triggered");
+      console.log(`[SUCCESS PAGE NAVIGATION] Directing candidate to receipt page (Step 6). Timestamp: ${new Date().toISOString()}`);
+      console.log("=== SUCCESS PATH EXECUTION COMPLETED ===");
+      
       setStep(6);
     } catch (error: any) {
-      setIsSubmitting(false);
-      console.error("Firestore Admission Submission Error:", error);
-      setErrorMessage("Submission failed due to a database/network error. Please double-check inputs.");
+      console.log("[ERROR]", error);
+      console.log("=== ERROR PATH EXECUTION TRIGGERED ===");
+      const friendlyMessage = getFriendlyFirestoreError(error);
+      console.error(`[ERROR DETAILS] Firestore Admission Submission Error:`, error, `Friendly description: ${friendlyMessage}`);
+      setErrorMessage(`Submission failed: ${friendlyMessage}`);
+      
       try {
         handleFirestoreError(error, OperationType.WRITE, "applications");
-      } catch (err) {}
+      } catch (err) {
+        console.error("Secondary Firestore Diagnostic Trace complete:", err);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

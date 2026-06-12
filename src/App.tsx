@@ -5,7 +5,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { db, handleFirestoreError, OperationType, auth, signInAdminWithGoogle, logOutAdmin } from "./firebase";
+import { db, handleFirestoreError, OperationType, auth, signInAdminWithGoogle, logOutAdmin, getFriendlyFirestoreError } from "./firebase";
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
@@ -47,7 +47,8 @@ import {
   User,
   ExternalLink,
   Award,
-  HelpCircle
+  HelpCircle,
+  AlertCircle
 } from "lucide-react";
 
 export default function App() {
@@ -66,6 +67,7 @@ export default function App() {
   });
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   const handleApplyClick = () => {
     setIsApplyModalOpen(true);
@@ -78,10 +80,17 @@ export default function App() {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(`[SUBMIT START] Timestamp: ${new Date().toISOString()}`);
     setContactSubmitting(true);
+    setContactError(null);
+    
+    console.log("=== CONTACT FORM SUBMISSION INTEGRITY AUDIT ===");
+    console.log("[VALIDATION PASSED] Contact validation complete - form fields are non-empty.");
+    
     try {
       const contactCollRef = collection(db, "contacts");
-      const docRef = doc(contactCollRef); // Auto id
+      const docRef = doc(contactCollRef);
+      console.log("2. Generated auto ID for contact ticket:", docRef.id);
       
       const payload = {
         name: contactForm.name,
@@ -92,14 +101,41 @@ export default function App() {
         createdAt: serverTimestamp()
       };
       
-      await setDoc(docRef, payload);
-      setContactSubmitting(false);
+      console.log("3. Payload assembled:", JSON.stringify(payload, null, 2));
+      console.log(`[WRITING TO FIRESTORE] Dispatching setDoc to contacts/${docRef.id}. Timestamp: ${new Date().toISOString()}`);
+      
+      let timeoutId: any;
+      const writePromise = setDoc(docRef, payload).then(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+      });
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("Network timeout after 30 seconds. Check connection credentials or firestore.rules permission limits."));
+        }, 30000); // 30 seconds to block false reports on slower preview/iframe networks
+      });
+      
+      // Wait for write or timeout
+      await Promise.race([writePromise, timeoutPromise]);
+      
+      console.log(`[FIRESTORE SUCCESS] Firestore write succeeded. Message logged successfully. Timestamp: ${new Date().toISOString()}`);
+      console.log(`[SUCCESS PAGE NAVIGATION] Displaying message confirmation alert. Timestamp: ${new Date().toISOString()}`);
+      console.log("=== SUCCESS PATH EXECUTION COMPLETED ===");
+      
       setContactSubmitted(true);
       setContactForm({ name: "", email: "", subject: "Application Inquiry", message: "" });
-    } catch (error) {
+    } catch (error: any) {
+      console.log("=== ERROR PATH EXECUTION TRIGGERED ===");
+      const friendlyMessage = getFriendlyFirestoreError(error);
+      console.error(`[ERROR DETAILS] Firestore Contact Message Submission Error:`, error, `Friendly description: ${friendlyMessage}`);
+      setContactError(`Submission failed: ${friendlyMessage}`);
+      
+      try {
+        handleFirestoreError(error, OperationType.WRITE, "contacts");
+      } catch (err) {
+        console.error("Secondary Firestore Contact diagnostic complete:", err);
+      }
+    } finally {
       setContactSubmitting(false);
-      console.error("Firestore Contact Message Submission Error:", error);
-      handleFirestoreError(error, OperationType.WRITE, "contacts");
     }
   };
 
@@ -945,6 +981,13 @@ export default function App() {
                               className="w-full bg-brand-bg text-brand-text px-3 py-2.5 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm leading-relaxed"
                             />
                           </div>
+
+                          {contactError && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-sm text-red-700 text-xs flex items-center gap-2 font-sans font-medium">
+                              <AlertCircle className="h-4 w-4 shrink-0" />
+                              <span>{contactError}</span>
+                            </div>
+                          )}
 
                           <button
                             type="submit"

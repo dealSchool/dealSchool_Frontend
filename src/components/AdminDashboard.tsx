@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { db, auth, signInAdminWithGoogle, logOutAdmin, handleFirestoreError, OperationType, isUsingPlaceholder } from "../firebase";
+import { db, auth, signInAdminWithGoogle, logOutAdmin, handleFirestoreError, OperationType } from "../firebase";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { 
@@ -291,14 +291,6 @@ export const AdminDashboard: React.FC = () => {
             </p>
           </div>
 
-          {isUsingPlaceholder && (
-            <div className="bg-[#FAF7F0] border border-[#D4A62A]/30 p-4 rounded-sm text-left font-mono text-[9px] text-brand-secondary space-y-1">
-              <span className="font-bold block uppercase text-[#D4A62A]">🚀 SDK Placement Info:</span>
-              <p>Firebase configuration is currently using placeholder fallback parameters. Please ensure your environment credentials (VITE_FIREBASE_*) are set in `.env.local`.</p>
-              <p className="font-bold text-brand-neutral mt-1">To finalize: please direct the workspace to configure your local or Cloud environment variables.</p>
-            </div>
-          )}
-
           {dbError && (
             <div className="bg-red-55/10 border border-red-500/20 p-3 text-red-700 text-xs text-left flex gap-2">
               <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
@@ -326,15 +318,15 @@ export const AdminDashboard: React.FC = () => {
             <ShieldAlert className="h-6 w-6" />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h3 className="font-serif text-2xl font-bold text-brand-text">
               Access Restricted
             </h3>
-            <p className="font-serif italic text-sm text-brand-neutral">
-              Signed in as: <span className="font-bold not-italic text-brand-text">{currentUser.email}</span>
+            <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+              Your account is not authorized to access the DealSchool Supervisor Portal.
             </p>
             <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-              Your email is not validated in our active secure directory of GPs. Access is strictly audited and limited to authorized family-office members: <code className="bg-gray-100 px-1 py-0.5 rounded text-red-600 font-bold">{import.meta.env.VITE_ADMIN_EMAIL || "admin@dealschool.in"}</code>.
+              If you believe this is an error, please contact the DealSchool team.
             </p>
           </div>
 
@@ -343,7 +335,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={handleLogout}
               className="flex-1 py-3 bg-brand-secondary text-[#FAFAF8] font-mono text-xs font-bold uppercase hover:bg-brand-dark-blue cursor-pointer"
             >
-              Log in with standard admin
+              Sign Out
             </button>
           </div>
         </div>
