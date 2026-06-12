@@ -896,7 +896,7 @@ export default function App() {
                           <Globe className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
                           <div>
                             <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">PROGRAM STRUCTURE</span>
-                            <span className="font-bold text-brand-text">Online-First, Multi-Channel Hybrid Cohort</span>
+                            <span className="font-bold text-brand-text">Online-First</span>
                           </div>
                         </div>
                       </div>
