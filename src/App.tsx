@@ -280,9 +280,8 @@ export default function App() {
                     </div>
                   </div>
                 </section>
-
-                {/* SOCIAL PROOF (TESTIMONIALS) */}
-                <section className="py-20 border-b border-brand-secondary/10 bg-brand-bg/50">
+ {/* SOCIAL PROOF (TESTIMONIALS) */}
+                <section className="py-20 border-b border-[#111111]/10 bg-brand-bg/50">
                   <div className="max-w-7xl mx-auto px-4 md:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16">
                       <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
@@ -293,26 +292,30 @@ export default function App() {
                       </h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
                       {/* Testimonial 1 */}
                       <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-8 md:p-10 shadow-sm relative space-y-6 flex flex-col justify-between">
                         <span className="absolute top-4 right-6 text-7xl font-serif text-brand-accent/10 pointer-events-none select-none font-bold">&ldquo;</span>
-                        <p className="font-serif italic text-sm md:text-base text-brand-secondary leading-relaxed relative z-10">
-                          &ldquo;I&apos;d spent two years studying valuation models. DealSchool taught me what a founder actually sounds like in a pitch call — and how an investor decides in 20 minutes.&rdquo;
-                        </p>
-                        <div className="border-t border-brand-secondary/10 pt-4 font-mono text-[11px] font-bold text-brand-accent uppercase tracking-widest">
-                          &mdash; Cohort 1 Fellow, MBA Finance, Pune
+                        <div className="space-y-4 font-serif italic text-sm md:text-base text-brand-secondary leading-relaxed relative z-10 flex-grow">
+                          <p>
+                            &ldquo;My experience at DealSchool was a valuable introduction to the venture capital and startup ecosystem. I had the opportunity to engage with founders across a wide range of sectors and gain firsthand exposure to early-stage entrepreneurship. What I appreciated most was observing how investors evaluate opportunities, identify emerging trends, and support founders during the early stages of company building. The fellowship also connected me with a network of founders, operators, and investors, broadening my perspective on the startup ecosystem and strengthening my interest in venture investing. I am grateful to the DealSchool team for the mentorship, exposure, and learning opportunities they provided.&rdquo;
+                          </p>
+                        </div>
+                        <div className="border-t border-brand-secondary/10 pt-4 font-mono text-[11px] font-bold text-brand-accent uppercase tracking-widest mt-auto">
+                          &mdash; Anika Mathur
                         </div>
                       </div>
 
                       {/* Testimonial 2 */}
                       <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-8 md:p-10 shadow-sm relative space-y-6 flex flex-col justify-between">
                         <span className="absolute top-4 right-6 text-7xl font-serif text-brand-accent/10 pointer-events-none select-none font-bold">&ldquo;</span>
-                        <p className="font-serif italic text-sm md:text-base text-brand-secondary leading-relaxed relative z-10">
-                          &ldquo;The due diligence week changed how I think about financial analysis entirely. Numbers don&apos;t lie, but founders do — and I learned to tell the difference.&rdquo;
-                        </p>
-                        <div className="border-t border-brand-secondary/10 pt-4 font-mono text-[11px] font-bold text-brand-accent uppercase tracking-widest">
-                          &mdash; Cohort 1 Fellow, CA Finalist, Mumbai
+                        <div className="space-y-4 font-serif italic text-sm md:text-base text-brand-secondary leading-relaxed relative z-10 flex-grow">
+                          <p>
+                            &ldquo;My time at DealSchool was an incredible crash course in the startup world. I got to dive into the stories of 100+ early-stage founders, using qualitative data to understand their vision and figure out where they fit best. The highlight was teaming up with the other interns to run an online Pitch Day and it was incredibly rewarding to see one of the startups we shortlisted go on to secure funding from the board. This fellowship wasn&apos;t just about analyzing data, it taught me how to spot real potential and gave me a genuine look into how VC works.&rdquo;
+                          </p>
+                        </div>
+                        <div className="border-t border-brand-secondary/10 pt-4 font-mono text-[11px] font-bold text-brand-accent uppercase tracking-widest mt-auto">
+                          &mdash; Lakshit Jangid
                         </div>
                       </div>
                     </div>
@@ -656,7 +659,6 @@ export default function App() {
               </div>
             )}
 
-            {/* ----------------- PAGE 4: TEAM PAGE ----------------- */}
             {activePage === "team" && (
               <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8 space-y-16">
                 
@@ -798,44 +800,9 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* Rotating Ecosystem Mentors Block */}
-                <section className="space-y-8">
-                  <div>
-                    <h3 className="font-serif text-2xl font-bold text-brand-text">Ecosystem Mentors</h3>
-                    <p className="font-serif italic text-sm text-brand-neutral mt-1">
-                      Guest mentors include: Practicing VCs, startup founders, and operators. Mentors rotate by cohort. Participants receive direct access to active ecosystem participants.
-                    </p>
-                  </div>
-
-                  <div className="divide-y divide-brand-secondary/15 border-t border-b border-brand-secondary/15">
-                    {MENTORS.map((m, idx) => (
-                      <div key={idx} className="py-6 md:py-8 flex flex-col md:flex-row items-start justify-between gap-6 hover:bg-brand-secondary/5 transition-all">
-                        <div className="flex items-center gap-4 md:w-1/3">
-                          <div className="h-12 w-12 rounded-sm border border-brand-secondary flex items-center justify-center font-mono text-sm font-bold fg-brand-text bg-brand-bg select-none">
-                            {m.monochromeImage}
-                          </div>
-                          <div>
-                            <h4 className="font-serif font-bold text-brand-text text-sm md:text-base">{m.name}</h4>
-                            <span className="font-mono text-[9px] text-brand-neutral uppercase tracking-widest block font-bold">
-                              {m.role} &mdash; {m.firm}
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="font-serif italic text-xs md:text-sm text-brand-neutral md:w-1/3 leading-relaxed">
-                          {m.background}
-                        </p>
-
-                        <p className="font-sans text-xs text-brand-secondary md:w-1/3 leading-relaxed">
-                          {m.details}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
               </div>
             )}
+
 
             {/* ----------------- PAGE 5: CONTACT PAGE ----------------- */}
             {activePage === "contact" && (
