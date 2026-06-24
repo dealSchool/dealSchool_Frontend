@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DealSchoolLogo } from "./SVGIllustrations";
 import { Menu, X, ArrowUpRight } from "lucide-react";
 
 interface HeaderNavbarProps {
   onApplyClick: () => void;
-  activePage: "home" | "about" | "program" | "team" | "contact";
-  onChangePage: (page: "home" | "about" | "program" | "team" | "contact") => void;
+  activePage: "home" | "about" | "program" | "team" | "contact" | "admin";
+  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "admin") => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -20,6 +20,15 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen]);
+
   const navLinks = [
     { label: "Home", id: "home" as const },
     { label: "About", id: "about" as const },
@@ -28,7 +37,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     { label: "Contact", id: "contact" as const },
   ];
 
-  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact") => {
+  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "admin") => {
     setMobileMenuOpen(false);
     onChangePage(pageId);
     window.scrollTo({
@@ -86,6 +95,15 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
+
+      {/* Click-outside backdrop for mobile menu */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-[-1] lg:hidden"
+          aria-hidden="true"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
       {/* Mobile drawer panel */}
       {mobileMenuOpen && (

@@ -8,7 +8,7 @@ import { DealSchoolLogo } from "./SVGIllustrations";
 import { Mail, MapPin, ArrowUp, Phone } from "lucide-react";
 
 interface FooterPanelProps {
-  onChangePage?: (page: "home" | "about" | "program" | "team" | "contact") => void;
+  onChangePage?: (page: "home" | "about" | "program" | "team" | "contact" | "admin") => void;
 }
 
 export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
@@ -69,7 +69,7 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
             <button
               onClick={() => {
                 if (onChangePage) {
-                  onChangePage("admin" as any);
+                  onChangePage("admin");
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
               }}

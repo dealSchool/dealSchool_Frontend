@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { db, handleFirestoreError, OperationType, auth, signInAdminWithGoogle, logOutAdmin, getFriendlyFirestoreError } from "./firebase";
-import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp, onSnapshot } from "firebase/firestore";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { db, handleFirestoreError, OperationType, getFriendlyFirestoreError } from "./firebase";
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
   StaircaseIllustration,
   CertificateKeyIllustration,
@@ -19,7 +18,8 @@ import { ApplyModal } from "./components/ApplyModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
 import { AdminDashboard } from "./components/AdminDashboard";
-import { JOURNEY_STAGES, MENTORS, MEMO_SUB_PAGES, FOUNDERS_DATA } from "./data";
+import { PaymentCallback } from "./components/PaymentCallback";
+import { FOUNDERS_DATA } from "./data";
 import { 
   Compass, 
   Search, 
@@ -53,8 +53,20 @@ import {
 
 export default function App() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
-  const [activePage, setActivePage] = useState<"home" | "about" | "program" | "team" | "contact">("home");
-  
+  const [activePage, setActivePage] = useState<"home" | "about" | "program" | "team" | "contact" | "admin">("home");
+
+  // Razorpay payment callback — detected from URL query params on mount
+  const [paymentCallbackParams, setPaymentCallbackParams] = useState<URLSearchParams | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("razorpay_payment_link_id")) {
+      setPaymentCallbackParams(params);
+      // Remove query params from URL so the user doesn't see them on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Section 7: Memo Process page state (used on About Page or Program Page)
   const [activeMemoPage, setActiveMemoPage] = useState(0);
 
@@ -73,25 +85,20 @@ export default function App() {
     setIsApplyModalOpen(true);
   };
 
-  const handlePageChange = (pageId: "home" | "about" | "program" | "team" | "contact") => {
+  const handlePageChange = (pageId: "home" | "about" | "program" | "team" | "contact" | "admin") => {
     setActivePage(pageId);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`[SUBMIT START] Timestamp: ${new Date().toISOString()}`);
     setContactSubmitting(true);
     setContactError(null);
-    
-    console.log("=== CONTACT FORM SUBMISSION INTEGRITY AUDIT ===");
-    console.log("[VALIDATION PASSED] Contact validation complete - form fields are non-empty.");
-    
+
     try {
       const contactCollRef = collection(db, "contacts");
       const docRef = doc(contactCollRef);
-      console.log("2. Generated auto ID for contact ticket:", docRef.id);
-      
+
       const payload = {
         name: contactForm.name,
         email: contactForm.email,
@@ -100,40 +107,16 @@ export default function App() {
         status: "unread",
         createdAt: serverTimestamp()
       };
-      
-      console.log("3. Payload assembled:", JSON.stringify(payload, null, 2));
-      console.log(`[WRITING TO FIRESTORE] Dispatching setDoc to contacts/${docRef.id}. Timestamp: ${new Date().toISOString()}`);
-      
-      let timeoutId: any;
-      const writePromise = setDoc(docRef, payload).then(() => {
-        if (timeoutId) clearTimeout(timeoutId);
-      });
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error("Network timeout after 30 seconds. Check connection credentials or firestore.rules permission limits."));
-        }, 30000); // 30 seconds to block false reports on slower preview/iframe networks
-      });
-      
-      // Wait for write or timeout
-      await Promise.race([writePromise, timeoutPromise]);
-      
-      console.log(`[FIRESTORE SUCCESS] Firestore write succeeded. Message logged successfully. Timestamp: ${new Date().toISOString()}`);
-      console.log(`[SUCCESS PAGE NAVIGATION] Displaying message confirmation alert. Timestamp: ${new Date().toISOString()}`);
-      console.log("=== SUCCESS PATH EXECUTION COMPLETED ===");
-      
+
+      await setDoc(docRef, payload);
+
       setContactSubmitted(true);
       setContactForm({ name: "", email: "", subject: "Application Inquiry", message: "" });
     } catch (error: any) {
-      console.log("=== ERROR PATH EXECUTION TRIGGERED ===");
       const friendlyMessage = getFriendlyFirestoreError(error);
-      console.error(`[ERROR DETAILS] Firestore Contact Message Submission Error:`, error, `Friendly description: ${friendlyMessage}`);
+      console.error("Firestore contact submission error:", error.code || error.message);
       setContactError(`Submission failed: ${friendlyMessage}`);
-      
-      try {
-        handleFirestoreError(error, OperationType.WRITE, "contacts");
-      } catch (err) {
-        console.error("Secondary Firestore Contact diagnostic complete:", err);
-      }
+      handleFirestoreError(error, OperationType.WRITE, "contacts");
     } finally {
       setContactSubmitting(false);
     }
@@ -176,7 +159,7 @@ export default function App() {
                           An Initiative by Middha Ventures
                         </span>
                         
-                        <h1 className="font-serif text-5xl sm:text-6xl md:text-[68px] leading-[0.95] md:leading-[0.9] font-serif italic text-brand-text tracking-tight mb-8">
+                        <h1 className="font-serif italic text-5xl sm:text-6xl md:text-[68px] leading-[0.95] md:leading-[0.9] text-brand-text tracking-tight mb-8">
                           Built for those who want a <span className="text-brand-accent">seat at the table</span>, <span className="block font-sans not-italic font-bold text-brand-text mt-3 md:mt-4">not a seat in the classroom.</span>
                         </h1>
                         
@@ -717,7 +700,7 @@ export default function App() {
                               </ul>
                             ) : (
                               <div className="text-xs font-serif italic text-brand-neutral/60 py-1">
-                                Details to be supplemented
+                                Professional background on file
                               </div>
                             )}
                           </div>
@@ -737,7 +720,7 @@ export default function App() {
                                 </div>
                               ) : (
                                 <div className="text-xs font-sans text-brand-neutral/60 italic py-1">
-                                  Information pending
+                                  Prior engagements on file
                                 </div>
                               )}
                             </div>
@@ -789,7 +772,7 @@ export default function App() {
                               </ul>
                             ) : (
                               <div className="text-[10px] font-mono text-brand-neutral/60 uppercase">
-                                Credentials pending
+                                Academic records on file
                               </div>
                             )}
                           </div>
@@ -992,7 +975,7 @@ export default function App() {
                           </div>
 
                           <button
-                            onClick={() => setContactSubmitted(false)}
+                            onClick={() => { setContactSubmitted(false); setContactError(null); }}
                             className="px-6 py-2 bg-brand-secondary text-brand-bg font-mono text-[10px] font-bold uppercase rounded-sm hover:bg-brand-text transition-colors cursor-pointer"
                           >
                             Submit Another Query
@@ -1006,7 +989,7 @@ export default function App() {
               </div>
             )}
 
-            {activePage === "admin" as any && (
+            {activePage === "admin" && (
               <AdminDashboard />
             )}
 
@@ -1016,6 +999,14 @@ export default function App() {
 
       {/* GLOBAL FOOTER REFERENCES */}
       <FooterPanel onChangePage={handlePageChange} />
+
+      {/* Razorpay payment callback overlay */}
+      {paymentCallbackParams && (
+        <PaymentCallback
+          params={paymentCallbackParams}
+          onClose={() => setPaymentCallbackParams(null)}
+        />
+      )}
 
       {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
       <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />

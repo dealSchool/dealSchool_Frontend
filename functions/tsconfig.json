@@ -6,7 +6,10 @@
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "es2021"
+    "skipLibCheck": true,
+    "target": "es2021",
+    "esModuleInterop": true,
+    "jsx": "react-jsx"
   },
   "compileOnSave": true,
   "include": [

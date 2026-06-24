@@ -1,282 +1,769 @@
-import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
+import * as crypto from "crypto";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { Resend } from "resend";
+import Razorpay from "razorpay";
+import {
+  renderAppReceivedCandidate,
+  renderAppReceivedAdmin,
+  renderContactInquiryAdmin,
+  renderAppUnderReview,
+  renderInterviewInvited,
+  renderAppDeclined,
+  renderPaymentLinkEmail,
+  renderPaymentReceiptEmail,
+} from "./emailTemplates";
 
 admin.initializeApp();
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@dealschool.in";
-
 const CANDIDATE_SENDER = "DealSchool <fellows@dealschool.in>";
-const ADMIN_SENDER = "DealSchool Engine <alerts@dealschool.in>";
-const CONTACT_SENDER = "DealSchool HelpDesk <alerts@dealschool.in>";
+const ADMIN_SENDER    = "DealSchool Engine <alerts@dealschool.in>";
+const CONTACT_SENDER  = "DealSchool HelpDesk <alerts@dealschool.in>";
 
-// Triggered on new Fellowship Applications with secure secrets injection
-export const onNewApplication = functions.runWith({ secrets: ["RESEND_API_KEY"] }).firestore
-  .document("applications/{applicationId}")
-  .onCreate(async (snap) => {
+// ---------------------------------------------------------------------------
+// TRIGGER: onNewApplication
+// Fires on new document in applications/{applicationId}.
+// Sends candidate confirmation email + admin notification email.
+// ---------------------------------------------------------------------------
+export const onNewApplication = onDocumentCreated(
+  {
+    document: "applications/{applicationId}",
+    secrets: ["RESEND_API_KEY", "ADMIN_EMAIL"],
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const data = snap.data();
     if (!data) return;
 
     logger.info("Application received", { applicationId: snap.id });
 
-    const emailSent = data.emailSent === true;
+    const emailSent     = data.emailSent     === true;
     const adminNotified = data.adminNotified === true;
 
     if (emailSent && adminNotified) {
-      logger.info("Application already processed completely. Skipping duplicate dispatch.", { applicationId: snap.id });
+      logger.info("Already processed. Skipping.", { applicationId: snap.id });
       return;
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      logger.warn("Resend API Key is missing. Email dispatch skipped.", { applicationId: snap.id });
-      return;
+      throw new Error("RESEND_API_KEY secret is not configured.");
     }
 
-    logger.info("Resend initialized", { applicationId: snap.id });
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@dealschool.in";
     const resend = new Resend(resendApiKey);
 
-    const { 
+    const {
       fullName, mobileNumber, email, linkedinUrl, city, currentStatus,
       collegeName, degree, graduationYear, currentRole, companyName,
       degreeEducationalBackground, yearsOfExperience, startupName,
       industrySector, startupLinkedinProfile, areaOfWork, freelancerLinkedinProfile,
       otherStatusSpecify, primaryReason, primaryReasonOther,
-      assessmentQ1, assessmentQ2, assessmentQ3, resumeLink, resumeUrl, discoverySource, discoverySourceOther
+      assessmentQ1, assessmentQ2, assessmentQ3, resumeLink, resumeUrl,
+      discoverySource, discoverySourceOther,
     } = data;
 
+    // Derive affiliation display from applicant type
     let affiliationLabel = "Affiliation Detail";
     let affiliationValue = "Core Curriculum";
     if (currentStatus === "Student") {
       affiliationLabel = "College / University";
-      affiliationValue = collegeName || "Unspecified College";
-    } else if (currentStatus === "Working Professional" || currentStatus === "Recent Graduate (0–2 years of experience)") {
+      affiliationValue = String(collegeName || "Unspecified College");
+    } else if (
+      currentStatus === "Working Professional" ||
+      currentStatus === "Recent Graduate (0–2 years of experience)"
+    ) {
       affiliationLabel = "Organization / Company";
-      affiliationValue = companyName || "Unspecified Company";
+      affiliationValue = String(companyName || "Unspecified Company");
     } else if (currentStatus === "Founder") {
       affiliationLabel = "Founded Venture";
-      affiliationValue = startupName || "Unspecified Startup";
+      affiliationValue = String(startupName || "Unspecified Startup");
     }
 
-    // 1. Send candidate confirmation email
+    // 1. Candidate confirmation
     if (!emailSent) {
       try {
-        if (!email) {
-          throw new Error("Missing candidate email address in database payload.");
-        }
+        if (!email) throw new Error("Missing candidate email in payload.");
+
         await resend.emails.send({
           from: CANDIDATE_SENDER,
-          to: email,
+          to: String(email),
           subject: "Resume Received | DealSchool Fellowship Underwriting",
-          html: `
-            <div style="font-family: Georgia, serif; padding: 32px; background-color: #FCFAF6; color: #111111; max-width: 600px; margin: 0 auto; border: 1px solid rgba(17,17,17,0.1);">
-              <div style="border-bottom: 2px solid #D4A62A; padding-bottom: 12px; margin-bottom: 24px;">
-                <h2 style="font-style: italic; margin: 0; color: #152238;">DEALSCHOOL</h2>
-                <span style="font-family: monospace; font-size: 8px; letter-spacing: 2px; color: #D4A62A; text-transform: uppercase;">Middha Ventures Family Office Desk</span>
-              </div>
-              
-              <p style="font-size: 14px; line-height: 1.6;">Dear <strong>${fullName}</strong>,</p>
-              
-              <p style="font-size: 14px; line-height: 1.6; font-style: italic; color: #555555; background: rgba(212,166,42,0.05); padding: 12px; border-left: 2px solid #D4A62A;">
-                &ldquo;Built for those who want a seat at the table, not a seat in the classroom.&rdquo;
-              </p>
-              
-              <p style="font-size: 14px; line-height: 1.6;">
-                We have successfully received your enrollment credentials and sector thesis focus for the fellowship program. Our GP partners are actively evaluating early-stage venture resumes for our upcoming Cohort.
-              </p>
-              
-              <h4 style="font-family: monospace; font-size: 11px; margin: 20px 0 8px 0; letter-spacing: 1.5px; text-transform: uppercase; color: #D4A62A;">Resume Confirmation Snapshot:</h4>
-              <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: sans-serif; margin-bottom: 24px;">
-                <tr>
-                  <td style="padding: 8px 0; font-weight: bold; width: 160px; border-bottom: 1px solid rgba(0,0,0,0.05); text-transform: uppercase; font-size: 10px; color:#555;">Alignment:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05);">${currentStatus}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; font-weight: bold; width: 160px; border-bottom: 1px solid rgba(0,0,0,0.05); text-transform: uppercase; font-size: 10px; color:#555;">${affiliationLabel}:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05);">${affiliationValue}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; font-weight: bold; border-bottom: 1px solid rgba(0,0,0,0.05); text-transform: uppercase; font-size: 10px; color:#555;">Primary Motivation:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); color: #D4A62A; font-weight: bold;">${primaryReason === "Other" ? (primaryReasonOther || "Other Purpose") : primaryReason}</td>
-                </tr>
-              </table>
-              
-              <p style="font-size: 13px; line-height: 1.6; color: #666666;">
-                No further operational actions are required on your side. Nominated fellows will be paired with interview parameters within Navi Mumbai or remotely.
-              </p>
-              
-              <div style="border-top: 1px solid rgba(17,17,17,0.1); padding-top: 16px; margin-top: 32px; font-size: 11px; font-family: monospace; color: #888888; line-height: 1.5;">
-                Kind regards,<br/>
-                <strong>Admissions Desk & General Partners</strong><br/>
-                Middha Ventures Family Office
-              </div>
-            </div>
-          `,
+          html: renderAppReceivedCandidate({
+            fullName:        String(fullName || ""),
+            currentStatus:   String(currentStatus || ""),
+            affiliationLabel,
+            affiliationValue,
+            primaryReason:
+              primaryReason === "Other"
+                ? String(primaryReasonOther || "Other Purpose")
+                : String(primaryReason || ""),
+          }),
         });
+
         logger.info("Candidate email sent", { applicationId: snap.id, email });
-        // Persist progress to prevent duplicates on retries
-        await snap.ref.update({ emailSent: true });
       } catch (err: any) {
-        logger.error("Email dispatch failed", { error: err.message || err, applicationId: snap.id, type: "candidate" });
+        logger.error("Candidate email failed", { error: err.message || err, applicationId: snap.id });
         throw err;
+      }
+      try {
+        await snap.ref.update({ emailSent: true });
+      } catch (flagErr: any) {
+        logger.warn("Could not set emailSent flag", { error: flagErr.message || flagErr });
       }
     }
 
-    // 2. Notify GP Supervisor
+    // 2. Admin notification
     if (!adminNotified) {
       try {
-        // Assemble structural HTML table of all status information
-        let statusDetailsHtml = "";
-        if (currentStatus === "Student") {
-          statusDetailsHtml = `
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">College Name:</td><td style="padding:4px;">${collegeName || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Degree Course:</td><td style="padding:4px;">${degree || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Graduation Year:</td><td style="padding:4px;">${graduationYear || ""}</td></tr>
-          `;
-        } else if (currentStatus === "Recent Graduate (0–2 years of experience)") {
-          statusDetailsHtml = `
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Current Role:</td><td style="padding:4px;">${currentRole || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Company Name:</td><td style="padding:4px;">${companyName || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Graduation Year:</td><td style="padding:4px;">${graduationYear || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Degree/Background:</td><td style="padding:4px;">${degreeEducationalBackground || ""}</td></tr>
-          `;
-        } else if (currentStatus === "Working Professional") {
-          statusDetailsHtml = `
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Current Role:</td><td style="padding:4px;">${currentRole || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Company Name:</td><td style="padding:4px;">${companyName || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Experience Duration:</td><td style="padding:4px;">${yearsOfExperience || ""}</td></tr>
-          `;
-        } else if (currentStatus === "Founder") {
-          statusDetailsHtml = `
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Startup Name:</td><td style="padding:4px;">${startupName || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Startup Domain:</td><td style="padding:4px;">${industrySector || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Startup LinkedIn:</td><td style="padding:4px;"><a href="${startupLinkedinProfile || ''}">${startupLinkedinProfile || ''}</a></td></tr>
-          `;
-        } else if (currentStatus === "Freelancer") {
-          statusDetailsHtml = `
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Area of Work:</td><td style="padding:4px;">${areaOfWork || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Experience Duration:</td><td style="padding:4px;">${yearsOfExperience || ""}</td></tr>
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">LinkedIn Profile:</td><td style="padding:4px;"><a href="${freelancerLinkedinProfile || ''}">${freelancerLinkedinProfile || ''}</a></td></tr>
-          `;
-        } else if (currentStatus === "Other") {
-          statusDetailsHtml = `
-            <tr><td style="padding:4px;font-weight:bold;color:#444;">Other Detail:</td><td style="padding:4px;">${otherStatusSpecify || ""}</td></tr>
-          `;
-        }
-
         await resend.emails.send({
           from: ADMIN_SENDER,
-          to: ADMIN_EMAIL,
-          subject: `[Admissions] New Fellowship Application: ${fullName}`,
-          html: `
-            <div style="font-family: sans-serif; padding: 24px; color: #111111; max-width: 650px; border: 1px solid #ddd; border-radius: 4px;">
-              <h3 style="color: #152238; border-bottom: 2px solid #D4A62A; padding-bottom: 10px; margin-bottom: 20px;">
-                New Candidate Admission Application & Resume Received
-              </h3>
-              
-              <p style="font-size: 15px; margin-bottom: 15px;"><strong>Candidate Name:</strong> ${fullName}</p>
-              
-              <h4 style="margin: 15px 0 5px 0; color: #152238; border-bottom: 1px solid #f0f0f0; padding-bottom: 3px; font-size:12px; text-transform:uppercase;">1. Core Coordinates</h4>
-              <p style="font-size:13px; margin: 4px 0;"><strong>Mobile Target:</strong> ${mobileNumber}</p>
-              <p style="font-size:13px; margin: 4px 0;"><strong>Enterprise Email:</strong> ${email}</p>
-              <p style="font-size:13px; margin: 4px 0;"><strong>City Base:</strong> ${city}</p>
-              <p style="font-size:13px; margin: 4px 0;"><strong>LinkedIn URL:</strong> <a href="${linkedinUrl}" target="_blank">${linkedinUrl}</a></p>
-              
-              <h4 style="margin: 20px 0 5px 0; color: #152238; border-bottom: 1px solid #f0f0f0; padding-bottom: 3px; font-size:12px; text-transform:uppercase;">2. Alignment Profile: ${currentStatus}</h4>
-              <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:5px;">
-                ${statusDetailsHtml}
-              </table>
-
-              <h4 style="margin: 20px 0 5px 0; color: #152238; border-bottom: 1px solid #f0f0f0; padding-bottom: 3px; font-size:12px; text-transform:uppercase;">3. Objective & Support</h4>
-              <p style="font-size:13px; margin:4px 0;"><strong>Primary Reason:</strong> ${primaryReason === "Other" ? primaryReasonOther : primaryReason}</p>
-              <p style="font-size:13px; margin:4px 0;"><strong>Discovery Channel:</strong> ${discoverySource === "Other" ? discoverySourceOther : discoverySource}</p>
-              <p style="font-size:13px; margin:4px 0;"><strong>Resume Link:</strong> <a href="${resumeLink || resumeUrl}" style="color:#d4a62a; font-weight:bold;" target="_blank">View Candidate Resume</a></p>
-              
-              <h4 style="margin: 20px 0 5px 0; color: #152238; border-bottom: 1px solid #f0f0f0; padding-bottom: 3px; font-size:12px; text-transform:uppercase;">4. Underwriting Assessments</h4>
-              
-              <div style="background-color: #FCFAF6; border-left: 3px solid #D4A62A; padding: 12px; margin-top: 10px; font-size: 13px; line-height:1.5;">
-                <p style="margin:0 0 6px 0; font-weight:bold; color:#152238; font-size:11px;">Scenario Response (Fast growth but high cash-burn marketing):</p>
-                <p style="margin:0; color:#333; font-style:italic;">"${assessmentQ1}"</p>
-              </div>
-
-              <div style="background-color: #FCFAF6; border-left: 3px solid #D4A62A; padding: 12px; margin-top: 12px; font-size: 13px; line-height:1.5;">
-                <p style="margin:0 0 6px 0; font-weight:bold; color:#152238; font-size:11px;">10-Year ₹10 Lakhs Thesis Segment Choose:</p>
-                <p style="margin:0; color:#333; font-style:italic;">"${assessmentQ2}"</p>
-              </div>
-              
-              <p style="font-size:13px; margin-top:12px;"><strong>What matters most in early-stage:</strong> <span style="background-color:#152238; color:white; padding:2px 8px; border-radius:3px; font-family:monospace; font-size:11px; font-weight:bold;">${assessmentQ3}</span></p>
-
-              <p style="font-size: 11px; color: #888; margin-top: 32px; border-top: 1px solid #eee; padding-top: 12px; font-family: monospace;">
-                This notification was pushed securely by DealSchool triggers. Review stats, update status, or initiate candidate interviews in the Admin dashboard.
-              </p>
-            </div>
-          `,
+          to: adminEmail,
+          subject: `[Admissions] New Fellowship Application: ${String(fullName || "")}`,
+          html: renderAppReceivedAdmin({
+            fullName:          String(fullName || ""),
+            email:             String(email || ""),
+            mobileNumber:      String(mobileNumber || ""),
+            city:              String(city || ""),
+            linkedinUrl:       String(linkedinUrl || ""),
+            currentStatus:     String(currentStatus || ""),
+            collegeName,
+            degree,
+            graduationYear,
+            currentRole,
+            companyName,
+            yearsOfExperience,
+            degreeEducationalBackground,
+            startupName,
+            industrySector,
+            startupLinkedinProfile,
+            areaOfWork,
+            freelancerLinkedinProfile,
+            otherStatusSpecify,
+            primaryReason:       String(primaryReason || ""),
+            primaryReasonOther,
+            discoverySource:     String(discoverySource || ""),
+            discoverySourceOther,
+            resumeUrl:           String(resumeLink || resumeUrl || ""),
+            assessmentQ1:        String(assessmentQ1 || ""),
+            assessmentQ2:        String(assessmentQ2 || ""),
+            assessmentQ3:        String(assessmentQ3 || ""),
+          }),
         });
-        logger.info("Admin notification sent", { applicationId: snap.id, adminEmail: ADMIN_EMAIL });
-        // Set adminNotified progress
-        await snap.ref.update({ adminNotified: true });
+
+        logger.info("Admin notification sent", { applicationId: snap.id, adminEmail });
       } catch (err: any) {
-        logger.error("Email dispatch failed", { error: err.message || err, applicationId: snap.id, type: "admin" });
+        logger.error("Admin email failed", { error: err.message || err, applicationId: snap.id });
         throw err;
       }
+      try {
+        await snap.ref.update({ adminNotified: true });
+      } catch (flagErr: any) {
+        logger.warn("Could not set adminNotified flag", { error: flagErr.message || flagErr });
+      }
     }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// TRIGGER: onApplicationStatusChange
+// Fires on every application document update.
+// Sends personalised email to the applicant when admin changes status to:
+//   under_review      → "Auditing" button
+//   interview_invited → "Invite Interview" button
+//   declined          → "Decline" button
+// "accepted" is handled separately by onApplicationAccepted.
+// ---------------------------------------------------------------------------
+export const onApplicationStatusChange = onDocumentUpdated(
+  {
+    document: "applications/{applicationId}",
+    secrets: ["RESEND_API_KEY"],
+  },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+    if (!before || !after) return;
+
+    const prevStatus = before.status;
+    const newStatus  = after.status;
+
+    if (prevStatus === newStatus) return;
+
+    const handledStatuses = ["under_review", "interview_invited", "declined"];
+    if (!handledStatuses.includes(newStatus)) return;
+
+    // One idempotency flag per status to prevent duplicate sends on retries
+    const flagField = `${newStatus}EmailSent`;
+    if (after[flagField] === true) {
+      logger.info(`${flagField} already set, skipping`, { applicationId: event.params.applicationId });
+      return;
+    }
+
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) throw new Error("RESEND_API_KEY not configured.");
+
+    const applicantEmail = after.email;
+    const fullName       = String(after.fullName || "Applicant");
+
+    if (!applicantEmail) {
+      logger.error("onApplicationStatusChange: missing email", { applicationId: event.params.applicationId });
+      return;
+    }
+
+    const resend = new Resend(resendApiKey);
+    let subject = "";
+    let html    = "";
+
+    if (newStatus === "under_review") {
+      subject = "Your DealSchool Application is Now Under Review";
+      html    = renderAppUnderReview({ fullName });
+    } else if (newStatus === "interview_invited") {
+      subject = "You've Been Invited to Interview — DealSchool Fellowship";
+      html    = renderInterviewInvited({ fullName });
+    } else {
+      subject = "DealSchool Fellowship Application — Update";
+      html    = renderAppDeclined({ fullName });
+    }
+
+    try {
+      await resend.emails.send({
+        from:    CANDIDATE_SENDER,
+        to:      String(applicantEmail),
+        subject,
+        html,
+      });
+      logger.info(`${newStatus} email sent`, {
+        applicationId: event.params.applicationId,
+        email: applicantEmail,
+      });
+    } catch (err: any) {
+      logger.error(`${newStatus} email failed`, {
+        error: err.message || err,
+        applicationId: event.params.applicationId,
+      });
+      throw err;
+    }
+
+    try {
+      await event.data!.after.ref.update({ [flagField]: true });
+    } catch (flagErr: any) {
+      logger.warn(`Could not set ${flagField}`, { error: flagErr.message || flagErr });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// RAZORPAY HELPERS
+// ---------------------------------------------------------------------------
+
+function getRazorpay(): Razorpay {
+  return new Razorpay({
+    key_id:     process.env.RAZORPAY_KEY_ID!,
+    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  });
+}
+
+async function isAdminUser(uid: string, email: string, emailVerified: boolean): Promise<boolean> {
+  if (!emailVerified) return false;
+  if (email === "admin@dealschool.in") return true;
+  const snap = await admin.firestore().collection("admins").doc(uid).get();
+  return snap.exists;
+}
+
+async function createAndSendPaymentLink(applicationId: string): Promise<void> {
+  const db     = admin.firestore();
+  const appRef = db.collection("applications").doc(applicationId);
+
+  // Optimistic lock — only one execution proceeds
+  let alreadyProcessing = false;
+  await db.runTransaction(async (t) => {
+    const doc = await t.get(appRef);
+    const d   = doc.data();
+    if (!d || d.paymentStatus) {
+      alreadyProcessing = true;
+      return;
+    }
+    t.update(appRef, { paymentStatus: "processing" });
   });
 
-// Triggered on new Contact Message logs with secure secrets injection
-export const onNewContactMessage = functions.runWith({ secrets: ["RESEND_API_KEY"] }).firestore
-  .document("contacts/{contactId}")
-  .onCreate(async (snap) => {
+  if (alreadyProcessing) {
+    logger.info("Payment link already being processed or exists", { applicationId });
+    return;
+  }
+
+  const appSnap = await appRef.get();
+  const appData = appSnap.data();
+  if (!appData) {
+    logger.error("Application document not found after lock", { applicationId });
+    await appRef.update({ paymentStatus: "error" });
+    return;
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    await appRef.update({ paymentStatus: "error" });
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  const feePaise   = parseInt(process.env.FELLOWSHIP_FEE_PAISE || "10000", 10);
+  const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:3000/";
+
+  let paymentLink: any;
+  try {
+    const rzp        = getRazorpay();
+    const expiryUnix = Math.floor(Date.now() / 1000) + 900; // 15 minutes
+
+    paymentLink = await rzp.paymentLink.create({
+      amount:       feePaise,
+      currency:     "INR",
+      description:  "DealSchool Fellowship Program Fee",
+      reference_id: applicationId,
+      expire_by:    expiryUnix,
+      customer: {
+        name:    String(appData.fullName     || ""),
+        email:   String(appData.email        || ""),
+        contact: String(appData.mobileNumber || ""),
+      },
+      notify:          { sms: false, email: false },
+      reminder_enable: false,
+      callback_url:    appBaseUrl,
+      callback_method: "get",
+      notes: {
+        applicationId,
+        source: "dealschool-auto",
+      },
+    });
+  } catch (rzpErr: any) {
+    logger.error("Razorpay payment link creation failed", { applicationId, error: rzpErr.message || rzpErr });
+    await appRef.update({ paymentStatus: "error" });
+    return;
+  }
+
+  const linkId:  string = paymentLink.id;
+  const linkUrl: string = paymentLink.short_url;
+  const expiresAt = admin.firestore.Timestamp.fromDate(
+    new Date((paymentLink.expire_by as number) * 1000)
+  );
+
+  await db.collection("payments").doc(applicationId).set({
+    applicationId,
+    applicantName:     appData.fullName     || "",
+    applicantEmail:    appData.email        || "",
+    applicantPhone:    appData.mobileNumber || "",
+    amount:            feePaise,
+    currency:          "INR",
+    rzpPaymentLinkId:  linkId,
+    rzpPaymentLinkUrl: linkUrl,
+    status:            "link_created",
+    expiresAt,
+    processedWebhookIds: [],
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await appRef.update({
+    paymentStatus:     "link_sent",
+    rzpPaymentLinkId:  linkId,
+    paymentLinkSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt:         admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  const resend     = new Resend(resendApiKey);
+  const feeDisplay = `₹${(feePaise / 100).toFixed(0)}`;
+
+  try {
+    await resend.emails.send({
+      from:    CANDIDATE_SENDER,
+      to:      String(appData.email),
+      subject: "Your DealSchool Fellowship Offer — Action Required",
+      html:    renderPaymentLinkEmail({
+        fullName:   String(appData.fullName || ""),
+        linkUrl,
+        feeDisplay,
+      }),
+    });
+    await db.collection("payments").doc(applicationId).update({
+      emailSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    logger.info("Payment link email sent", { applicationId, email: appData.email });
+  } catch (emailErr: any) {
+    // Email failure is non-fatal — payment link still exists in Firestore
+    logger.error("Payment link email failed", { applicationId, error: emailErr.message || emailErr });
+  }
+}
+
+async function sendPaymentConfirmationEmail(
+  applicantEmail: string,
+  applicantName: string,
+  rzpPaymentId: string,
+  feePaise: number
+): Promise<void> {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) return;
+
+  const resend     = new Resend(resendApiKey);
+  const feeDisplay = `₹${(feePaise / 100).toFixed(0)}`;
+
+  try {
+    await resend.emails.send({
+      from:    CANDIDATE_SENDER,
+      to:      applicantEmail,
+      subject: "Payment Confirmed — Welcome to DealSchool!",
+      html:    renderPaymentReceiptEmail({ applicantName, feeDisplay, rzpPaymentId }),
+    });
+    logger.info("Payment confirmation email sent", { applicantEmail, rzpPaymentId });
+  } catch (err: any) {
+    logger.error("Payment confirmation email failed", { error: err.message || err });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TRIGGER: onApplicationAccepted
+// Creates Razorpay payment link when admin transitions status to "accepted".
+// ---------------------------------------------------------------------------
+export const onApplicationAccepted = onDocumentUpdated(
+  {
+    document: "applications/{applicationId}",
+    secrets: ["RESEND_API_KEY", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "FELLOWSHIP_FEE_PAISE", "APP_BASE_URL"],
+  },
+  async (event) => {
+    const before = event.data?.before;
+    const after  = event.data?.after;
+    if (!before || !after) return;
+
+    const beforeData = before.data();
+    const afterData  = after.data();
+    if (!beforeData || !afterData) return;
+
+    if (beforeData.status === "accepted" || afterData.status !== "accepted") return;
+
+    if (afterData.paymentStatus) {
+      logger.info("onApplicationAccepted: paymentStatus already set, skipping", {
+        applicationId: event.params.applicationId,
+        paymentStatus: afterData.paymentStatus,
+      });
+      return;
+    }
+
+    logger.info("onApplicationAccepted: creating payment link", { applicationId: event.params.applicationId });
+
+    try {
+      await createAndSendPaymentLink(event.params.applicationId);
+    } catch (err: any) {
+      logger.error("onApplicationAccepted: unhandled error", {
+        applicationId: event.params.applicationId,
+        error: err.message || err,
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// FUNCTION: razorpayWebhook
+// Receives payment events from Razorpay.
+// Events to enable in Razorpay Dashboard: payment_link.paid | payment_link.expired
+// ---------------------------------------------------------------------------
+export const razorpayWebhook = onRequest(
+  {
+    secrets: ["RAZORPAY_WEBHOOK_SECRET", "RESEND_API_KEY", "FELLOWSHIP_FEE_PAISE"],
+    cors: false,
+  },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+    const rawBody = (req as any).rawBody as Buffer | undefined;
+    if (!rawBody) {
+      logger.error("razorpayWebhook: rawBody unavailable");
+      res.status(400).send("No body");
+      return;
+    }
+
+    const incomingSig = req.headers["x-razorpay-signature"] as string | undefined;
+    if (!incomingSig) {
+      logger.warn("razorpayWebhook: missing signature header");
+      res.status(400).send("Missing signature");
+      return;
+    }
+
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET!;
+    const expectedSig   = crypto
+      .createHmac("sha256", webhookSecret)
+      .update(rawBody)
+      .digest("hex");
+
+    let sigValid = false;
+    try {
+      const expectedBuf = Buffer.from(expectedSig, "hex");
+      const incomingBuf = Buffer.from(incomingSig, "hex");
+      sigValid =
+        expectedBuf.length === incomingBuf.length &&
+        crypto.timingSafeEqual(expectedBuf, incomingBuf);
+    } catch {
+      sigValid = false;
+    }
+
+    if (!sigValid) {
+      logger.warn("razorpayWebhook: signature verification failed");
+      res.status(400).send("Invalid signature");
+      return;
+    }
+
+    const event         = req.body as any;
+    const eventType:      string = event.event || "";
+    const webhookEventId: string = event.id    || "";
+
+    logger.info("razorpayWebhook: received event", { eventType, webhookEventId });
+
+    if (eventType === "payment_link.paid") {
+      const paymentEntity = event.payload?.payment?.entity;
+      const linkEntity    = event.payload?.payment_link?.entity;
+
+      if (!paymentEntity || !linkEntity) {
+        logger.error("razorpayWebhook: malformed payload", { eventType });
+        res.status(200).send("OK");
+        return;
+      }
+
+      const rzpPaymentId:     string = paymentEntity.id;
+      const rzpPaymentLinkId: string = linkEntity.id;
+      const applicationId:    string = linkEntity.notes?.applicationId || linkEntity.reference_id || "";
+      const paidAmountPaise:  number = paymentEntity.amount;
+
+      if (!applicationId) {
+        logger.error("razorpayWebhook: applicationId missing in notes", { rzpPaymentLinkId });
+        res.status(200).send("OK");
+        return;
+      }
+
+      const db         = admin.firestore();
+      const paymentRef = db.collection("payments").doc(applicationId);
+      const appRef     = db.collection("applications").doc(applicationId);
+
+      const paymentSnap = await paymentRef.get();
+      if (paymentSnap.exists) {
+        const existing = paymentSnap.data()!;
+        if ((existing.processedWebhookIds as string[]).includes(webhookEventId)) {
+          logger.info("razorpayWebhook: duplicate event, skipping", { webhookEventId });
+          res.status(200).send("OK");
+          return;
+        }
+        if (existing.status === "paid") {
+          logger.info("razorpayWebhook: already paid, skipping", { applicationId });
+          res.status(200).send("OK");
+          return;
+        }
+      }
+
+      // Cross-verify with Razorpay API before marking paid
+      try {
+        const rzp         = getRazorpay();
+        const linkDetails = await rzp.paymentLink.fetch(rzpPaymentLinkId);
+        const feePaise    = parseInt(process.env.FELLOWSHIP_FEE_PAISE || "10000", 10);
+
+        if (linkDetails.status !== "paid" || (linkDetails.amount as number) !== feePaise) {
+          logger.warn("razorpayWebhook: API verification failed", {
+            apiStatus:      linkDetails.status,
+            apiAmount:      linkDetails.amount,
+            expectedAmount: feePaise,
+            webhookAmount:  paidAmountPaise,
+          });
+          res.status(200).send("OK");
+          return;
+        }
+      } catch (verifyErr: any) {
+        logger.error("razorpayWebhook: Razorpay API verification threw", { error: verifyErr.message || verifyErr });
+        res.status(200).send("OK");
+        return;
+      }
+
+      await db.runTransaction(async (t) => {
+        t.set(
+          paymentRef,
+          {
+            rzpPaymentId,
+            status:    "paid",
+            paidAt:    admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            processedWebhookIds: admin.firestore.FieldValue.arrayUnion(webhookEventId),
+          },
+          { merge: true }
+        );
+        t.set(
+          appRef,
+          {
+            paymentStatus: "paid",
+            rzpPaymentId,
+            paidAt:    admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      });
+
+      logger.info("razorpayWebhook: payment marked as paid", { applicationId, rzpPaymentId });
+
+      const appSnap = await appRef.get();
+      const appData = appSnap.data();
+      if (appData?.email) {
+        const feePaise = parseInt(process.env.FELLOWSHIP_FEE_PAISE || "10000", 10);
+        await sendPaymentConfirmationEmail(
+          String(appData.email),
+          String(appData.fullName || "Fellow"),
+          rzpPaymentId,
+          feePaise
+        );
+      }
+
+    } else if (eventType === "payment_link.expired") {
+      const linkEntity = event.payload?.payment_link?.entity;
+      if (!linkEntity) {
+        res.status(200).send("OK");
+        return;
+      }
+
+      const applicationId: string =
+        linkEntity.notes?.applicationId || linkEntity.reference_id || "";
+      if (!applicationId) {
+        res.status(200).send("OK");
+        return;
+      }
+
+      const db = admin.firestore();
+      await db.collection("payments").doc(applicationId).set(
+        { status: "expired", updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+      await db.collection("applications").doc(applicationId).set(
+        { paymentStatus: "expired", updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+      logger.info("razorpayWebhook: payment link expired", { applicationId });
+    }
+
+    res.status(200).send("OK");
+  }
+);
+
+// ---------------------------------------------------------------------------
+// FUNCTION: resendPaymentLink
+// Admin-callable to regenerate a payment link for expired/errored applications.
+// ---------------------------------------------------------------------------
+export const resendPaymentLink = onCall(
+  {
+    secrets: ["RESEND_API_KEY", "RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "FELLOWSHIP_FEE_PAISE", "APP_BASE_URL"],
+  },
+  async (request) => {
+    if (!request.auth || !request.auth.token.email_verified) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+
+    const authorized = await isAdminUser(
+      request.auth.uid,
+      request.auth.token.email || "",
+      request.auth.token.email_verified
+    );
+    if (!authorized) {
+      throw new HttpsError("permission-denied", "Admin access required.");
+    }
+
+    const { applicationId } = request.data as { applicationId?: string };
+    if (!applicationId || typeof applicationId !== "string") {
+      throw new HttpsError("invalid-argument", "applicationId is required.");
+    }
+
+    const db      = admin.firestore();
+    const appSnap = await db.collection("applications").doc(applicationId).get();
+    if (!appSnap.exists) {
+      throw new HttpsError("not-found", "Application not found.");
+    }
+
+    const appData = appSnap.data()!;
+    if (appData.status !== "accepted") {
+      throw new HttpsError("failed-precondition", "Application must be in accepted status.");
+    }
+
+    const allowedPaymentStatuses = ["expired", "error", "failed", "link_sent"];
+    if (appData.paymentStatus && !allowedPaymentStatuses.includes(appData.paymentStatus)) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Cannot resend — current payment status: ${appData.paymentStatus}`
+      );
+    }
+
+    await db.collection("applications").doc(applicationId).update({ paymentStatus: null });
+
+    try {
+      await createAndSendPaymentLink(applicationId);
+    } catch (err: any) {
+      throw new HttpsError("internal", `Failed to create payment link: ${err.message}`);
+    }
+
+    return { success: true };
+  }
+);
+
+// ---------------------------------------------------------------------------
+// TRIGGER: onNewContactMessage
+// Fires on new document in contacts/{contactId}.
+// Sends admin notification email for contact form submissions.
+// ---------------------------------------------------------------------------
+export const onNewContactMessage = onDocumentCreated(
+  {
+    document: "contacts/{contactId}",
+    secrets: ["RESEND_API_KEY", "ADMIN_EMAIL"],
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const data = snap.data();
     if (!data) return;
 
     logger.info("Contact inquiry received", { contactId: snap.id });
 
-    const adminNotified = data.adminNotified === true;
-    if (adminNotified) {
-      logger.info("Contact inquiry already processed completely. Skipping duplicate dispatch.", { contactId: snap.id });
+    if (data.adminNotified === true) {
+      logger.info("Already processed. Skipping.", { contactId: snap.id });
       return;
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      logger.warn("Resend API Key is missing. Email dispatch skipped.", { contactId: snap.id });
-      return;
+      throw new Error("RESEND_API_KEY secret is not configured.");
     }
 
-    logger.info("Resend initialized", { contactId: snap.id });
-    const resend = new Resend(resendApiKey);
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@dealschool.in";
+    const resend     = new Resend(resendApiKey);
     const { name, email, subject, message } = data;
 
     try {
       await resend.emails.send({
-        from: CONTACT_SENDER,
-        to: ADMIN_EMAIL,
-        subject: `[Inquiry Ticket] From ${name}: ${subject}`,
-        html: `
-          <div style="font-family: sans-serif; padding: 24px; color: #111111;">
-            <h3 style="color: #152238; border-bottom: 1px solid #111111; padding-bottom: 10px; margin-bottom: 20px;">
-              New Support Inquiry Ticket Created
-            </h3>
-            <p><strong>Sender Full Name:</strong> ${name}</p>
-            <p><strong>Sender Email Address:</strong> ${email}</p>
-            <p><strong>Subject Segment:</strong> ${subject}</p>
-            
-            <div style="background-color: #fafafa; border: 1px solid #eee; padding: 16px; margin-top: 20px; border-radius: 4px;">
-              <h4 style="margin: 0 0 8px 0; font-size: 11px; color: #888; font-family: monospace; text-transform: uppercase;">Inquiry Message Content:</h4>
-              <p style="font-size: 13px; white-space: pre-wrap; line-height: 1.6; margin: 0; color: #333;">${message}</p>
-            </div>
-            
-            <p style="font-size: 11px; color: #888; margin-top: 32px; border-top: 1px solid #eee; padding-top: 12px;">
-              Inspect ticket queues, resolve, or archive messages in real-time within the [Admin Portal].
-            </p>
-          </div>
-        `,
+        from:    CONTACT_SENDER,
+        to:      adminEmail,
+        subject: `[Inquiry Ticket] From ${String(name || "")}: ${String(subject || "")}`,
+        html:    renderContactInquiryAdmin({
+          name:    String(name    || ""),
+          email:   String(email   || ""),
+          subject: String(subject || ""),
+          message: String(message || ""),
+        }),
       });
-      logger.info("Admin notification sent", { contactId: snap.id, adminEmail: ADMIN_EMAIL });
-      await snap.ref.update({ adminNotified: true });
+      logger.info("Admin notification sent", { contactId: snap.id, adminEmail });
     } catch (err: any) {
-      logger.error("Email dispatch failed", { error: err.message || err, contactId: snap.id });
+      logger.error("Contact email failed", { error: err.message || err, contactId: snap.id });
       throw err;
     }
-  });
+
+    try {
+      await snap.ref.update({ adminNotified: true });
+    } catch (flagErr: any) {
+      logger.warn("Could not set adminNotified flag", { error: flagErr.message || flagErr });
+    }
+  }
+);

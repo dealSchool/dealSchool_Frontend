@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  X, Check, ArrowRight, Sparkles, User, Mail, FileText, 
+import {
+  X, Check, ArrowRight, Sparkles, User, Mail, FileText,
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
 import { db, handleFirestoreError, OperationType, getFriendlyFirestoreError } from "../firebase";
@@ -17,13 +17,20 @@ interface ApplyModalProps {
   onClose: () => void;
 }
 
+// Basic phone format: must start with + or digit, then 5–19 digits/spaces/dashes/parens
+const PHONE_REGEX = /^[+\d][\d\s\-(). ]{4,18}$/;
+
 export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submittedDocId, setSubmittedDocId] = useState<string>("");
 
   // Resume Link State
   const [resumeLinkError, setResumeLinkError] = useState<string | null>(null);
+
+  // Ref for modal container — used for focus trap
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -33,29 +40,29 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     linkedinUrl: "",
     city: "",
     currentStatus: "",
-    
+
     // Student fields
     collegeName: "",
     degree: "",
     graduationYear: "",
-    
+
     // Recent Graduate fields
     currentRole: "",
     companyName: "",
     degreeEducationalBackground: "",
-    
+
     // Working Professional fields
     yearsOfExperience: "",
-    
+
     // Founder fields
     startupName: "",
     industrySector: "",
     startupLinkedinProfile: "",
-    
+
     // Freelancer fields
     areaOfWork: "",
     freelancerLinkedinProfile: "",
-    
+
     // Other fields
     otherStatusSpecify: "",
 
@@ -73,6 +80,51 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     discoverySource: "",
     discoverySourceOther: ""
   });
+
+  // Focus trap + Escape key handler
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusableSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    // Move focus to first focusable element on open / step change
+    const focusable: HTMLElement[] = Array.from(modal.querySelectorAll<HTMLElement>(focusableSelector));
+    if (focusable.length > 0) {
+      focusable[0].focus();
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        resetAndClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      // Re-query on each tab press since step content changes
+      const focusableNow: HTMLElement[] = Array.from(modal.querySelectorAll<HTMLElement>(focusableSelector));
+      const first = focusableNow[0];
+      const last = focusableNow[focusableNow.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -93,17 +145,17 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     if (step === 1) {
       return (
         formData.fullName.trim() !== "" &&
-        formData.mobileNumber.trim() !== "" &&
+        PHONE_REGEX.test(formData.mobileNumber.trim()) &&
         formData.email.trim() !== "" &&
         formData.email.includes("@") &&
         formData.linkedinUrl.trim() !== "" &&
         formData.city.trim() !== ""
       );
     }
-    
+
     if (step === 2) {
       if (!formData.currentStatus) return false;
-      
+
       switch (formData.currentStatus) {
         case "Student":
           return (
@@ -173,16 +225,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   };
 
   const submitForm = async () => {
-    console.log("[1] Submit started");
     setIsSubmitting(true);
     setErrorMessage(null);
-    
-    console.log("=== ADMISSIONS FORM SUBMISSION INTEGRITY AUDIT ===");
-    const validationResult = isStepValid();
-    console.log("[2] Validation passed", validationResult);
-    
-    if (!validationResult) {
-      console.error("[ERROR DETAILS] Validation failed at submission time. Step 5 fields are invalid.");
+
+    if (!isStepValid()) {
       setIsSubmitting(false);
       setErrorMessage("Form validation failed. Please make sure all fields are correctly formatted.");
       return;
@@ -190,10 +236,8 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
     try {
       const appCollRef = collection(db, "applications");
-      console.log("[4] Creating Firestore document reference");
       const docRef = doc(appCollRef);
-      console.log("2. Generated unique auto ID for document:", docRef.id);
-      
+
       // Assemble structured payload based on selected status and reasons
       const payload: Record<string, any> = {
         fullName: formData.fullName,
@@ -202,7 +246,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         linkedinUrl: formData.linkedinUrl,
         city: formData.city,
         currentStatus: formData.currentStatus,
-        
+
         // Include ONLY relevant fields from conditional sections
         ...(formData.currentStatus === "Student" && {
           collegeName: formData.collegeName,
@@ -253,44 +297,17 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
-      
-      console.log("[3] Payload created", JSON.stringify(payload, null, 2));
-      console.log("[5] About to call setDoc");
-      console.log(`[WRITING TO FIRESTORE] Dispatching setDoc to applications/${docRef.id}. Timestamp: ${new Date().toISOString()}`);
-      
-      let timeoutId: any;
-      const writePromise = setDoc(docRef, payload).then(() => {
-        if (timeoutId) clearTimeout(timeoutId);
-      });
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error("Network timeout after 10 seconds. Check connection credentials or firestore.rules permission limits."));
-        }, 10000); // 10 seconds standard timeout wrapper to react swiftly in slower preview environments
-      });
-      
-      // Wait on firestore write or timeout
-      await Promise.race([writePromise, timeoutPromise]);
-      
-      console.log("[6] setDoc completed");
-      console.log("[7] Success state triggered");
-      console.log(`[FIRESTORE SUCCESS] Firestore write accomplished and committed successfully. Timestamp: ${new Date().toISOString()}`);
-      console.log("[8] Navigation triggered");
-      console.log(`[SUCCESS PAGE NAVIGATION] Directing candidate to receipt page (Step 6). Timestamp: ${new Date().toISOString()}`);
-      console.log("=== SUCCESS PATH EXECUTION COMPLETED ===");
-      
+
+      // Direct write — Firebase SDK handles retries and timeouts internally
+      await setDoc(docRef, payload);
+
+      setSubmittedDocId(docRef.id);
       setStep(6);
     } catch (error: any) {
-      console.log("[ERROR]", error);
-      console.log("=== ERROR PATH EXECUTION TRIGGERED ===");
       const friendlyMessage = getFriendlyFirestoreError(error);
-      console.error(`[ERROR DETAILS] Firestore Admission Submission Error:`, error, `Friendly description: ${friendlyMessage}`);
+      console.error("Firestore application submission error:", error.code || error.message);
       setErrorMessage(`Submission failed: ${friendlyMessage}`);
-      
-      try {
-        handleFirestoreError(error, OperationType.WRITE, "applications");
-      } catch (err) {
-        console.error("Secondary Firestore Diagnostic Trace complete:", err);
-      }
+      handleFirestoreError(error, OperationType.WRITE, "applications");
     } finally {
       setIsSubmitting(false);
     }
@@ -303,6 +320,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       setStep(1);
       setResumeLinkError(null);
       setErrorMessage(null);
+      setSubmittedDocId("");
       setFormData({
         fullName: "",
         mobileNumber: "",
@@ -346,11 +364,16 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
             exit={{ opacity: 0 }}
             onClick={resetAndClose}
             className="fixed inset-0 bg-[#111111]/70 backdrop-blur-xs"
+            aria-hidden="true"
           />
 
           {/* Modal Centered position */}
           <div className="flex min-h-full items-center justify-center p-4 md:p-6 relative z-10">
             <motion.div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-step-title"
               initial={{ scale: 0.96, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 15 }}
@@ -359,6 +382,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
             >
               <button
                 onClick={resetAndClose}
+                aria-label="Close application form"
                 className="absolute top-4 right-4 p-1.5 rounded-sm hover:bg-brand-secondary/5 text-brand-neutral hover:text-brand-text transition-all cursor-pointer"
                 id="modal-close-btn"
               >
@@ -393,7 +417,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       Admissions Flow 2026
                     </span>
-                    <h4 className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
+                    <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Candidate Specifications
                     </h4>
                     <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
@@ -436,9 +460,19 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             value={formData.mobileNumber}
                             onChange={handleInputChange}
                             placeholder="+91 XXXXX XXXXX"
-                            className="w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                            className={`w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10 transition-colors ${
+                              formData.mobileNumber && !PHONE_REGEX.test(formData.mobileNumber.trim())
+                                ? "border-red-400"
+                                : "border-brand-secondary/15"
+                            }`}
                           />
                         </div>
+                        {formData.mobileNumber && !PHONE_REGEX.test(formData.mobileNumber.trim()) && (
+                          <p className="text-red-600 text-[10px] flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3 shrink-0" />
+                            Enter a valid phone number (e.g. +91 98765 43210)
+                          </p>
+                        )}
                       </div>
 
                       {/* Email Profile */}
@@ -519,7 +553,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       Functional Position
                     </span>
-                    <h4 className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
+                    <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Professional Trajectory
                     </h4>
                     <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
@@ -862,7 +896,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       MEMBERSHIP FOCUS
                     </span>
-                    <h4 className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
+                    <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Motivation & Intent
                     </h4>
                     <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
@@ -936,7 +970,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       Analytical Lens
                     </span>
-                    <h4 className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
+                    <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Assessment & Thinking Framework
                     </h4>
                     <p className="font-sans text-[11.5px] text-brand-neutral leading-relaxed">
@@ -1032,7 +1066,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       RESUME HANDSHAKE
                     </span>
-                    <h4 className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
+                    <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Resume Link
                     </h4>
                     <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
@@ -1074,7 +1108,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           }`}
                         />
                       </div>
-                      
+
                       {resumeLinkError && (
                         <p className="text-red-700 text-[10px] font-semibold mt-1 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3 shrink-0" />
@@ -1166,8 +1200,8 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.25em] font-bold block uppercase">
                       Credentials Received
                     </span>
-                    <h3 className="font-serif text-xl md:text-2xl font-bold text-brand-text">
-                      Resume Link Received
+                    <h3 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text">
+                      Application Submitted
                     </h3>
                     <p className="font-serif italic text-xs md:text-sm text-brand-neutral">
                       Welcome to the DealSchool Sourcing Hub, {formData.fullName}.
@@ -1185,8 +1219,8 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       <span className="font-bold text-brand-accent">FALL CYCLE 1 INCUBATE</span>
                     </div>
                     <div className="flex justify-between border-b border-brand-secondary/5 pb-1">
-                      <span className="text-brand-neutral font-bold">DOCKET ID:</span>
-                      <span className="font-bold">DS-AD-{Math.floor(100000 + Math.random() * 900000)}</span>
+                      <span className="text-brand-neutral font-bold">REF ID:</span>
+                      <span className="font-bold">DS-{submittedDocId.substring(0, 8).toUpperCase()}</span>
                     </div>
                     <p className="text-[9px] text-brand-neutral leading-relaxed pt-2">
                       Our selection committee, in concert with Middha Ventures General Partners, will inspect your financial and technological thesis answers. Expect interview parameters inside 5 enterprise days.

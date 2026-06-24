@@ -1,5 +1,9 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut,
+  signInWithEmailAndPassword, sendPasswordResetEmail,
+  updatePassword, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Define required environment variables list
@@ -23,7 +27,6 @@ const firebaseConfig = {
 };
 
 // Check for missing variables
-console.log("DIAGNOSTIC - import.meta.env:", import.meta.env);
 const missingVars = requiredVars.filter(varName => {
   const val = import.meta.env[varName];
   return !val || val === "" || val.includes("placeholder");
@@ -44,9 +47,6 @@ if (!isValidConfig) {
   }
   throw new Error(errorMsg);
 }
-
-// Check for placeholder profile to notify developer or UI if needed
-export const isUsingPlaceholder = false;
 
 // Dynamic initialization to avoid re-binding errors across HMR refresh
 export const app = getApps().length === 0 
@@ -85,7 +85,7 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): void {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -102,8 +102,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error("Firestore Diagnostic Trace Error: ", JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.error("Firestore Diagnostic Trace:", JSON.stringify(errInfo));
 }
 
 export function getFriendlyFirestoreError(error: any): string {
@@ -130,6 +129,66 @@ export function getFriendlyFirestoreError(error: any): string {
       }
       return msg || "An internal error occurred during submission.";
   }
+}
+
+// Maps Firebase Auth error codes to human-readable messages.
+export function getFriendlyAuthError(err: any): string {
+  const code = String(err?.code || "");
+  switch (code) {
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+    case "auth/invalid-credential":
+      return "Invalid email or password.";
+    case "auth/too-many-requests":
+      return "Too many failed attempts. Please try again later.";
+    case "auth/user-disabled":
+      return "This account has been disabled.";
+    case "auth/weak-password":
+      return "Password must be at least 6 characters.";
+    case "auth/requires-recent-login":
+      return "Please re-enter your current password to continue.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection and try again.";
+    default:
+      return err?.message || "An unexpected error occurred. Please try again.";
+  }
+}
+
+// Email + password login via Firebase Auth directly (no Cloud Functions needed).
+export async function signInAdminWithEmail(email: string, password: string): Promise<void> {
+  await signInWithEmailAndPassword(auth, email, password);
+}
+
+// Sends Firebase Auth password reset email (Firebase handles delivery — no SMTP needed).
+export async function callAdminForgotPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+}
+
+// Returns true if the current user signed in with Google (no email/password provider).
+export function isGoogleOnlyUser(): boolean {
+  const user = auth.currentUser;
+  if (!user) return false;
+  return !user.providerData.some((p) => p.providerId === "password");
+}
+
+// Re-authenticates via Google popup then sets the new password.
+export async function adminReauthGoogleAndChangePassword(newPassword: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not authenticated.");
+  await reauthenticateWithPopup(user, googleProvider);
+  await updatePassword(user, newPassword);
+}
+
+// Re-authenticates with current email/password then sets the new password.
+export async function adminReauthAndChangePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user?.email) throw new Error("Not authenticated.");
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
 }
 
 // Google login utility matching DealSchool admin specs

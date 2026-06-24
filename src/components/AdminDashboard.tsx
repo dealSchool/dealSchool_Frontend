@@ -1,41 +1,63 @@
 import React, { useState, useEffect } from "react";
-import { db, auth, signInAdminWithGoogle, logOutAdmin, handleFirestoreError, OperationType } from "../firebase";
+import { db, auth, app, logOutAdmin, handleFirestoreError, OperationType } from "../firebase";
+import { FellowshipApplication, ContactMessage } from "../types";
+import { AdminLoginForm } from "./AdminLoginForm";
+import { AdminForgotPassword } from "./AdminForgotPassword";
+import { AdminChangePassword } from "./AdminChangePassword";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { 
-  Search, 
-  Filter, 
-  ShieldAlert, 
-  Shield, 
-  LogIn, 
-  LogOut, 
-  Check, 
-  X, 
-  Clock, 
-  Mail, 
-  Calendar, 
-  Award, 
-  Trash2, 
-  AlertTriangle, 
-  CheckCircle2, 
-  UserCheck, 
-  ChevronRight, 
-  User, 
+import {
+  Search,
+  ShieldAlert,
+  LogOut,
+  X,
+  Mail,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  User,
   Building,
   ExternalLink,
   MessageSquare,
   MapPin,
-  FileSpreadsheet
+  KeyRound,
+  CreditCard,
+  RefreshCw
 } from "lucide-react";
 
 export const AdminDashboard: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [applications, setApplications] = useState<FellowshipApplication[]>([]);
+  const [contacts, setContacts] = useState<ContactMessage[]>([]);
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  const [adminView, setAdminView] = useState<"login" | "forgotPassword">("login");
+
+  // Change password modal
+  const [showChangePassword, setShowChangePassword] = useState(false);
+
+  // Custom confirm modal
+  const [confirmModal, setConfirmModal] = useState<{
+    message: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const showConfirm = (message: string, onConfirm: () => Promise<void>) => {
+    setConfirmModal({ message, onConfirm });
+  };
 
   // Tabs: "applications" | "contacts"
   const [activeTab, setActiveTab] = useState<"applications" | "contacts">("applications");
@@ -49,21 +71,21 @@ export const AdminDashboard: React.FC = () => {
   const [contactStatusFilter, setContactStatusFilter] = useState("all");
 
   // Detailed selected records
-  const [selectedApp, setSelectedApp] = useState<any | null>(null);
-  const [selectedContact, setSelectedContact] = useState<any | null>(null);
+  const [selectedApp, setSelectedApp] = useState<FellowshipApplication | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactMessage | null>(null);
 
-  // Auth State Listener
+  // Payment link resend loading
+  const [resendingPaymentLink, setResendingPaymentLink] = useState(false);
+
+  // Auth State Listener — authorization is enforced server-side by Firestore rules.
+  // Any authenticated user is allowed to attempt data access; Firestore will reject
+  // unauthorized reads with permission-denied, which triggers the Access Restricted screen.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setIsAuthChecking(false);
-      
-      // Check if user is the authorized admin email
       if (user) {
-        const email = user.email || "";
-        const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || "admin@dealschool.in";
-        const authorized = email === adminEmail;
-        setIsAdminAuthorized(authorized);
+        setIsAdminAuthorized(true);
       } else {
         setIsAdminAuthorized(false);
       }
@@ -91,16 +113,18 @@ export const AdminDashboard: React.FC = () => {
     const unsubApps = onSnapshot(
       applicationsQuery,
       (snapshot) => {
-        const appsList: any[] = [];
-        snapshot.forEach((doc) => {
-          appsList.push({ id: doc.id, ...doc.data() });
-        });
+        const appsList = snapshot.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as FellowshipApplication)
+        );
         setApplications(appsList);
         setDbLoading(false);
       },
       (error) => {
         console.error("Firestore applications subscription failed:", error);
-        setDbError("Access denied. Please ensure your user email is authorized in firestore.rules.");
+        if ((error as any).code === "permission-denied") {
+          setIsAdminAuthorized(false);
+        }
+        setDbError("Access denied. Your Google account is not authorized for this portal.");
         setDbLoading(false);
       }
     );
@@ -114,10 +138,9 @@ export const AdminDashboard: React.FC = () => {
     const unsubContacts = onSnapshot(
       contactsQuery,
       (snapshot) => {
-        const contactsList: any[] = [];
-        snapshot.forEach((doc) => {
-          contactsList.push({ id: doc.id, ...doc.data() });
-        });
+        const contactsList = snapshot.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as ContactMessage)
+        );
         setContacts(contactsList);
       },
       (error) => {
@@ -132,16 +155,6 @@ export const AdminDashboard: React.FC = () => {
   }, [currentUser, isAdminAuthorized]);
 
   // Auth Handlers
-  const handleLogin = async () => {
-    try {
-      setDbError(null);
-      await signInAdminWithGoogle();
-    } catch (err: any) {
-      console.error("Login failure:", err);
-      setDbError(err.message || "Unable to complete Google Authentication.");
-    }
-  };
-
   const handleLogout = async () => {
     try {
       await logOutAdmin();
@@ -153,58 +166,83 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Status Action Handler for Applications
-  const handleUpdateAppStatus = async (appId: string, transitionStatus: string) => {
+  const handleUpdateAppStatus = async (appId: string, transitionStatus: FellowshipApplication["status"]) => {
     try {
       const docRef = doc(db, "applications", appId);
       await updateDoc(docRef, {
         status: transitionStatus,
         updatedAt: serverTimestamp()
       });
-      // Sync selected modal context
       if (selectedApp && selectedApp.id === appId) {
-        setSelectedApp((prev: any) => ({ ...prev, status: transitionStatus }));
+        setSelectedApp((prev) => prev ? { ...prev, status: transitionStatus } : null);
       }
     } catch (err: any) {
       console.error("Error updating application status:", err);
-      alert(`Status update failed: ${err.message}`);
+      showToast(`Status update failed: ${err.message}`, "error");
       handleFirestoreError(err, OperationType.UPDATE, `applications/${appId}`);
     }
   };
 
   // Delete Record Handler for Applications
-  const handleDeleteApplication = async (appId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this application record?")) return;
-    try {
-      await deleteDoc(doc(db, "applications", appId));
-      setSelectedApp(null);
-    } catch (err: any) {
-      alert(`Delete operation failed: ${err.message}`);
-      handleFirestoreError(err, OperationType.DELETE, `applications/${appId}`);
-    }
+  const handleDeleteApplication = (appId: string) => {
+    showConfirm(
+      "Are you sure you want to permanently delete this application record?",
+      async () => {
+        try {
+          await deleteDoc(doc(db, "applications", appId));
+          setSelectedApp(null);
+        } catch (err: any) {
+          console.error("Error deleting application:", err);
+          showToast(`Delete operation failed: ${err.message}`, "error");
+          handleFirestoreError(err, OperationType.DELETE, `applications/${appId}`);
+        }
+      }
+    );
   };
 
   // Message Actions for Inquiries
-  const handleUpdateContactStatus = async (contactId: string, targetStatus: string) => {
+  const handleUpdateContactStatus = async (contactId: string, targetStatus: ContactMessage["status"]) => {
     try {
       const docRef = doc(db, "contacts", contactId);
       await updateDoc(docRef, { status: targetStatus });
       if (selectedContact && selectedContact.id === contactId) {
-        setSelectedContact((prev: any) => ({ ...prev, status: targetStatus }));
+        setSelectedContact((prev) => prev ? { ...prev, status: targetStatus } : null);
       }
     } catch (err: any) {
       console.error("Error updating enquiry status:", err);
+      showToast(`Status update failed: ${err.message}`, "error");
       handleFirestoreError(err, OperationType.UPDATE, `contacts/${contactId}`);
     }
   };
 
-  const handleDeleteContact = async (contactId: string) => {
-    if (!window.confirm("Are you sure you want to remove this general inquiry archive?")) return;
+  const handleDeleteContact = (contactId: string) => {
+    showConfirm(
+      "Are you sure you want to remove this general inquiry archive?",
+      async () => {
+        try {
+          await deleteDoc(doc(db, "contacts", contactId));
+          setSelectedContact(null);
+        } catch (err: any) {
+          console.error("Error deleting contact:", err);
+          showToast(`Delete inquiry failed: ${err.message}`, "error");
+          handleFirestoreError(err, OperationType.DELETE, `contacts/${contactId}`);
+        }
+      }
+    );
+  };
+
+  // Resend payment link via Cloud Function
+  const handleResendPaymentLink = async (appId: string) => {
+    setResendingPaymentLink(true);
     try {
-      await deleteDoc(doc(db, "contacts", contactId));
-      setSelectedContact(null);
+      const functions = getFunctions(app);
+      const resendLink = httpsCallable(functions, "resendPaymentLink");
+      await resendLink({ applicationId: appId });
+      showToast("Payment link resent successfully!", "success");
     } catch (err: any) {
-      alert(`Delete inquiry failed: ${err.message}`);
-      handleFirestoreError(err, OperationType.DELETE, `contacts/${contactId}`);
+      showToast(`Resend failed: ${err.message}`, "error");
+    } finally {
+      setResendingPaymentLink(false);
     }
   };
 
@@ -245,10 +283,11 @@ export const AdminDashboard: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Render Time Cleanly
+  // Render Time Cleanly — guards against Firestore Timestamps, plain dates, and invalid values
   const renderTimestamp = (timestampObj: any) => {
     if (!timestampObj) return "N/A";
     const date = timestampObj?.toDate ? timestampObj.toDate() : new Date(timestampObj);
+    if (isNaN(date.getTime())) return "Unknown date";
     return date.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
@@ -270,43 +309,12 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // Login Screen
+  // Login / Forgot Password / Reset Password screens
   if (!currentUser) {
-    return (
-      <section className="py-24 max-w-7xl mx-auto px-4 md:px-8">
-        <div className="max-w-md mx-auto bg-brand-bg border border-brand-secondary/15 rounded-sm p-8 shadow-xl text-center space-y-6">
-          <div className="mx-auto h-12 w-12 bg-brand-accent/10 border border-[#D4A62A]/25 rounded-md flex items-center justify-center text-brand-accent">
-            <Shield className="h-6 w-6" />
-          </div>
-          
-          <div className="space-y-2">
-            <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.25em] font-bold block uppercase">
-              Admissions Underwriting Login
-            </span>
-            <h3 className="font-serif text-2xl font-bold text-brand-text">
-              Supervisor Portal
-            </h3>
-            <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-              Unlock real-time view over candidate enrollment queues, application underwriting records, and institutional feedback channels.
-            </p>
-          </div>
-
-          {dbError && (
-            <div className="bg-red-55/10 border border-red-500/20 p-3 text-red-700 text-xs text-left flex gap-2">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>{dbError}</span>
-            </div>
-          )}
-
-          <button
-            onClick={handleLogin}
-            className="w-full py-4 bg-brand-secondary hover:bg-brand-dark-blue text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-brand-secondary/25"
-          >
-            <LogIn className="h-4 w-4 text-brand-accent" /> Log In with Enterprise Google
-          </button>
-        </div>
-      </section>
-    );
+    if (adminView === "forgotPassword") {
+      return <AdminForgotPassword onBack={() => setAdminView("login")} />;
+    }
+    return <AdminLoginForm onForgotPassword={() => setAdminView("forgotPassword")} />;
   }
 
   // Not Authorized Screen
@@ -348,10 +356,12 @@ export const AdminDashboard: React.FC = () => {
   const pendingApps = applications.filter(a => a.status === "pending").length;
   const underReviewApps = applications.filter(a => a.status === "under_review").length;
   const acceptedApps = applications.filter(a => a.status === "accepted").length;
+  const paidApps = applications.filter(a => a.paymentStatus === "paid").length;
   const totalContacts = contacts.length;
   const unreadContacts = contacts.filter(c => c.status === "unread").length;
 
   return (
+    <>
     <div className="py-8 max-w-7xl mx-auto px-4 md:px-8 space-y-8 animate-fade-in">
       
       {/* Top Admin Header */}
@@ -373,16 +383,24 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleLogout}
-          className="bg-transparent border border-brand-secondary/25 text-brand-secondary hover:bg-brand-secondary hover:text-brand-bg px-5 py-2.5 font-mono text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer self-start md:self-center"
-        >
-          <LogOut className="h-3.5 w-3.5" /> Sign Out
-        </button>
+        <div className="flex items-center gap-3 self-start md:self-center">
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="bg-transparent border border-brand-accent/30 text-brand-accent hover:bg-brand-accent/10 px-4 py-2.5 font-mono text-xs uppercase tracking-wider transition-all duration-300 flex items-center gap-2 cursor-pointer"
+          >
+            <KeyRound className="h-3.5 w-3.5" /> Change Password
+          </button>
+          <button
+            onClick={handleLogout}
+            className="bg-transparent border border-brand-secondary/25 text-brand-secondary hover:bg-brand-secondary hover:text-brand-bg px-5 py-2.5 font-mono text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="bg-brand-bg border border-brand-secondary/10 p-4 rounded-sm shadow-xs">
           <span className="block font-mono text-[9px] text-brand-neutral uppercase tracking-widest">Applications Recv</span>
           <span className="block font-serif text-3xl font-black text-brand-text mt-1">{totalApps}</span>
@@ -398,6 +416,10 @@ export const AdminDashboard: React.FC = () => {
         <div className="bg-brand-bg border border-brand-secondary/10 p-4 rounded-sm shadow-xs">
           <span className="block font-mono text-[9px] text-green-700 uppercase tracking-widest font-semibold">Accepted Fellows</span>
           <span className="block font-serif text-3xl font-black text-green-700 mt-1">{acceptedApps}</span>
+        </div>
+        <div className="bg-brand-bg border border-brand-secondary/10 p-4 rounded-sm shadow-xs">
+          <span className="block font-mono text-[9px] text-emerald-700 uppercase tracking-widest font-semibold">Fees Paid</span>
+          <span className="block font-serif text-3xl font-black text-emerald-700 mt-1">{paidApps}</span>
         </div>
         <div className="bg-brand-bg border border-brand-secondary/10 col-span-2 lg:col-span-1 p-4 rounded-sm shadow-xs">
           <span className="block font-mono text-[9px] text-blue-700 uppercase tracking-widest font-semibold">Unread Messages</span>
@@ -554,6 +576,28 @@ export const AdminDashboard: React.FC = () => {
                         {app.status === "declined" && (
                           <span className="font-mono text-[9px] bg-red-100 text-red-600 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
                             Declined
+                          </span>
+                        )}
+
+                        {/* Payment status badge — only shown for accepted applicants */}
+                        {app.status === "accepted" && app.paymentStatus === "paid" && (
+                          <span className="font-mono text-[9px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider flex items-center gap-1">
+                            <CreditCard className="h-2.5 w-2.5" /> Paid ✓
+                          </span>
+                        )}
+                        {app.status === "accepted" && app.paymentStatus === "link_sent" && (
+                          <span className="font-mono text-[9px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                            Payment Pending
+                          </span>
+                        )}
+                        {app.status === "accepted" && app.paymentStatus === "expired" && (
+                          <span className="font-mono text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                            Link Expired
+                          </span>
+                        )}
+                        {app.status === "accepted" && app.paymentStatus === "processing" && (
+                          <span className="font-mono text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                            Creating Link...
                           </span>
                         )}
                       </div>
@@ -850,7 +894,7 @@ export const AdminDashboard: React.FC = () => {
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(selectedApp.resumeLink || selectedApp.resumeUrl || "");
-                              alert("Resume link copied to clipboard!");
+                              showToast("Resume link copied to clipboard!", "success");
                             }}
                             className="w-full font-mono text-[10px] text-brand-text hover:bg-brand-secondary/5 flex items-center gap-1.5 font-bold bg-[#FAF8F5] p-2 border border-brand-secondary/10 rounded-sm justify-center shadow-xs cursor-pointer"
                           >
@@ -862,6 +906,102 @@ export const AdminDashboard: React.FC = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Payment Section — shown only for accepted applications */}
+                  {selectedApp.status === "accepted" && (
+                    <div className="border border-brand-secondary/10 rounded-sm p-4 space-y-3 bg-[#FAF8F5]">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-3.5 w-3.5 text-brand-accent" />
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-brand-accent font-bold">
+                          Payment Status
+                        </span>
+                      </div>
+
+                      {/* Status badge */}
+                      <div>
+                        {selectedApp.paymentStatus === "paid" && (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-sm font-bold uppercase">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+                          </span>
+                        )}
+                        {selectedApp.paymentStatus === "link_sent" && (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-sm font-bold uppercase">
+                            Payment Link Sent — Awaiting Payment
+                          </span>
+                        )}
+                        {selectedApp.paymentStatus === "expired" && (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-orange-100 text-orange-700 px-3 py-1.5 rounded-sm font-bold uppercase">
+                            Link Expired
+                          </span>
+                        )}
+                        {selectedApp.paymentStatus === "processing" && (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-blue-100 text-blue-700 px-3 py-1.5 rounded-sm font-bold uppercase">
+                            Creating Link...
+                          </span>
+                        )}
+                        {selectedApp.paymentStatus === "error" && (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-red-100 text-red-700 px-3 py-1.5 rounded-sm font-bold uppercase">
+                            Creation Failed
+                          </span>
+                        )}
+                        {!selectedApp.paymentStatus && (
+                          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-gray-100 text-gray-500 px-3 py-1.5 rounded-sm uppercase">
+                            Not Initiated
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Razorpay payment ID after success */}
+                      {selectedApp.rzpPaymentId && (
+                        <div>
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-0.5">
+                            Razorpay Payment ID:
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <code className="font-mono text-[10px] text-brand-secondary bg-white border border-brand-secondary/10 px-2 py-1 rounded-sm">
+                              {selectedApp.rzpPaymentId}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(selectedApp.rzpPaymentId || "");
+                                showToast("Payment ID copied!", "success");
+                              }}
+                              className="font-mono text-[9px] text-brand-accent hover:underline cursor-pointer"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Paid at timestamp */}
+                      {selectedApp.paidAt && (
+                        <div>
+                          <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-0.5">
+                            Paid At:
+                          </span>
+                          <p className="font-mono text-[10px] text-brand-secondary">
+                            {renderTimestamp(selectedApp.paidAt)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Resend payment link button */}
+                      {(selectedApp.paymentStatus === "expired" ||
+                        selectedApp.paymentStatus === "error" ||
+                        selectedApp.paymentStatus === "link_sent") && (
+                        <button
+                          onClick={() => handleResendPaymentLink(selectedApp.id)}
+                          disabled={resendingPaymentLink}
+                          className="w-full py-2 bg-brand-secondary hover:bg-brand-dark-blue text-brand-bg font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm border border-brand-secondary transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${resendingPaymentLink ? "animate-spin" : ""}`} />
+                          {resendingPaymentLink ? "Sending..." : "Resend Payment Link"}
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Actions status transition dashboard */}
                   <div className="border-t border-brand-secondary/10 pt-4 space-y-3">
@@ -1040,5 +1180,76 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
     </div>
+
+    {/* Change Password Modal */}
+    {showChangePassword && (
+      <AdminChangePassword onClose={() => setShowChangePassword(false)} />
+    )}
+
+    {/* Custom Confirm Modal */}
+    {confirmModal && (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(10, 14, 22, 0.72)", backdropFilter: "blur(4px)" }}
+      >
+        <div className="bg-brand-bg border border-brand-secondary/20 rounded-sm shadow-2xl w-full max-w-md p-8 space-y-6 animate-fade-in">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 h-10 w-10 rounded-full bg-red-100/60 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg font-bold text-brand-text">Confirm Action</h3>
+              <p className="font-sans text-xs text-brand-neutral leading-relaxed">{confirmModal.message}</p>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setConfirmModal(null)}
+              className="flex-1 py-2.5 bg-transparent border border-brand-secondary/25 text-brand-secondary font-mono text-xs font-bold uppercase tracking-wider hover:bg-brand-secondary/5 transition-all rounded-sm cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                const fn = confirmModal.onConfirm;
+                setConfirmModal(null);
+                await fn();
+              }}
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all rounded-sm cursor-pointer"
+            >
+              Confirm Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Toast Notification */}
+    {toast && (
+      <div
+        className={`fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-sm shadow-2xl border animate-fade-in max-w-sm ${
+          toast.type === "success"
+            ? "bg-brand-bg border-brand-accent/30 text-brand-text"
+            : "bg-brand-bg border-red-400/30 text-brand-text"
+        }`}
+      >
+        <div className={`shrink-0 h-7 w-7 rounded-full flex items-center justify-center ${
+          toast.type === "success" ? "bg-brand-accent/15" : "bg-red-100/60"
+        }`}>
+          {toast.type === "success"
+            ? <CheckCircle2 className="h-4 w-4 text-brand-accent" />
+            : <AlertTriangle className="h-4 w-4 text-red-600" />
+          }
+        </div>
+        <p className="font-sans text-xs text-brand-text flex-1 leading-relaxed">{toast.message}</p>
+        <button
+          onClick={() => setToast(null)}
+          className="shrink-0 text-brand-neutral hover:text-brand-text transition-colors cursor-pointer"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    )}
+    </>
   );
 };
