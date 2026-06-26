@@ -4,8 +4,6 @@ import {
   signInWithEmailAndPassword, sendPasswordResetEmail,
   updatePassword, reauthenticateWithCredential, reauthenticateWithPopup, EmailAuthProvider,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-
 // Define required environment variables list
 const requiredVars = [
   "VITE_FIREBASE_API_KEY",
@@ -56,80 +54,7 @@ export const app = getApps().length === 0
 
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
-
-export enum OperationType {
-  CREATE = "create",
-  UPDATE = "update",
-  DELETE = "delete",
-  LIST = "list",
-  GET = "get",
-  WRITE = "write",
-}
-
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): void {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid || null,
-      email: auth.currentUser?.email || null,
-      emailVerified: auth.currentUser?.emailVerified || null,
-      isAnonymous: auth.currentUser?.isAnonymous || null,
-      tenantId: auth.currentUser?.tenantId || null,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.error("Firestore Diagnostic Trace:", JSON.stringify(errInfo));
-}
-
-export function getFriendlyFirestoreError(error: any): string {
-  if (!error) return "An unknown database error occurred.";
-  const code = error.code || "";
-  const msg = error.message || "";
-  
-  switch (code) {
-    case "permission-denied":
-      return "Permission denied (permission-denied). Please verify your firestore.rules authorize writes for this collection.";
-    case "unavailable":
-      return "The database service is temporarily unavailable (unavailable). Please check your internet connection or try again later.";
-    case "deadline-exceeded":
-      return "The operation deadline was exceeded (deadline-exceeded). Please try submitting again.";
-    case "unauthenticated":
-      return "User is unauthenticated (unauthenticated). Please sign in or check authentication credentials.";
-    case "network-request-failed":
-      return "Network connection failed (network-request-failed). Please check your internet connection.";
-    case "resource-exhausted":
-      return "Database quota or storage resource exhausted (resource-exhausted). Please check usage limits.";
-    default:
-      if (msg.toLowerCase().includes("timeout")) {
-        return "Network timeout. Check connection credentials or firestore.rules permission limits.";
-      }
-      return msg || "An internal error occurred during submission.";
-  }
-}
 
 // Maps Firebase Auth error codes to human-readable messages.
 export function getFriendlyAuthError(err: any): string {
@@ -159,9 +84,31 @@ export async function signInAdminWithEmail(email: string, password: string): Pro
   await signInWithEmailAndPassword(auth, email, password);
 }
 
-// Sends Firebase Auth password reset email (Firebase handles delivery — no SMTP needed).
+// ── Password-reset rate limit ────────────────────────────────────────────────
+// One request per 15 minutes, enforced at the API call layer (localStorage)
+// so the Firebase endpoint is never hit even if the UI is bypassed.
+const RESET_RL_KEY = "ds_pwd_reset_ts";
+const RESET_RL_MS  = 15 * 60 * 1000; // 15 minutes in ms
+
+/** Returns remaining cooldown in milliseconds (0 = no cooldown). */
+export function getPasswordResetCooldownMs(): number {
+  const ts = localStorage.getItem(RESET_RL_KEY);
+  if (!ts) return 0;
+  const elapsed = Date.now() - parseInt(ts, 10);
+  return Math.max(0, RESET_RL_MS - elapsed);
+}
+
+/** Sends a Firebase Auth password reset email, guarded by a 15-min rate limit. */
 export async function callAdminForgotPassword(email: string): Promise<void> {
+  const cooldown = getPasswordResetCooldownMs();
+  if (cooldown > 0) {
+    const mins = Math.ceil(cooldown / 60_000);
+    throw new Error(
+      `Rate limited — please wait ${mins} minute${mins !== 1 ? "s" : ""} before requesting another reset link.`
+    );
+  }
   await sendPasswordResetEmail(auth, email);
+  localStorage.setItem(RESET_RL_KEY, Date.now().toString());
 }
 
 // Returns true if the current user signed in with Google (no email/password provider).

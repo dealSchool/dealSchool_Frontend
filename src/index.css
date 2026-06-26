@@ -63,6 +63,16 @@
   }
 }
 
+/* Detail drawer animations */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1;   }
+}
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Scroll support styling */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;

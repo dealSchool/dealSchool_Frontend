@@ -9,8 +9,6 @@ import {
   X, Check, ArrowRight, Sparkles, User, Mail, FileText,
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
-import { db, handleFirestoreError, OperationType, getFriendlyFirestoreError } from "../firebase";
-import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -20,6 +18,29 @@ interface ApplyModalProps {
 // Basic phone format: must start with + or digit, then 5–19 digits/spaces/dashes/parens
 const PHONE_REGEX = /^[+\d][\d\s\-(). ]{4,18}$/;
 
+// Character limits — above industry standard for generous UX
+const LIMITS = {
+  fullName: 80, mobile: 20, email: 254, linkedinUrl: 300, city: 100,
+  collegeName: 150, degree: 100, graduationYear: 4, currentRole: 100,
+  companyName: 150, degreeBackground: 150, yearsOfExperience: 30,
+  startupName: 150, industrySector: 100, startupLinkedin: 300,
+  areaOfWork: 100, freelancerLinkedin: 300, otherStatus: 300,
+  primaryReasonOther: 300, assessmentQ1: 1500, assessmentQ2: 1500,
+  resumeLink: 2048, discoveryOther: 200,
+} as const;
+
+const CharCount: React.FC<{ value: string; max: number }> = ({ value, max }) => {
+  const len = value.length;
+  const near = (max - len) < Math.ceil(max * 0.1);
+  return (
+    <div className="flex justify-end mt-0.5">
+      <span className={`font-mono text-[9px] tabular-nums transition-colors ${near ? "text-amber-600 font-semibold" : "text-brand-neutral/35"}`}>
+        {len} / {max}
+      </span>
+    </div>
+  );
+};
+
 export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +49,14 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
   // Resume Link State
   const [resumeLinkError, setResumeLinkError] = useState<string | null>(null);
+
+  // Duplicate application check
+  const [dupCheck, setDupCheck] = useState<{
+    checking: boolean;
+    alreadyApplied: boolean;
+    message: string | null;
+    triggeredBy: "email" | "phone" | null;
+  }>({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
 
   // Ref for modal container — used for focus trap
   const modalRef = useRef<HTMLDivElement>(null);
@@ -140,10 +169,39 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const checkDuplicate = async (field: "email" | "phone", value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    setDupCheck({ checking: true, alreadyApplied: false, message: null, triggeredBy: field });
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+      const body = field === "email" ? { email: trimmed } : { phone: trimmed };
+      const res = await fetch(`${backendUrl}/api/applications/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        setDupCheck(prev => ({ ...prev, checking: false }));
+        return;
+      }
+      const data = await res.json();
+      setDupCheck({
+        checking: false,
+        alreadyApplied: data.alreadyApplied === true,
+        message: data.alreadyApplied ? (data.message ?? "You have already applied. Please wait for our team to review your application.") : null,
+        triggeredBy: field,
+      });
+    } catch {
+      setDupCheck(prev => ({ ...prev, checking: false }));
+    }
+  };
+
   // Step validation check gates
   const isStepValid = () => {
     if (step === 1) {
       return (
+        !dupCheck.alreadyApplied &&
         formData.fullName.trim() !== "" &&
         PHONE_REGEX.test(formData.mobileNumber.trim()) &&
         formData.email.trim() !== "" &&
@@ -235,79 +293,42 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }
 
     try {
-      const appCollRef = collection(db, "applications");
-      const docRef = doc(appCollRef);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+      // Exclude resumeLink from spread; send only resumeUrl so the backend
+      // receives a single canonical key for the resume URL.
+      const { resumeLink, ...rest } = formData;
+      const res = await fetch(`${backendUrl}/api/applications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...rest, resumeUrl: resumeLink }),
+      });
 
-      // Assemble structured payload based on selected status and reasons
-      const payload: Record<string, any> = {
-        fullName: formData.fullName,
-        mobileNumber: formData.mobileNumber,
-        email: formData.email,
-        linkedinUrl: formData.linkedinUrl,
-        city: formData.city,
-        currentStatus: formData.currentStatus,
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        setDupCheck({
+          checking: false,
+          alreadyApplied: true,
+          message: data.error || "You have already applied to DealSchool. Our team will review your application and get in touch.",
+          triggeredBy: "email",
+        });
+        setStep(1);
+        return;
+      }
+      if (res.status === 429) {
+        setErrorMessage("Too many submissions from your connection. Please wait a few minutes and try again.");
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+        throw new Error(err.error || `Server error (${res.status})`);
+      }
 
-        // Include ONLY relevant fields from conditional sections
-        ...(formData.currentStatus === "Student" && {
-          collegeName: formData.collegeName,
-          degree: formData.degree,
-          graduationYear: formData.graduationYear,
-        }),
-        ...(formData.currentStatus === "Recent Graduate (0–2 years of experience)" && {
-          currentRole: formData.currentRole,
-          companyName: formData.companyName,
-          graduationYear: formData.graduationYear,
-          degreeEducationalBackground: formData.degreeEducationalBackground,
-        }),
-        ...(formData.currentStatus === "Working Professional" && {
-          currentRole: formData.currentRole,
-          companyName: formData.companyName,
-          yearsOfExperience: formData.yearsOfExperience,
-        }),
-        ...(formData.currentStatus === "Founder" && {
-          startupName: formData.startupName,
-          industrySector: formData.industrySector,
-          startupLinkedinProfile: formData.startupLinkedinProfile,
-        }),
-        ...(formData.currentStatus === "Freelancer" && {
-          areaOfWork: formData.areaOfWork,
-          yearsOfExperience: formData.yearsOfExperience,
-          freelancerLinkedinProfile: formData.freelancerLinkedinProfile,
-        }),
-        ...(formData.currentStatus === "Other" && {
-          otherStatusSpecify: formData.otherStatusSpecify,
-        }),
-
-        primaryReason: formData.primaryReason,
-        ...(formData.primaryReason === "Other" && {
-          primaryReasonOther: formData.primaryReasonOther,
-        }),
-
-        assessmentQ1: formData.assessmentQ1,
-        assessmentQ2: formData.assessmentQ2,
-        assessmentQ3: formData.assessmentQ3,
-
-        resumeLink: formData.resumeLink,
-        discoverySource: formData.discoverySource,
-        ...(formData.discoverySource === "Other" && {
-          discoverySourceOther: formData.discoverySourceOther,
-        }),
-
-        status: "pending",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
-
-      // Direct write — Firebase SDK handles retries and timeouts internally
-      await setDoc(docRef, payload);
-
-      setSubmittedDocId(docRef.id);
+      const { applicationId } = await res.json();
+      setSubmittedDocId(applicationId);
       setStep(6);
     } catch (error: any) {
-      const friendlyMessage = getFriendlyFirestoreError(error);
-      console.error("Firestore application submission error:", error.code || error.message);
-      setErrorMessage(`Submission failed: ${friendlyMessage}`);
-      handleFirestoreError(error, OperationType.WRITE, "applications");
+      console.error("Application submission error:", error.message);
+      setErrorMessage(error.message || "Submission failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -321,6 +342,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       setResumeLinkError(null);
       setErrorMessage(null);
       setSubmittedDocId("");
+      setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
       setFormData({
         fullName: "",
         mobileNumber: "",
@@ -378,7 +400,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 15 }}
               transition={{ ease: "easeOut", duration: 0.25 }}
-              className="w-full max-w-xl bg-brand-bg border border-brand-secondary/15 rounded-sm shadow-xl p-5 md:p-8 relative"
+              className="w-full max-w-2xl bg-brand-bg border border-brand-secondary/15 rounded-sm shadow-2xl p-6 md:p-10 relative"
             >
               <button
                 onClick={resetAndClose}
@@ -389,17 +411,38 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                 <X className="h-4 w-4" />
               </button>
 
-              {/* Progress markers */}
+              {/* Step progress indicator */}
               {step < 6 && (
-                <div className="flex items-center gap-1.5 mb-6">
-                  <div className={`h-1 flex-1 rounded-sm transition-all ${step >= 1 ? "bg-brand-accent" : "bg-brand-secondary/10"}`} />
-                  <div className={`h-1 flex-1 rounded-sm transition-all ${step >= 2 ? "bg-brand-accent" : "bg-brand-secondary/10"}`} />
-                  <div className={`h-1 flex-1 rounded-sm transition-all ${step >= 3 ? "bg-brand-accent" : "bg-brand-secondary/10"}`} />
-                  <div className={`h-1 flex-1 rounded-sm transition-all ${step >= 4 ? "bg-brand-accent" : "bg-brand-secondary/10"}`} />
-                  <div className={`h-1 flex-1 rounded-sm transition-all ${step >= 5 ? "bg-brand-accent" : "bg-brand-secondary/10"}`} />
-                  <span className="font-mono text-[9px] text-brand-neutral tracking-widest uppercase ml-3 select-none">
-                    STEP {step} OF 5
-                  </span>
+                <div className="mb-8">
+                  <div className="flex items-center">
+                    {([
+                      { n: 1, label: "Personal" },
+                      { n: 2, label: "Background" },
+                      { n: 3, label: "Motivation" },
+                      { n: 4, label: "Assessment" },
+                      { n: 5, label: "Documents" },
+                    ] as const).map(({ n, label }, i) => (
+                      <React.Fragment key={n}>
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-[11px] font-bold transition-all duration-200 shrink-0 ${
+                            step > n
+                              ? "bg-brand-secondary text-white"
+                              : step === n
+                              ? "bg-brand-accent text-white shadow-md shadow-brand-accent/30"
+                              : "bg-brand-secondary/8 text-brand-neutral/50"
+                          }`}>
+                            {step > n ? <Check className="h-3 w-3" /> : n}
+                          </div>
+                          <span className={`font-mono text-[8px] uppercase tracking-wider hidden sm:block select-none transition-colors ${
+                            step === n ? "text-brand-accent font-bold" : step > n ? "text-brand-secondary/70" : "text-brand-neutral/35"
+                          }`}>{label}</span>
+                        </div>
+                        {i < 4 && (
+                          <div className={`h-px flex-1 mb-4 mx-1 transition-all duration-300 ${step > n ? "bg-brand-secondary/40" : "bg-brand-secondary/10"}`} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -412,159 +455,211 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
               {/* STEP 1: Basic Information */}
               {step === 1 && (
-                <form onSubmit={handleNextStep} className="space-y-4">
-                  <div>
+                <form onSubmit={handleNextStep} className="space-y-5">
+                  <div className="border-b border-brand-secondary/8 pb-4">
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       Admissions Flow 2026
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Candidate Specifications
                     </h4>
-                    <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
-                      All fields are required. DealSchool admits ambitious candidates matching rigorous venture criteria.
+                    <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                      DealSchool admits ambitious candidates matching rigorous venture criteria. Fields marked <span className="text-brand-accent font-semibold">*</span> are required.
                     </p>
                   </div>
 
-                  <div className="space-y-3.5">
+                  <div className="space-y-4">
                     {/* Full Name */}
-                    <div className="space-y-1">
-                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                    <div className="space-y-1.5">
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         Full Name <span className="text-brand-accent">*</span>
                       </label>
                       <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-brand-neutral" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                         <input
                           type="text"
                           name="fullName"
                           required
+                          maxLength={LIMITS.fullName}
                           value={formData.fullName}
                           onChange={handleInputChange}
-                          placeholder="Devang Sachdeva"
-                          className="w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                          placeholder="Your full legal name"
+                          className="w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm transition-all h-11"
                         />
                       </div>
+                      <CharCount value={formData.fullName} max={LIMITS.fullName} />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Mobile Number */}
-                      <div className="space-y-1">
-                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                      <div className="space-y-1.5">
+                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                           Mobile Number <span className="text-brand-accent">*</span>
                         </label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-3 h-4 w-4 text-brand-neutral" />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                           <input
                             type="tel"
                             name="mobileNumber"
                             required
+                            maxLength={LIMITS.mobile}
                             value={formData.mobileNumber}
-                            onChange={handleInputChange}
-                            placeholder="+91 XXXXX XXXXX"
-                            className={`w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10 transition-colors ${
+                            onChange={(e) => {
+                              handleInputChange(e);
+                              if (dupCheck.triggeredBy === "phone") {
+                                setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
+                              }
+                            }}
+                            onBlur={() => {
+                              if (PHONE_REGEX.test(formData.mobileNumber.trim())) {
+                                checkDuplicate("phone", formData.mobileNumber);
+                              }
+                            }}
+                            placeholder="+91 98765 43210"
+                            className={`w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border focus:outline-none focus:ring-2 text-sm h-11 transition-all ${
                               formData.mobileNumber && !PHONE_REGEX.test(formData.mobileNumber.trim())
-                                ? "border-red-400"
-                                : "border-brand-secondary/15"
+                                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                                : "border-brand-secondary/15 focus:border-brand-accent focus:ring-brand-accent/10"
                             }`}
                           />
                         </div>
                         {formData.mobileNumber && !PHONE_REGEX.test(formData.mobileNumber.trim()) && (
                           <p className="text-red-600 text-[10px] flex items-center gap-1">
                             <AlertCircle className="h-3 w-3 shrink-0" />
-                            Enter a valid phone number (e.g. +91 98765 43210)
+                            e.g. +91 98765 43210
                           </p>
+                        )}
+                        {dupCheck.checking && dupCheck.triggeredBy === "phone" && (
+                          <p className="text-brand-neutral/50 text-[10px] font-mono">Checking...</p>
                         )}
                       </div>
 
-                      {/* Email Profile */}
-                      <div className="space-y-1">
-                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                      {/* Email */}
+                      <div className="space-y-1.5">
+                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                           Email Address <span className="text-brand-accent">*</span>
                         </label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-brand-neutral" />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                           <input
                             type="email"
                             name="email"
                             required
+                            maxLength={LIMITS.email}
                             value={formData.email}
-                            onChange={handleInputChange}
+                            onChange={(e) => {
+                              handleInputChange(e);
+                              if (dupCheck.triggeredBy === "email") {
+                                setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
+                              }
+                            }}
+                            onBlur={() => {
+                              if (formData.email.trim() && formData.email.includes("@")) {
+                                checkDuplicate("email", formData.email);
+                              }
+                            }}
                             placeholder="yourname@example.com"
-                            className="w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                            className="w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                           />
                         </div>
+                        {dupCheck.checking && dupCheck.triggeredBy === "email" && (
+                          <p className="text-brand-neutral/50 text-[10px] font-mono">Checking...</p>
+                        )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* LinkedIn URL */}
-                      <div className="space-y-1">
-                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
-                          LinkedIn Profile URL <span className="text-brand-accent">*</span>
+                      <div className="space-y-1.5">
+                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+                          LinkedIn Profile <span className="text-brand-accent">*</span>
                         </label>
                         <div className="relative">
-                          <Globe className="absolute left-3 top-3 h-4 w-4 text-brand-neutral" />
+                          <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                           <input
                             type="url"
                             name="linkedinUrl"
                             required
+                            maxLength={LIMITS.linkedinUrl}
                             value={formData.linkedinUrl}
                             onChange={handleInputChange}
-                            placeholder="https://linkedin.com/in/username"
-                            className="w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                            placeholder="linkedin.com/in/username"
+                            className="w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                           />
                         </div>
+                        <p className="text-[10px] text-brand-neutral/50 font-sans">Include https://</p>
                       </div>
 
                       {/* City */}
-                      <div className="space-y-1">
-                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
-                          City <span className="text-brand-accent">*</span>
+                      <div className="space-y-1.5">
+                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+                          City / Location <span className="text-brand-accent">*</span>
                         </label>
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-brand-neutral" />
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                           <input
                             type="text"
                             name="city"
                             required
+                            maxLength={LIMITS.city}
                             value={formData.city}
                             onChange={handleInputChange}
-                            placeholder="Mumbai"
-                            className="w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                            placeholder="Mumbai, Delhi, Pune..."
+                            className="w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                           />
                         </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Duplicate application warning */}
+                  {dupCheck.alreadyApplied && dupCheck.message && (
+                    <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-sm">
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="font-mono text-[10px] font-bold text-amber-800 uppercase tracking-wider">Already Applied</p>
+                        <p className="font-sans text-xs text-amber-700 leading-relaxed">
+                          {dupCheck.message.replace("admin@dealschool.in", "").trim()}{" "}
+                          <a
+                            href="mailto:admin@dealschool.in"
+                            className="font-semibold underline underline-offset-2 hover:text-amber-900 transition-colors"
+                          >
+                            admin@dealschool.in
+                          </a>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    disabled={!isStepValid()}
-                    className="w-full py-3 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-50 text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-1.5 mt-6 cursor-pointer"
+                    disabled={!isStepValid() || dupCheck.checking}
+                    className="w-full py-3.5 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer rounded-sm"
                   >
-                    Proceed to Alignment Details <ArrowRight className="h-4 w-4 text-white" />
+                    Continue to Background <ArrowRight className="h-4 w-4" />
                   </button>
                 </form>
               )}
 
               {/* STEP 2: Current Status & Conditional Fields */}
               {step === 2 && (
-                <form onSubmit={handleNextStep} className="space-y-4">
-                  <div>
+                <form onSubmit={handleNextStep} className="space-y-5">
+                  <div className="border-b border-brand-secondary/8 pb-4">
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       Functional Position
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
-                      Professional Trajectory
+                      Professional Background
                     </h4>
-                    <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
-                      Select your operational model. Fill out the corresponding short-answer verification fields.
+                    <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                      Select your current professional status, then complete the relevant fields below.
                     </p>
                   </div>
 
-                  <div className="space-y-3.5">
+                  <div className="space-y-4">
                     {/* Status Select */}
-                    <div className="space-y-1">
-                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                    <div className="space-y-1.5">
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         Current Status <span className="text-brand-accent">*</span>
                       </label>
                       <select
@@ -572,7 +667,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         required
                         value={formData.currentStatus}
                         onChange={handleInputChange}
-                        className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10 select-none cursor-pointer"
+                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
                       >
                         <option value="">-- Click To Choose --</option>
                         <option value="Student">Student</option>
@@ -585,6 +680,11 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* DYNAMIC CONDITIONAL SHORT-ANSWER FIELDS */}
+                    {formData.currentStatus && (
+                      <div className="bg-brand-secondary/[0.03] border border-brand-secondary/10 rounded-sm p-4">
+                        <span className="font-mono text-[8px] text-brand-secondary/60 uppercase tracking-widest block mb-3">
+                          {formData.currentStatus} — Additional Details
+                        </span>
                     <AnimatePresence mode="wait">
                       {formData.currentStatus === "Student" && (
                         <motion.div
@@ -600,6 +700,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               type="text"
                               name="collegeName"
                               required
+                              maxLength={LIMITS.collegeName}
                               value={formData.collegeName}
                               onChange={handleInputChange}
                               placeholder="St. Xavier's College"
@@ -613,6 +714,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="degree"
                                required
+                               maxLength={LIMITS.degree}
                                value={formData.degree}
                                onChange={handleInputChange}
                                placeholder="B.A. Economics"
@@ -625,6 +727,9 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="graduationYear"
                                required
+                               maxLength={LIMITS.graduationYear}
+                               inputMode="numeric"
+                               pattern="\d{4}"
                                value={formData.graduationYear}
                                onChange={handleInputChange}
                                placeholder="2027"
@@ -650,6 +755,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="currentRole"
                                required
+                               maxLength={LIMITS.currentRole}
                                value={formData.currentRole}
                                onChange={handleInputChange}
                                placeholder="Analyst"
@@ -662,6 +768,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="companyName"
                                required
+                               maxLength={LIMITS.companyName}
                                value={formData.companyName}
                                onChange={handleInputChange}
                                placeholder="KPMG"
@@ -676,6 +783,9 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="graduationYear"
                                required
+                               maxLength={LIMITS.graduationYear}
+                               inputMode="numeric"
+                               pattern="\d{4}"
                                value={formData.graduationYear}
                                onChange={handleInputChange}
                                placeholder="2025"
@@ -688,6 +798,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="degreeEducationalBackground"
                                required
+                               maxLength={LIMITS.degreeBackground}
                                value={formData.degreeEducationalBackground}
                                onChange={handleInputChange}
                                placeholder="B.Tech Computer Science"
@@ -713,6 +824,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="currentRole"
                                required
+                               maxLength={LIMITS.currentRole}
                                value={formData.currentRole}
                                onChange={handleInputChange}
                                placeholder="Product Manager"
@@ -725,6 +837,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="companyName"
                                required
+                               maxLength={LIMITS.companyName}
                                value={formData.companyName}
                                onChange={handleInputChange}
                                placeholder="HDFC Bank"
@@ -738,6 +851,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               type="text"
                               name="yearsOfExperience"
                               required
+                              maxLength={LIMITS.yearsOfExperience}
                               value={formData.yearsOfExperience}
                               onChange={handleInputChange}
                               placeholder="4.5 Years"
@@ -762,6 +876,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="startupName"
                                required
+                               maxLength={LIMITS.startupName}
                                value={formData.startupName}
                                onChange={handleInputChange}
                                placeholder="Credo Infra"
@@ -774,6 +889,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="industrySector"
                                required
+                               maxLength={LIMITS.industrySector}
                                value={formData.industrySector}
                                onChange={handleInputChange}
                                placeholder="Fintech Infrastructure"
@@ -787,6 +903,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               type="url"
                               name="startupLinkedinProfile"
                               required
+                              maxLength={LIMITS.startupLinkedin}
                               value={formData.startupLinkedinProfile}
                               onChange={handleInputChange}
                               placeholder="https://linkedin.com/company/startup"
@@ -811,6 +928,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="areaOfWork"
                                required
+                               maxLength={LIMITS.areaOfWork}
                                value={formData.areaOfWork}
                                onChange={handleInputChange}
                                placeholder="Solidity Audits"
@@ -823,6 +941,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                                type="text"
                                name="yearsOfExperience"
                                required
+                               maxLength={LIMITS.yearsOfExperience}
                                value={formData.yearsOfExperience}
                                onChange={handleInputChange}
                                placeholder="3 Years"
@@ -836,6 +955,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               type="url"
                               name="freelancerLinkedinProfile"
                               required
+                              maxLength={LIMITS.freelancerLinkedin}
                               value={formData.freelancerLinkedinProfile}
                               onChange={handleInputChange}
                               placeholder="https://linkedin.com/in/username"
@@ -859,31 +979,35 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               type="text"
                               name="otherStatusSpecify"
                               required
+                              maxLength={LIMITS.otherStatus}
                               value={formData.otherStatusSpecify}
                               onChange={handleInputChange}
                               placeholder="Briefly state your unique professional archetype..."
                               className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
                             />
+                            <CharCount value={formData.otherStatusSpecify} max={LIMITS.otherStatus} />
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex gap-3 mt-2">
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="px-5 py-3 bg-brand-bg hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 transition-all cursor-pointer"
+                      className="px-5 py-3 bg-white hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 rounded-sm transition-all cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={!isStepValid()}
-                      className="flex-1 py-3 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-50 text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-3.5 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer rounded-sm"
                     >
-                      Proceed to Motivation & Intent <ArrowRight className="h-4 w-4" />
+                      Continue to Motivation <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </form>
@@ -891,73 +1015,76 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
               {/* STEP 3: Motivation & Intent */}
               {step === 3 && (
-                <form onSubmit={handleNextStep} className="space-y-4">
-                  <div>
+                <form onSubmit={handleNextStep} className="space-y-5">
+                  <div className="border-b border-brand-secondary/8 pb-4">
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
-                      MEMBERSHIP FOCUS
+                      Membership Focus
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
                       Motivation & Intent
                     </h4>
-                    <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
-                      This helps us customize and align program vertical loops to match your primary goal. This step feels quick and easy to complete.
+                    <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                      This helps us align the program to your primary goal. Quick — one selection required.
                     </p>
                   </div>
 
                   <div className="space-y-4">
-                    {/* Primary Reason dropdown selection */}
                     <div className="space-y-1.5">
-                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase leading-relaxed">
-                        What best describes your primary reason for joining DealSchool? <span className="text-brand-accent">*</span>
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+                        Primary reason for joining DealSchool <span className="text-brand-accent">*</span>
                       </label>
                       <select
                         name="primaryReason"
                         required
                         value={formData.primaryReason}
                         onChange={handleInputChange}
-                        className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-11 select-none cursor-pointer animate-fadeIn"
+                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
                       >
-                        <option value="">-- Choose Priority Reason --</option>
+                        <option value="">Select the closest option...</option>
                         <option value="Explore a career in VC">Explore a career in VC</option>
                         <option value="Understand startups & investing">Understand startups & investing</option>
                         <option value="Improve startup evaluation skills">Improve startup evaluation skills</option>
                         <option value="Prepare for startup or VC internships">Prepare for startup or VC internships</option>
                         <option value="Learn directly from founders & investors">Learn directly from founders & investors</option>
                         <option value="Expand network">Expand network</option>
-                        <option value="Other">Other</option>
+                        <option value="Other">Other (please specify)</option>
                       </select>
                     </div>
 
                     {formData.primaryReason === "Other" && (
-                      <div className="space-y-1 my-3 animate-fadeIn">
-                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Please Specify <span className="text-brand-accent">*</span></label>
+                      <div className="space-y-1.5">
+                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+                          Please Specify <span className="text-brand-accent">*</span>
+                        </label>
                         <input
                           type="text"
                           name="primaryReasonOther"
                           required
+                          maxLength={LIMITS.primaryReasonOther}
                           value={formData.primaryReasonOther}
                           onChange={handleInputChange}
-                          placeholder="Your specific motive..."
-                          className="w-full bg-brand-bg text-brand-text px-3 py-2 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs h-10"
+                          placeholder="Describe your specific reason..."
+                          className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                         />
+                        <CharCount value={formData.primaryReasonOther} max={LIMITS.primaryReasonOther} />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex gap-3 mt-2">
                     <button
                       type="button"
                       onClick={() => setStep(2)}
-                      className="px-5 py-3 bg-brand-bg hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 transition-all cursor-pointer"
+                      className="px-5 py-3.5 bg-white hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 rounded-sm transition-all cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={!isStepValid()}
-                      className="flex-1 py-3 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-50 text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-3.5 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer rounded-sm"
                     >
-                      Proceed to Thinking Assessment <ArrowRight className="h-4 w-4" />
+                      Continue to Assessment <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </form>
@@ -965,95 +1092,103 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
               {/* STEP 4: Assessment Questions */}
               {step === 4 && (
-                <form onSubmit={handleNextStep} className="space-y-6 max-h-[78vh] overflow-y-auto pr-2">
-                  <div>
+                <form onSubmit={handleNextStep} className="space-y-5">
+                  <div className="border-b border-brand-secondary/8 pb-4">
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
                       Analytical Lens
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
-                      Assessment & Thinking Framework
+                      Thinking Assessment
                     </h4>
-                    <p className="font-sans text-[11.5px] text-brand-neutral leading-relaxed">
-                      There are no right or wrong answers. We are interested in how you think about startups, investing, and decision-making.
+                    <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                      No right or wrong answers — we want to see how you reason about startups and investing. Write freely.
                     </p>
                   </div>
 
-                  <div className="space-y-6 max-w-full">
-                    {/* Assessment Question 1: Textarea */}
+                  <div className="space-y-5 max-h-[55vh] overflow-y-auto pr-1 scrollbar-thin">
+                    {/* Q1 */}
                     <div className="space-y-2">
-                      <label className="block text-xs md:text-sm font-medium text-brand-secondary leading-relaxed">
-                        A startup is growing very fast but losing heavy money every month on marketing. Is this a good or bad sign and would you invest? <span className="text-brand-accent">*</span>
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider leading-relaxed">
+                        Q1 — A startup grows fast but burns heavy cash on marketing. Good or bad sign — would you invest? <span className="text-brand-accent">*</span>
                       </label>
                       <textarea
                         name="assessmentQ1"
-                        rows={4}
+                        rows={5}
                         required
+                        maxLength={LIMITS.assessmentQ1}
                         value={formData.assessmentQ1}
                         onChange={handleInputChange}
-                        placeholder="Analyze customer acquisition costs (CAC) unit economics, payback thresholds, or market dynamics..."
-                        className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs leading-relaxed min-h-[110px]"
+                        placeholder="Think about CAC, LTV, payback periods, unit economics, market saturation..."
+                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm leading-relaxed resize-none"
                       />
-                      <p className="text-[10px] text-brand-neutral/80 leading-normal italic font-sans">
-                        Hint: We are looking for insights into CAC/LTV dynamics, payback periods, market saturation, and whether marketing burn builds genuine pricing power or just buys temporary growth.
-                      </p>
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="text-[10px] text-brand-neutral/60 leading-normal font-sans flex-1 italic">
+                          Hint: CAC/LTV dynamics, payback periods, and whether burn creates real pricing power or buys temporary growth.
+                        </p>
+                        <CharCount value={formData.assessmentQ1} max={LIMITS.assessmentQ1} />
+                      </div>
                     </div>
 
-                    {/* Assessment Question 2: Textarea */}
+                    {/* Q2 */}
                     <div className="space-y-2">
-                      <label className="block text-xs md:text-sm font-medium text-brand-secondary leading-relaxed">
-                        If you had ₹10 lakhs to invest into ONE startup sector for the next 10 years, which sector would you choose and why? <span className="text-brand-accent">*</span>
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider leading-relaxed">
+                        Q2 — If you had ₹10 lakhs to invest in ONE startup sector for 10 years, which and why? <span className="text-brand-accent">*</span>
                       </label>
                       <textarea
                         name="assessmentQ2"
-                        rows={4}
+                        rows={5}
                         required
+                        maxLength={LIMITS.assessmentQ2}
                         value={formData.assessmentQ2}
                         onChange={handleInputChange}
-                        placeholder="Elaborate on structural macroeconomic tailwinds, regulatory environments, and scaling parameters..."
-                        className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs leading-relaxed min-h-[110px]"
+                        placeholder="Think about macro tailwinds, regulation, market size, competitive dynamics..."
+                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm leading-relaxed resize-none"
                       />
-                      <p className="text-[10px] text-brand-neutral/80 leading-normal italic font-sans">
-                        Hint: Bring out your structural view: highlight durable macroeconomic shifts, technology transitions, market size potential, and key competitive risks.
-                      </p>
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="text-[10px] text-brand-neutral/60 leading-normal font-sans flex-1 italic">
+                          Hint: Durable macro shifts, tech transitions, market scale potential, and key competitive risks.
+                        </p>
+                        <CharCount value={formData.assessmentQ2} max={LIMITS.assessmentQ2} />
+                      </div>
                     </div>
 
-                    {/* Assessment Question 3: Select */}
+                    {/* Q3 */}
                     <div className="space-y-2">
-                      <label className="block text-xs md:text-sm font-medium text-brand-secondary leading-relaxed">
-                        In your opinion, what matters more in an early-stage startup? <span className="text-brand-accent">*</span>
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+                        Q3 — In an early-stage startup, what matters most? <span className="text-brand-accent">*</span>
                       </label>
                       <select
                         name="assessmentQ3"
                         required
                         value={formData.assessmentQ3}
                         onChange={handleInputChange}
-                        className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-11 select-none cursor-pointer"
+                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
                       >
-                        <option value="">-- Choose One Parameter --</option>
-                        <option value="Founder">Founder</option>
-                        <option value="Product">Product</option>
-                        <option value="Market">Market</option>
+                        <option value="">Choose your conviction...</option>
+                        <option value="Founder">Founder — team, grit, pedigree</option>
+                        <option value="Product">Product — usability, differentiation</option>
+                        <option value="Market">Market — size, demand, tailwind</option>
                       </select>
-                      <p className="text-[10px] text-brand-neutral/80 leading-normal italic font-sans">
-                        Hint: Outline your core philosophy—do you favor the pedigree and resilience of the execution team (Founder), the breakthrough usability (Product), or a massive systemic demand (Market)?
+                      <p className="text-[10px] text-brand-neutral/60 leading-normal font-sans italic">
+                        Hint: Execution team resilience (Founder), breakthrough usability (Product), or massive systemic demand (Market)?
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex gap-3 mt-8">
+                  <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => setStep(3)}
-                      className="px-5 py-3 bg-brand-bg hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 transition-all cursor-pointer"
+                      className="px-5 py-3.5 bg-white hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 rounded-sm transition-all cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={!isStepValid()}
-                      className="flex-1 py-3 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-50 text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-3.5 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer rounded-sm"
                     >
-                      Proceed to Resume Link <ArrowRight className="h-4 w-4" />
+                      Continue to Resume <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 </form>
@@ -1062,70 +1197,68 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               {/* STEP 5: Resume URL input & Discovery Source */}
               {step === 5 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
-                  <div>
+                  <div className="border-b border-brand-secondary/8 pb-4">
                     <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
-                      RESUME HANDSHAKE
+                      Final Step
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
-                      Resume Link
+                      Resume & Discovery
                     </h4>
-                    <p className="font-sans text-[11px] text-brand-neutral leading-relaxed">
-                      Please provide a shareable Google Drive, Dropbox, OneDrive, Notion, or direct PDF link to your resume. Make sure the link is publicly accessible and does not require access approval.
+                    <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                      Share a publicly accessible link to your resume — Google Drive, Dropbox, or direct PDF. Ensure "Anyone with the link" can view it.
                     </p>
                   </div>
 
                   <div className="space-y-4">
-                    {/* Resume URL Field with real-time UI validation */}
-                    <div className="space-y-1">
-                      <label htmlFor="resumeLink" className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                    {/* Resume URL */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="resumeLink" className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         Resume Link <span className="text-brand-accent">*</span>
                       </label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Globe className="h-4 w-4 text-brand-neutral/60" />
-                        </div>
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                         <input
                           id="resumeLink"
                           type="url"
                           name="resumeLink"
                           required
+                          maxLength={LIMITS.resumeLink}
                           value={formData.resumeLink}
                           onChange={(e) => {
                             handleInputChange(e);
                             if (e.target.value.trim() !== "" && !isValidUrl(e.target.value)) {
-                              setResumeLinkError("Please enter a valid URL starting with http:// or https://");
+                              setResumeLinkError("Please enter a valid URL starting with https://");
                             } else {
                               setResumeLinkError(null);
                             }
                           }}
-                          placeholder="https://drive.google.com/..."
-                          className={`w-full bg-brand-bg text-brand-text pl-9 pr-3 py-2.5 rounded-sm border focus:outline-none text-xs md:text-sm h-11 transition-all ${
+                          placeholder="https://drive.google.com/file/..."
+                          className={`w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border focus:outline-none focus:ring-2 text-sm h-11 transition-all ${
                             formData.resumeLink.trim() === ""
-                              ? "border-brand-secondary/15 focus:border-brand-accent"
+                              ? "border-brand-secondary/15 focus:border-brand-accent focus:ring-brand-accent/10"
                               : isValidUrl(formData.resumeLink)
-                              ? "border-green-600 bg-green-50/5 focus:border-green-600"
-                              : "border-red-600 bg-red-50/5 focus:border-red-600"
+                              ? "border-green-500 focus:border-green-500 focus:ring-green-400/15"
+                              : "border-red-400 focus:border-red-400 focus:ring-red-400/10"
                           }`}
                         />
                       </div>
-
                       {resumeLinkError && (
-                        <p className="text-red-700 text-[10px] font-semibold mt-1 flex items-center gap-1">
+                        <p className="text-red-600 text-[10px] flex items-center gap-1">
                           <AlertCircle className="h-3 w-3 shrink-0" />
                           {resumeLinkError}
                         </p>
                       )}
                       {formData.resumeLink.trim() !== "" && isValidUrl(formData.resumeLink) && (
-                        <p className="text-green-700 text-[10px] font-semibold mt-1 flex items-center gap-1">
+                        <p className="text-green-700 text-[10px] flex items-center gap-1 font-semibold">
                           <Check className="h-3 w-3 shrink-0" />
-                          Resume link formatted successfully
+                          Valid resume link
                         </p>
                       )}
                     </div>
 
-                    {/* How did you hear about DealSchool */}
-                    <div className="space-y-1">
-                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">
+                    {/* Discovery Source */}
+                    <div className="space-y-1.5">
+                      <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         How did you hear about DealSchool? <span className="text-brand-accent">*</span>
                       </label>
                       <select
@@ -1133,50 +1266,55 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         required
                         value={formData.discoverySource}
                         onChange={handleInputChange}
-                        className="w-full bg-brand-bg text-brand-text px-3 py-2 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10 select-none cursor-pointer"
+                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
                       >
-                        <option value="">-- Click To Select Origin --</option>
+                        <option value="">Select how you found us...</option>
                         <option value="LinkedIn">LinkedIn</option>
-                        <option value="Social Media">Social Media</option>
-                        <option value="College">College</option>
+                        <option value="Social Media">Social Media (Instagram / Twitter)</option>
+                        <option value="College">College / Campus</option>
+                        <option value="Friend / Referral">Friend / Referral</option>
                         <option value="Other">Other</option>
                       </select>
                     </div>
 
                     {formData.discoverySource === "Other" && (
-                      <div className="space-y-1 animate-fadeIn">
-                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Please Specify <span className="text-brand-accent">*</span></label>
+                      <div className="space-y-1.5">
+                        <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+                          Please Specify <span className="text-brand-accent">*</span>
+                        </label>
                         <input
                           type="text"
                           name="discoverySourceOther"
                           required
+                          maxLength={LIMITS.discoveryOther}
                           value={formData.discoverySourceOther}
                           onChange={handleInputChange}
-                          placeholder="Referral name, web page, or newsletter..."
-                          className="w-full bg-brand-bg text-brand-text px-3 py-2 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs h-10"
+                          placeholder="Referral name, website, newsletter..."
+                          className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                         />
+                        <CharCount value={formData.discoverySourceOther} max={LIMITS.discoveryOther} />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex gap-3">
                     <button
                       type="button"
                       onClick={() => setStep(4)}
-                      className="px-5 py-3 bg-brand-bg hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 transition-all cursor-pointer"
+                      className="px-5 py-3.5 bg-white hover:bg-brand-secondary/5 text-brand-neutral font-mono text-xs font-bold uppercase border border-brand-secondary/15 rounded-sm transition-all cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={!isStepValid() || isSubmitting}
-                      className="flex-1 py-3 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-50 text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-3.5 bg-brand-accent hover:bg-[#c49620] disabled:opacity-40 disabled:cursor-not-allowed text-white font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer rounded-sm shadow-md shadow-brand-accent/20"
                     >
                       {isSubmitting ? (
-                        <span>Analyzing Credentials...</span>
+                        <span>Submitting Application...</span>
                       ) : (
                         <>
-                          Complete Enrollment <Sparkles className="h-4 w-4" />
+                          Submit Application <Sparkles className="h-4 w-4" />
                         </>
                       )}
                     </button>

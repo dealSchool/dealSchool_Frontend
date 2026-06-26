@@ -5,8 +5,6 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { db, handleFirestoreError, OperationType, getFriendlyFirestoreError } from "./firebase";
-import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
   StaircaseIllustration,
   CertificateKeyIllustration,
@@ -18,7 +16,13 @@ import { ApplyModal } from "./components/ApplyModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { AdminLoginForm } from "./components/AdminLoginForm";
+import { AdminForgotPassword } from "./components/AdminForgotPassword";
 import { PaymentCallback } from "./components/PaymentCallback";
+import { auth } from "./firebase";
+import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+
+const ADMIN_EMAIL = "admin@dealschool.in";
 import { FOUNDERS_DATA } from "./data";
 import { 
   Compass, 
@@ -51,9 +55,41 @@ import {
   AlertCircle
 } from "lucide-react";
 
+type AppPage = "home" | "about" | "program" | "team" | "contact" | "admin-login" | "admin";
+
+const PAGE_PATHS: Record<string, AppPage> = {
+  "/": "home",
+  "/about": "about",
+  "/program": "program",
+  "/team": "team",
+  "/contact": "contact",
+  "/admin-login": "admin-login",
+  "/admin": "admin",
+};
+
+const PATH_FROM_PAGE: Record<AppPage, string> = {
+  home: "/",
+  about: "/about",
+  program: "/program",
+  team: "/team",
+  contact: "/contact",
+  "admin-login": "/admin-login",
+  admin: "/admin",
+};
+
+function pageFromPathname(pathname: string): AppPage {
+  return PAGE_PATHS[pathname] ?? "home";
+}
+
 export default function App() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
-  const [activePage, setActivePage] = useState<"home" | "about" | "program" | "team" | "contact" | "admin">("home");
+  const [activePage, setActivePage] = useState<AppPage>(
+    pageFromPathname(window.location.pathname)
+  );
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [adminLoginView, setAdminLoginView] = useState<"login" | "forgotPassword">("login");
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Razorpay payment callback — detected from URL query params on mount
   const [paymentCallbackParams, setPaymentCallbackParams] = useState<URLSearchParams | null>(null);
@@ -85,8 +121,43 @@ export default function App() {
     setIsApplyModalOpen(true);
   };
 
-  const handlePageChange = (pageId: "home" | "about" | "program" | "team" | "contact" | "admin") => {
+  useEffect(() => {
+    const onPopState = () => {
+      setActivePage(pageFromPathname(window.location.pathname));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // Reject any Google (or email) account that isn't the authorised admin.
+      // Sign them out immediately — never set currentUser — so the dashboard
+      // is never rendered even for a frame.
+      if (user && user.email !== ADMIN_EMAIL) {
+        signOut(auth);
+        setAuthError("This Google account is not authorised for admin access. Please use the admin email.");
+        return; // onAuthStateChanged will fire again with null
+      }
+
+      setCurrentUser(user);
+      setAuthChecked(true);
+      const page = pageFromPathname(window.location.pathname);
+      if (user && page === "admin-login") {
+        setActivePage("admin");
+        window.history.replaceState({}, "", "/admin");
+      } else if (!user && page === "admin") {
+        setActivePage("admin-login");
+        window.history.replaceState({}, "", "/admin-login");
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  const handlePageChange = (pageId: AppPage) => {
     setActivePage(pageId);
+    window.history.pushState({}, "", PATH_FROM_PAGE[pageId]);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -96,27 +167,36 @@ export default function App() {
     setContactError(null);
 
     try {
-      const contactCollRef = collection(db, "contacts");
-      const docRef = doc(contactCollRef);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+      const res = await fetch(`${backendUrl}/api/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactForm.name,
+          email: contactForm.email,
+          subject: contactForm.subject,
+          message: contactForm.message,
+        }),
+      });
 
-      const payload = {
-        name: contactForm.name,
-        email: contactForm.email,
-        subject: contactForm.subject,
-        message: contactForm.message,
-        status: "unread",
-        createdAt: serverTimestamp()
-      };
-
-      await setDoc(docRef, payload);
+      if (res.status === 409) {
+        setContactError("A message from this email was already submitted recently. Please wait before submitting again.");
+        return;
+      }
+      if (res.status === 429) {
+        setContactError("Too many requests from your connection. Please wait a few minutes and try again.");
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+        throw new Error(err.error || `Server error (${res.status})`);
+      }
 
       setContactSubmitted(true);
       setContactForm({ name: "", email: "", subject: "Application Inquiry", message: "" });
     } catch (error: any) {
-      const friendlyMessage = getFriendlyFirestoreError(error);
-      console.error("Firestore contact submission error:", error.code || error.message);
-      setContactError(`Submission failed: ${friendlyMessage}`);
-      handleFirestoreError(error, OperationType.WRITE, "contacts");
+      console.error("Contact submission error:", error.message);
+      setContactError(error.message || "Submission failed. Please try again.");
     } finally {
       setContactSubmitting(false);
     }
@@ -132,7 +212,9 @@ export default function App() {
       </div>
 
       {/* Premium Top Navigation */}
-      <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
+      )}
 
       {/* RENDER PAGES DYNAMICALLY USING SMOOTH TRANSITIONS */}
       <main className="flex-grow">
@@ -870,66 +952,87 @@ export default function App() {
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                         >
-                          {/* Name \& Email row */}
+                          {/* Name & Email row */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
-                                Full Name *
+                            <div className="space-y-1.5">
+                              <label className="block font-mono text-[9px] text-brand-secondary uppercase font-bold tracking-wider">
+                                Full Name <span className="text-brand-accent">*</span>
                               </label>
-                              <input
-                                type="text"
-                                required
-                                value={contactForm.name}
-                                onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                                placeholder="Your Name"
-                                className="w-full bg-brand-bg text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
-                              />
+                              <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/50 pointer-events-none" />
+                                <input
+                                  type="text"
+                                  required
+                                  maxLength={100}
+                                  value={contactForm.name}
+                                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                                  placeholder="Your full name"
+                                  className="w-full bg-white text-brand-text pl-9 pr-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                                />
+                              </div>
                             </div>
-                            <div className="space-y-1">
-                              <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
-                                Email Address *
+                            <div className="space-y-1.5">
+                              <label className="block font-mono text-[9px] text-brand-secondary uppercase font-bold tracking-wider">
+                                Email Address <span className="text-brand-accent">*</span>
                               </label>
-                              <input
-                                type="email"
-                                required
-                                value={contactForm.email}
-                                onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                                placeholder="name@domain.com"
-                                className="w-full bg-brand-bg text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
-                              />
+                              <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/50 pointer-events-none" />
+                                <input
+                                  type="email"
+                                  required
+                                  maxLength={254}
+                                  value={contactForm.email}
+                                  onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                                  placeholder="name@domain.com"
+                                  className="w-full bg-white text-brand-text pl-9 pr-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                                />
+                              </div>
                             </div>
                           </div>
 
                           {/* Subject Select */}
-                          <div className="space-y-1">
-                            <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
-                              Subject Focus
+                          <div className="space-y-1.5">
+                            <label className="block font-mono text-[9px] text-brand-secondary uppercase font-bold tracking-wider">
+                              Subject <span className="text-brand-accent">*</span>
                             </label>
                             <select
+                              required
                               value={contactForm.subject}
                               onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                              className="w-full bg-brand-bg text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
+                              className="w-full bg-white text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
                             >
-                              <option value="Application Inquiry">Cohort 1 Application Inquiry</option>
-                              <option value="Syllabus/Brochure Request">Venture Curriculum Specs</option>
+                              <option value="Application Inquiry">Application Inquiry — Cohort 1</option>
+                              <option value="Syllabus/Brochure Request">Venture Curriculum / Brochure</option>
                               <option value="Operator Collaboration">Partner / Mentor Engagement</option>
-                              <option value="Other">Custom Question Desk</option>
+                              <option value="Other">General Question</option>
                             </select>
                           </div>
 
                           {/* Message Textarea */}
-                          <div className="space-y-1">
-                            <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
-                              Message Content *
-                            </label>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <label className="block font-mono text-[9px] text-brand-secondary uppercase font-bold tracking-wider">
+                                Your Message <span className="text-brand-accent">*</span>
+                              </label>
+                              <span className={`font-mono text-[9px] tabular-nums transition-colors ${(2000 - contactForm.message.length) < 200 ? "text-amber-600 font-semibold" : "text-brand-neutral/35"}`}>
+                                {contactForm.message.length} / 2000
+                              </span>
+                            </div>
                             <textarea
-                              rows={5}
+                              rows={6}
                               required
+                              minLength={20}
+                              maxLength={2000}
                               value={contactForm.message}
                               onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                              placeholder="Describe your question or thesis background briefly..."
-                              className="w-full bg-brand-bg text-brand-text px-3 py-2.5 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm leading-relaxed"
+                              placeholder="Describe your question, background, or inquiry in detail. The more context you share, the better we can help."
+                              className="w-full bg-white text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm leading-relaxed transition-all resize-none"
                             />
+                            {contactForm.message.length > 0 && contactForm.message.length < 20 && (
+                              <p className="text-[10px] text-brand-neutral/60 font-sans">
+                                Please write at least 20 characters.
+                              </p>
+                            )}
                           </div>
 
                           {contactError && (
@@ -989,7 +1092,17 @@ export default function App() {
               </div>
             )}
 
-            {activePage === "admin" && (
+            {activePage === "admin-login" && (
+              adminLoginView === "forgotPassword"
+                ? <AdminForgotPassword onBack={() => setAdminLoginView("login")} />
+                : <AdminLoginForm
+                    onForgotPassword={() => setAdminLoginView("forgotPassword")}
+                    authError={authError}
+                    onClearAuthError={() => setAuthError(null)}
+                  />
+            )}
+
+            {activePage === "admin" && authChecked && currentUser && (
               <AdminDashboard />
             )}
 
@@ -998,7 +1111,9 @@ export default function App() {
       </main>
 
       {/* GLOBAL FOOTER REFERENCES */}
-      <FooterPanel onChangePage={handlePageChange} />
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <FooterPanel onChangePage={handlePageChange} />
+      )}
 
       {/* Razorpay payment callback overlay */}
       {paymentCallbackParams && (
@@ -1009,7 +1124,9 @@ export default function App() {
       )}
 
       {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
-      <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+      )}
 
     </div>
   );

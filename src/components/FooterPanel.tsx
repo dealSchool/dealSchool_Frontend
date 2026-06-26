@@ -6,9 +6,10 @@
 import React from "react";
 import { DealSchoolLogo } from "./SVGIllustrations";
 import { Mail, MapPin, ArrowUp, Phone } from "lucide-react";
+import { auth } from "../firebase";
 
 interface FooterPanelProps {
-  onChangePage?: (page: "home" | "about" | "program" | "team" | "contact" | "admin") => void;
+  onChangePage?: (page: "home" | "about" | "program" | "team" | "contact" | "admin-login" | "admin") => void;
 }
 
 export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
@@ -69,7 +70,8 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
             <button
               onClick={() => {
                 if (onChangePage) {
-                  onChangePage("admin");
+                  const destination = auth.currentUser ? "admin" : "admin-login";
+                  onChangePage(destination);
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
               }}
