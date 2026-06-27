@@ -501,7 +501,7 @@ export const AdminDashboard: React.FC = () => {
   const filteredApps = applications.filter((app) => {
     const term = appSearch.toLowerCase();
     const searchText =
-      (app.fullName || "") + (app.email || "") + (app.collegeName || "") +
+      (app.id || "") + (app.fullName || "") + (app.email || "") + (app.collegeName || "") +
       (app.companyName || "") + (app.startupName || "") + (app.areaOfWork || "") +
       (app.city || "") + (app.currentStatus || "");
     const matchesSearch     = !term || searchText.toLowerCase().includes(term);
@@ -806,7 +806,7 @@ export const AdminDashboard: React.FC = () => {
                     <table className="w-full min-w-[780px] border-collapse">
                       <thead>
                         <tr style={{ background: "linear-gradient(90deg, #061a42 0%, #082C6C 60%, #0D3B8E 100%)" }}>
-                          {["Name", "Email", "City", "Current Role", "Company", "Status"].map((col) => (
+                          {["Name / ID", "Email", "City", "Current Role", "Company", "Status"].map((col) => (
                             <th key={col} className="px-4 py-3 text-left font-mono text-[9px] font-bold text-white/60 uppercase tracking-[0.18em] whitespace-nowrap select-none">
                               {col}
                             </th>
@@ -838,9 +838,12 @@ export const AdminDashboard: React.FC = () => {
                                       {getInitials(app.fullName)}
                                     </span>
                                   </div>
-                                  <span className="font-sans text-sm font-semibold text-brand-text group-hover:text-[#082C6C] transition-colors">
-                                    {app.fullName}
-                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className="font-sans text-sm font-semibold text-brand-text group-hover:text-[#082C6C] transition-colors">
+                                      {app.fullName}
+                                    </span>
+                                    <span className="font-mono text-[9px] text-brand-neutral/50 tracking-wide">{app.id}</span>
+                                  </div>
                                 </div>
                               </td>
                               {/* Email */}
@@ -1068,6 +1071,16 @@ export const AdminDashboard: React.FC = () => {
                                 <span className="flex items-center gap-1"><User className="h-2.5 w-2.5" />{selectedApp.currentStatus}</span>
                                 {selectedApp.city && <span className="flex items-center gap-1"><MapPin className="h-2.5 w-2.5" />{selectedApp.city}</span>}
                                 <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{renderShortDate(selectedApp.createdAt)}</span>
+                              </div>
+                              <div className="mt-1.5 flex items-center gap-1.5">
+                                <span className="font-mono text-[9px] text-white/30 uppercase tracking-wider">ID:</span>
+                                <span
+                                  className="font-mono text-[9px] text-white/50 cursor-pointer hover:text-[#D4A62A] transition-colors"
+                                  title="Click to copy"
+                                  onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(selectedApp.id); showToast("Applicant ID copied!", "success"); }}
+                                >
+                                  {selectedApp.id}
+                                </span>
                               </div>
                             </div>
                           </div>
