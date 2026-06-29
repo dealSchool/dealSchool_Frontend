@@ -1482,9 +1482,9 @@ export const AdminDashboard: React.FC = () => {
                               {selectedContact.subject}
                             </p>
                           </div>
-                          <div className="bg-white rounded-sm border border-brand-secondary/10 p-4 shadow-sm space-y-1">
+                          <div className="bg-white rounded-sm border border-brand-secondary/10 p-4 shadow-sm space-y-1 overflow-hidden">
                             <SectionLabel>Message</SectionLabel>
-                            <p className="font-sans text-xs text-brand-neutral leading-relaxed whitespace-pre-wrap">
+                            <p className="font-sans text-xs text-brand-neutral leading-relaxed whitespace-pre-wrap break-words">
                               {selectedContact.message}
                             </p>
                           </div>
