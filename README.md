@@ -1,6 +1,6 @@
 # DealSchool — VC Fellowship Platform
 
-DealSchool is a full-stack web application for an 8-week, cohort-based venture capital fellowship by Middha Ventures. Applicants discover the programme, apply online, and pay the fellowship fee. Admins review applications, manage statuses, and trigger Razorpay payment links — all from a password-protected dashboard.
+DealSchool is a full-stack web application for a 10-week, cohort-based venture capital fellowship by Middha Ventures. Applicants discover the programme, apply online, and pay the fellowship fee. Admins review applications, manage statuses, and trigger Razorpay payment links — all from a password-protected dashboard.
 
 ---
 

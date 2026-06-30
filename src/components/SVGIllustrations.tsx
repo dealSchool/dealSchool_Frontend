@@ -37,7 +37,7 @@ const glowVariants = {
 export const StaircaseIllustration: React.FC = () => {
   return (
     <motion.div 
-      className="relative w-full max-w-[480px] aspect-[16/10] mx-auto flex items-center justify-center p-4 bg-transparent"
+      className="relative w-full aspect-[16/10] mx-auto flex items-center justify-center p-4 bg-transparent"
       {...floatingYAnimation}
     >
       <svg
@@ -132,11 +132,11 @@ export const StaircaseIllustration: React.FC = () => {
           <animate attributeName="opacity" values="1;0;1" dur="2.5s" repeatCount="indefinite" />
         </circle>
 
-        {/* Floating text metadata labels - Sequoia/McKinsey style */}
-        <g fill="#5F6368" fontFamily="var(--font-mono)" fontSize="11" letterSpacing="0.05em">
-          <text x="70" y="475">ENTRY: AMBITIOUS THINKING</text>
-          <text x="240" y="270">ANALYSIS & METRICS</text>
-          <text x="560" y="80" textAnchor="end">DESTINATION: VC BOARDROOM</text>
+        {/* Floating text metadata labels */}
+        <g fontFamily="var(--font-mono)" fontSize="13" letterSpacing="0.08em" fontWeight="600">
+          <text x="70" y="475" fill="#0D3B8E" fillOpacity="0.55">ENTRY: AMBITIOUS THINKING</text>
+          <text x="240" y="270" fill="#0D3B8E" fillOpacity="0.55">ANALYSIS &amp; METRICS</text>
+          <text x="560" y="80" textAnchor="end" fill="#D4A62A" fillOpacity="0.9">DESTINATION: VC BOARDROOM</text>
         </g>
       </svg>
     </motion.div>
@@ -370,7 +370,7 @@ export const CollaborationIllustration: React.FC = () => {
           </circle>
         </g>
 
-        {/* Figure 1 (Left - Analyst/Sourcing) */}
+        {/* Figure 1 (Left - Analyst/Screening) */}
         <g transform="translate(160, 200)">
           {/* Stand point shadow */}
           <ellipse cx="0" cy="50" rx="20" ry="10" fill="#0D3B8E" fillOpacity="0.08" />
@@ -416,9 +416,9 @@ export const CollaborationIllustration: React.FC = () => {
         <path d="M 180,180 Q 300,150 420,180" stroke="#D4A62A" strokeWidth="1.5" fill="none" strokeOpacity="0.4" />
         <path d="M 420,240 Q 300,300 180,240" stroke="#D4A62A" strokeWidth="1.5" fill="none" strokeOpacity="0.4" />
 
-        {/* Sourcing and decision headers */}
+        {/* Screening and decision headers */}
         <g fill="#5F6368" fontFamily="var(--font-mono)" fontSize="10" letterSpacing="0.05em">
-          <text x="120" y="270" textAnchor="middle">SOURCING INPUTS</text>
+          <text x="120" y="270" textAnchor="middle">SCREENING INPUTS</text>
           <text x="480" y="270" textAnchor="middle">DILIGENCE INSIGHTS</text>
           <text x="300" y="60" textAnchor="middle">COMMITTEE DECISIVE CONVICTION</text>
         </g>

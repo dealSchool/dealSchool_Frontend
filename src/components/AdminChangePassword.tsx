@@ -135,7 +135,7 @@ export const AdminChangePassword: React.FC<Props> = ({ onClose }) => {
               <div className="bg-[#FCFAF6] border border-brand-accent/20 p-4 rounded-sm space-y-2">
                 <p className="font-sans text-xs text-brand-neutral leading-relaxed">
                   You're signed in with <span className="font-bold text-brand-secondary">Google</span>.
-                  In the next step you'll set a new password — Google will verify your identity first.
+                  In the next step you'll set a new password. Google will verify your identity first.
                 </p>
               </div>
             ) : (

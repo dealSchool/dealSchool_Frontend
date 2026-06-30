@@ -13,11 +13,11 @@ export const JOURNEY_STAGES: JourneyStage[] = [
   {
     id: "stage-2",
     num: "P2",
-    title: "Phase 2 — Sourcing & Evaluation",
+    title: "Phase 2 — Screening & Evaluation",
     duration: "Weeks 3 - 4",
     summary: "Shadow real pitch calls. Develop screening instincts. Learn how investors evaluate opportunities.",
     focusAreas: ["Shadowing Pitch Calls", "Screening Metrics", "Opportunity Assessments"],
-    skillsAcquired: ["Metric Auditing", "sourcing instincts", "evaluation models"]
+    skillsAcquired: ["Metric Auditing", "screening instincts", "evaluation models"]
   },
   {
     id: "stage-3",
@@ -32,16 +32,16 @@ export const JOURNEY_STAGES: JourneyStage[] = [
     id: "stage-4",
     num: "P4",
     title: "Phase 4 — Due Diligence & Deal Mechanics",
-    duration: "Weeks 7 - 8",
+    duration: "Weeks 7 - 10",
     summary: "The work between the pitch and the investment. Deep dive into diligence and deal structures.",
     focusAreas: ["Data room audits", "Term sheet analysis", "Waterfall payouts"],
     skillsAcquired: ["Due Diligence", "diligence sheets", "deal frameworks"]
   },
   {
     id: "stage-5",
-    num: "W8",
-    title: "Week 8 — The Experience",
-    duration: "Week 8",
+    num: "W10",
+    title: "Week 10 — The Experience",
+    duration: "Week 10",
     summary: "Something you'll have to experience for yourself. Details available inside the brochure.",
     focusAreas: ["Brochure Material", "Active Simulations", "Live Presentations"],
     skillsAcquired: ["Venture Immersion", "Experience Day", "Brochure Access"]

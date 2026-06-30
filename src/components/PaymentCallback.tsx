@@ -98,7 +98,7 @@ export const PaymentCallback: React.FC<PaymentCallbackProps> = ({ params, onClos
         <div className="flex items-start gap-2 bg-brand-secondary/5 border border-brand-secondary/10 rounded-sm p-3">
           <Mail className="h-4 w-4 text-brand-accent mt-0.5 shrink-0" />
           <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-            Questions? Email <a href="mailto:hello@dealschool.in" className="text-brand-accent font-bold underline">hello@dealschool.in</a>
+            Questions? Email <a href="mailto:support@dealschool.in" className="text-brand-accent font-bold underline">support@dealschool.in</a>
           </p>
         </div>
 

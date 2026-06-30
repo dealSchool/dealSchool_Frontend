@@ -93,7 +93,7 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
             <img src={dealschoolLogo} alt="DealSchool" className="w-9 h-9 object-contain" />
           </div>
           <div>
-            <span className="font-serif text-lg font-black text-[#FAFAF8] tracking-widest uppercase block leading-tight">
+            <span className="font-sans text-lg font-black text-[#FAFAF8] tracking-widest uppercase block leading-tight">
               DEAL<span className="text-brand-accent">SCHOOL</span>
             </span>
             <span className="font-mono text-[8px] text-[#FAFAF8]/40 uppercase tracking-[0.25em]">
@@ -141,8 +141,8 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
           <div className="grid grid-cols-3 divide-x divide-white/[0.07] border border-white/[0.07] rounded-sm overflow-hidden">
             {[
               { value: "20",   label: "Fellows / Cohort" },
-              { value: "₹12K", label: "Student Pricing"  },
-              { value: "8 Wk", label: "Weekend Sessions" },
+              { value: "₹18K", label: "Student Pricing"  },
+              { value: "10 Wk", label: "Weekend Sessions" },
             ].map(({ value, label }) => (
               <div key={label} className="px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
                 <span className="block font-serif text-xl font-black text-brand-accent leading-none">
@@ -158,12 +158,12 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
           {/* 4-Phase strip */}
           <div className="space-y-2">
             <span className="font-mono text-[9px] text-[#FAFAF8]/35 uppercase tracking-[0.22em] block">
-              8-week curriculum
+              10-week curriculum
             </span>
             <div className="flex gap-0 overflow-hidden rounded-sm border border-white/[0.07]">
               {[
                 { code: "P1", name: "Ecosystem"  },
-                { code: "P2", name: "Sourcing"   },
+                { code: "P2", name: "Screening"  },
                 { code: "P3", name: "Founders"   },
                 { code: "P4", name: "Diligence"  },
               ].map(({ code, name }, i) => (
@@ -217,7 +217,7 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
           <div className="lg:hidden flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <img src={dealschoolLogo} alt="DealSchool" className="w-8 h-8 object-contain" />
-              <span className="font-serif text-base font-black text-brand-text tracking-widest uppercase">
+              <span className="font-sans text-base font-black text-brand-text tracking-widest uppercase">
                 DEAL<span className="text-brand-accent">SCHOOL</span>
               </span>
             </div>

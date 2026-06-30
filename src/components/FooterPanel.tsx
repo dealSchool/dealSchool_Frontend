@@ -5,7 +5,7 @@
 
 import React from "react";
 import { DealSchoolLogo } from "./SVGIllustrations";
-import { Mail, MapPin, ArrowUp, Phone } from "lucide-react";
+import { Mail, MapPin, ArrowUp } from "lucide-react";
 import { auth } from "../firebase";
 
 interface FooterPanelProps {
@@ -40,12 +40,9 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-brand-accent" />
-                <span>hello@dealschool.in</span>
+                <span>support@dealschool.in</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-brand-accent" />
-                <span>+91 91361 51361</span>
-              </div>
+
             </div>
           </div>
 
@@ -54,7 +51,7 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
             <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase">
               UNDERWRITTEN BY
             </h5>
-            <div className="space-y-2 font-serif text-xs text-[#FAFAF8]/80 leading-relaxed">
+            <div className="space-y-2 font-sans text-xs text-[#FAFAF8]/80 leading-relaxed">
               <p className="font-bold text-white">Middha Ventures</p>
               <p className="text-[#FAFAF8]/60 text-[10px] leading-relaxed">
                 Middha Ventures is a Navi Mumbai-based family office investing at the intersection of Consumer Tech and Strategic Capital, backing the next wave of builders.

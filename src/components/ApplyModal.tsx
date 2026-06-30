@@ -400,7 +400,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 15 }}
               transition={{ ease: "easeOut", duration: 0.25 }}
-              className="w-full max-w-2xl bg-brand-bg border border-brand-secondary/15 rounded-sm shadow-2xl p-6 md:p-10 relative"
+              className={`w-full bg-brand-bg border border-brand-secondary/15 rounded-sm shadow-2xl relative ${step === 6 ? 'max-w-md p-8' : 'max-w-2xl p-6 md:p-10'}`}
             >
               <button
                 onClick={resetAndClose}
@@ -683,7 +683,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {formData.currentStatus && (
                       <div className="bg-brand-secondary/[0.03] border border-brand-secondary/10 rounded-sm p-4">
                         <span className="font-mono text-[8px] text-brand-secondary/60 uppercase tracking-widest block mb-3">
-                          {formData.currentStatus} — Additional Details
+                          {formData.currentStatus}: Additional Details
                         </span>
                     <AnimatePresence mode="wait">
                       {formData.currentStatus === "Student" && (
@@ -1024,7 +1024,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       Motivation & Intent
                     </h4>
                     <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-                      This helps us align the program to your primary goal. Quick — one selection required.
+                      This helps us align the program to your primary goal. One selection required.
                     </p>
                   </div>
 
@@ -1101,7 +1101,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       Thinking Assessment
                     </h4>
                     <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-                      No right or wrong answers — we want to see how you reason about startups and investing. Write freely.
+                      No right or wrong answers. We want to see how you reason about startups and investing. Write freely.
                     </p>
                   </div>
 
@@ -1109,7 +1109,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {/* Q1 */}
                     <div className="space-y-2">
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider leading-relaxed">
-                        Q1 — A startup grows fast but burns heavy cash on marketing. Good or bad sign — would you invest? <span className="text-brand-accent">*</span>
+                        Q1: A startup grows fast but burns heavy cash on marketing. Good or bad sign, would you invest? <span className="text-brand-accent">*</span>
                       </label>
                       <textarea
                         name="assessmentQ1"
@@ -1132,7 +1132,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {/* Q2 */}
                     <div className="space-y-2">
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider leading-relaxed">
-                        Q2 — If you had ₹10 lakhs to invest in ONE startup sector for 10 years, which and why? <span className="text-brand-accent">*</span>
+                        Q2: If you had ₹10 lakhs to invest in ONE startup sector for 10 years, which and why? <span className="text-brand-accent">*</span>
                       </label>
                       <textarea
                         name="assessmentQ2"
@@ -1155,7 +1155,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {/* Q3 */}
                     <div className="space-y-2">
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                        Q3 — In an early-stage startup, what matters most? <span className="text-brand-accent">*</span>
+                        Q3: In an early-stage startup, what matters most? <span className="text-brand-accent">*</span>
                       </label>
                       <select
                         name="assessmentQ3"
@@ -1165,9 +1165,9 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
                       >
                         <option value="">Choose your conviction...</option>
-                        <option value="Founder">Founder — team, grit, pedigree</option>
-                        <option value="Product">Product — usability, differentiation</option>
-                        <option value="Market">Market — size, demand, tailwind</option>
+                        <option value="Founder">Founder: team, grit, pedigree</option>
+                        <option value="Product">Product: usability, differentiation</option>
+                        <option value="Market">Market: size, demand, tailwind</option>
                       </select>
                       <p className="text-[10px] text-brand-neutral/60 leading-normal font-sans italic">
                         Hint: Execution team resilience (Founder), breakthrough usability (Product), or massive systemic demand (Market)?
@@ -1205,7 +1205,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       Resume & Discovery
                     </h4>
                     <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-                      Share a publicly accessible link to your resume — Google Drive, Dropbox, or direct PDF. Ensure "Anyone with the link" can view it.
+                      Share a publicly accessible link to your resume: Google Drive, Dropbox, or direct PDF. Ensure "Anyone with the link" can view it.
                     </p>
                   </div>
 
@@ -1327,49 +1327,52 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                 <motion.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="py-6 text-center space-y-4"
+                  className="py-2 text-center space-y-5"
                   id="application-success-receipt"
                 >
-                  <div className="mx-auto h-16 w-16 bg-brand-accent/15 border border-brand-accent rounded-full flex items-center justify-center text-brand-accent shadow-md shadow-brand-accent/10">
-                    <Check className="h-8 w-8 animate-pulse" />
+                  {/* Icon */}
+                  <div className="mx-auto h-14 w-14 bg-brand-accent/15 border border-brand-accent/40 rounded-full flex items-center justify-center text-brand-accent">
+                    <Check className="h-6 w-6" strokeWidth={2.5} />
                   </div>
 
-                  <div className="space-y-2">
-                    <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.25em] font-bold block uppercase">
-                      Credentials Received
-                    </span>
-                    <h3 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text">
+                  {/* Heading */}
+                  <div className="space-y-1.5">
+                    <h3 id="modal-step-title" className="font-serif text-2xl md:text-3xl font-bold text-brand-text">
                       Application Submitted
                     </h3>
-                    <p className="font-serif italic text-xs md:text-sm text-brand-neutral">
-                      Welcome to the DealSchool Sourcing Hub, {formData.fullName}.
+                    <p className="font-sans text-sm text-brand-neutral">
+                      Welcome to DealSchool, <span className="font-semibold text-brand-text">{formData.fullName}</span>.
                     </p>
                   </div>
 
-                  {/* Aesthetic Ledger Invoice */}
-                  <div className="bg-[#FAF8F5] p-5 rounded-sm text-left border border-brand-secondary/10 max-w-sm mx-auto font-mono text-[10px] text-brand-secondary space-y-2 shadow-xs">
-                    <div className="flex justify-between border-b border-brand-secondary/5 pb-1">
-                      <span className="text-brand-neutral font-bold uppercase">OUTLOOK ROLE:</span>
-                      <span className="font-bold text-brand-accent uppercase">{formData.currentStatus}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-brand-secondary/5 pb-1">
-                      <span className="text-brand-neutral font-bold">COHORT CYCLE:</span>
-                      <span className="font-bold text-brand-accent">FALL CYCLE 1 INCUBATE</span>
-                    </div>
-                    <div className="flex justify-between border-b border-brand-secondary/5 pb-1">
-                      <span className="text-brand-neutral font-bold">REF ID:</span>
-                      <span className="font-bold">DS-{submittedDocId.substring(0, 8).toUpperCase()}</span>
-                    </div>
-                    <p className="text-[9px] text-brand-neutral leading-relaxed pt-2">
-                      Our selection committee, in concert with Middha Ventures General Partners, will inspect your financial and technological thesis answers. Expect interview parameters inside 5 enterprise days.
-                    </p>
+                  {/* Divider */}
+                  <div className="w-12 h-px bg-brand-accent/40 mx-auto" />
+
+                  {/* What happens next */}
+                  <div className="bg-[#F7F5F1] border border-brand-secondary/10 rounded-sm px-6 py-5 text-left space-y-3 max-w-sm mx-auto">
+                    <p className="font-mono text-[9px] text-brand-accent uppercase tracking-[0.2em] font-bold">What Happens Next</p>
+                    <ul className="space-y-2.5">
+                      {[
+                        "Our team will review your application within 5 business days.",
+                        "Shortlisted applicants will receive an interview invite by email.",
+                        "Selected fellows are confirmed before the cohort start date.",
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-start gap-2.5">
+                          <span className="mt-0.5 h-4 w-4 rounded-full bg-brand-accent/15 border border-brand-accent/30 text-brand-accent font-mono text-[8px] font-bold flex items-center justify-center shrink-0">
+                            {i + 1}
+                          </span>
+                          <span className="font-sans text-xs text-brand-neutral leading-relaxed">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
+                  {/* CTA */}
                   <button
                     onClick={resetAndClose}
-                    className="mt-4 px-6 py-2.5 bg-brand-secondary hover:bg-brand-text text-[#FAFAF8] font-mono text-xs font-bold tracking-wider uppercase transition-colors duration-200 cursor-pointer"
+                    className="px-8 py-3 bg-brand-secondary hover:bg-brand-text text-[#FAFAF8] font-mono text-xs font-bold tracking-wider uppercase transition-colors duration-200 cursor-pointer"
                   >
-                    Return To Intelligence Report
+                    Back to Website
                   </button>
                 </motion.div>
               )}

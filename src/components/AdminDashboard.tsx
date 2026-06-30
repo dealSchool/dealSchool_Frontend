@@ -599,7 +599,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="bg-white/10 rounded-lg p-1 ring-1 ring-white/15">
               <img src={dealschoolLogo} alt="DealSchool" className="w-6 h-6 object-contain" />
             </div>
-            <span className="font-serif text-sm font-bold text-white tracking-tight">DealSchool</span>
+            <span className="font-sans text-sm font-bold text-white tracking-tight">DealSchool</span>
           </div>
           <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/15">
             <span className="font-mono text-[9px] text-[#D4A62A] uppercase tracking-[0.25em] font-bold">Admissions Board</span>
@@ -1185,7 +1185,7 @@ export const AdminDashboard: React.FC = () => {
 
                             <div className="border border-brand-secondary/15 rounded-sm p-3 space-y-1.5">
                               <span className="block font-mono text-[9px] font-bold text-brand-secondary uppercase tracking-wider">
-                                Q1 — Cash-burning marketing growth
+                                Q1: Cash-burning marketing growth
                               </span>
                               <p className="font-serif italic text-xs text-brand-neutral leading-relaxed whitespace-pre-wrap max-h-24 overflow-y-auto">
                                 "{selectedApp.assessmentQ1}"
@@ -1194,7 +1194,7 @@ export const AdminDashboard: React.FC = () => {
 
                             <div className="border border-brand-secondary/15 rounded-sm p-3 space-y-1.5">
                               <span className="block font-mono text-[9px] font-bold text-brand-secondary uppercase tracking-wider">
-                                Q2 — ₹10 lakhs sector choice
+                                Q2: ₹10 lakhs sector choice
                               </span>
                               <p className="font-serif italic text-xs text-brand-neutral leading-relaxed whitespace-pre-wrap max-h-24 overflow-y-auto">
                                 "{selectedApp.assessmentQ2}"
@@ -1203,7 +1203,7 @@ export const AdminDashboard: React.FC = () => {
 
                             <div className="bg-[#082C6C]/[0.05] border border-brand-secondary/20 rounded-sm p-3 flex items-center justify-between gap-3">
                               <span className="font-mono text-[9px] font-bold text-brand-secondary uppercase tracking-wider">
-                                Q3 — Most vital in early-stage
+                                Q3: Most vital in early-stage
                               </span>
                               <span className="font-mono text-[10px] font-black bg-[#082C6C] text-[#D4A62A] px-3 py-1 rounded-full uppercase tracking-wider border border-[#D4A62A]/30 shrink-0">
                                 {selectedApp.assessmentQ3}

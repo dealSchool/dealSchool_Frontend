@@ -104,7 +104,7 @@ export async function callAdminForgotPassword(email: string): Promise<void> {
   if (cooldown > 0) {
     const mins = Math.ceil(cooldown / 60_000);
     throw new Error(
-      `Rate limited — please wait ${mins} minute${mins !== 1 ? "s" : ""} before requesting another reset link.`
+      `Rate limited. Please wait ${mins} minute${mins !== 1 ? "s" : ""} before requesting another reset link.`
     );
   }
   await sendPasswordResetEmail(auth, email);
