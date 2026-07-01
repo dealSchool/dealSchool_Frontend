@@ -740,14 +740,14 @@ export default function App() {
                     <h2 className="font-serif text-2xl md:text-3xl font-bold text-brand-text">Founding Team</h2>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                     {[
                       { img: tusshaarImg, name: "Tusshaar Chawla", role: "Head of Growth & Strategy", bio: "Tusshaar has experience across Venture Capital & Investment Banking. His work includes startup screening, investment research, due diligence, pitch decks, stakeholder communication, and founder engagement. He is part of the core team at Middha Ventures, contributing to Venture Strategy & Ecosystem initiatives and the development of DealSchool.", linkedin: "https://www.linkedin.com/in/tusshaarchawla/" },
                       { img: rishabhImg, name: "Rishabh Agrawal", role: "Head of Strategy & Operations", bio: "Rishabh's experience spans venture capital, investment banking, capital markets, and startup ecosystems, with hands-on exposure to startup evaluation, fundraising, and investment research. He leads the fellowship's strategy and operations, overseeing program development, partnerships, and execution.", linkedin: "https://www.linkedin.com/in/rishabh-agrawal11/" },
                     ].map((person) => (
                       <div key={person.name} className="bg-brand-bg border border-brand-secondary/15 rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
                         {/* Photo — square crop */}
-                        <div className="aspect-square overflow-hidden bg-[#F0EDE8]">
+                        <div className="aspect-[4/3] overflow-hidden bg-[#F0EDE8]">
                           <img src={person.img} alt={person.name} className="w-full h-full object-cover object-top" />
                         </div>
                         {/* Content */}
