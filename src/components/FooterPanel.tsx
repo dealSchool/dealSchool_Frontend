@@ -9,7 +9,19 @@ import { Mail, MapPin, ArrowUp } from "lucide-react";
 import { auth } from "../firebase";
 
 interface FooterPanelProps {
-  onChangePage?: (page: "home" | "about" | "program" | "team" | "contact" | "admin-login" | "admin") => void;
+  onChangePage?: (
+    page:
+      | "home"
+      | "about"
+      | "program"
+      | "team"
+      | "contact"
+      | "terms-and-conditions"
+      | "privacy-policy"
+      | "refund-and-cancellation"
+      | "admin-login"
+      | "admin"
+  ) => void;
 }
 
 export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
@@ -64,6 +76,39 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 text-[10px] font-mono text-[#FAFAF8]/40 uppercase tracking-widest leading-none">
           <div className="flex flex-col md:flex-row items-center gap-4">
             <span>&copy; {new Date().getFullYear()} DEALSCHOOL. AN INITIATIVE BY MIDDHA VENTURES. ALL RIGHTS RESERVED.</span>
+            <button
+              onClick={() => {
+                if (onChangePage) {
+                  onChangePage("terms-and-conditions");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
+            >
+              Terms &amp; Conditions
+            </button>
+            <button
+              onClick={() => {
+                if (onChangePage) {
+                  onChangePage("privacy-policy");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
+            >
+              Privacy Policy
+            </button>
+            <button
+              onClick={() => {
+                if (onChangePage) {
+                  onChangePage("refund-and-cancellation");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
+            >
+              Refund &amp; Cancellation Policy
+            </button>
             <button
               onClick={() => {
                 if (onChangePage) {

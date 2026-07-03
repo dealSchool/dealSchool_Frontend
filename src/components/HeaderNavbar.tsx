@@ -9,8 +9,8 @@ import { Menu, X, ArrowUpRight } from "lucide-react";
 
 interface HeaderNavbarProps {
   onApplyClick: () => void;
-  activePage: "home" | "about" | "program" | "team" | "contact" | "admin";
-  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "admin") => void;
+  activePage: "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin";
+  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -37,7 +37,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     { label: "Contact", id: "contact" as const },
   ];
 
-  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "admin") => {
+  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => {
     setMobileMenuOpen(false);
     onChangePage(pageId);
     window.scrollTo({
