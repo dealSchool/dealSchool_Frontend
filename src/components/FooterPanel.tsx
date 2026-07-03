@@ -16,6 +16,7 @@ interface FooterPanelProps {
       | "program"
       | "team"
       | "contact"
+      | "faq"
       | "terms-and-conditions"
       | "privacy-policy"
       | "refund-and-cancellation"
@@ -60,7 +61,7 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
 
           {/* Underwriting credits */}
           <div className="space-y-3 md:col-span-2">
-            <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase">
+            <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase">
               UNDERWRITTEN BY
             </h5>
             <div className="space-y-2 font-sans text-xs text-[#FAFAF8]/80 leading-relaxed">
@@ -76,6 +77,17 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 text-[10px] font-mono text-[#FAFAF8]/40 uppercase tracking-widest leading-none">
           <div className="flex flex-col md:flex-row items-center gap-4">
             <span>&copy; {new Date().getFullYear()} DEALSCHOOL. AN INITIATIVE BY MIDDHA VENTURES. ALL RIGHTS RESERVED.</span>
+            <button
+              onClick={() => {
+                if (onChangePage) {
+                  onChangePage("faq");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
+            >
+              FAQ
+            </button>
             <button
               onClick={() => {
                 if (onChangePage) {

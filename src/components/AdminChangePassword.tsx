@@ -83,7 +83,7 @@ export const AdminChangePassword: React.FC<Props> = ({ onClose }) => {
           <div className="mx-auto h-12 w-12 bg-brand-accent/10 border border-[#D4A62A]/25 rounded-md flex items-center justify-center text-brand-accent">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.25em] font-bold block uppercase">
+          <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.12em] font-bold block uppercase">
             Account Security
           </span>
           <h3 className="font-serif text-xl font-bold text-brand-text">Change Password</h3>

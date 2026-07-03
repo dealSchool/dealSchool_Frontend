@@ -9,8 +9,8 @@ import { Menu, X, ArrowUpRight } from "lucide-react";
 
 interface HeaderNavbarProps {
   onApplyClick: () => void;
-  activePage: "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin";
-  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => void;
+  activePage: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin";
+  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -35,9 +35,10 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     { label: "Program", id: "program" as const },
     { label: "Team", id: "team" as const },
     { label: "Contact", id: "contact" as const },
+    { label: "FAQ", id: "faq" as const },
   ];
 
-  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => {
+  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => {
     setMobileMenuOpen(false);
     onChangePage(pageId);
     window.scrollTo({
@@ -65,7 +66,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
               <button
                 key={link.id}
                 onClick={() => handlePageClick(link.id)}
-                className={`text-xs font-mono font-bold tracking-[0.15em] uppercase transition-all duration-200 cursor-pointer border-b pb-0.5 ${
+                className={`text-xs font-mono font-bold tracking-[0.08em] uppercase transition-all duration-200 cursor-pointer border-b pb-0.5 ${
                   isActive
                     ? "text-brand-accent border-brand-accent"
                     : "text-brand-text opacity-60 hover:opacity-100 border-transparent hover:border-brand-accent/50"

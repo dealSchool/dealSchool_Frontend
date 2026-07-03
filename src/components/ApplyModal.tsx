@@ -9,6 +9,7 @@ import {
   X, Check, ArrowRight, Sparkles, User, Mail, FileText,
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
+import { CustomSelect } from "./CustomSelect";
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -457,7 +458,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               {step === 1 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
                   <div className="border-b border-brand-secondary/8 pb-4">
-                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
+                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase block mb-1">
                       Admissions Flow 2026
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
@@ -645,7 +646,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               {step === 2 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
                   <div className="border-b border-brand-secondary/8 pb-4">
-                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
+                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase block mb-1">
                       Functional Position
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
@@ -662,21 +663,20 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         Current Status <span className="text-brand-accent">*</span>
                       </label>
-                      <select
-                        name="currentStatus"
-                        required
+                      <CustomSelect
                         value={formData.currentStatus}
-                        onChange={handleInputChange}
-                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
-                      >
-                        <option value="">-- Click To Choose --</option>
-                        <option value="Student">Student</option>
-                        <option value="Recent Graduate (0–2 years of experience)">Recent Graduate (0–2 years of experience)</option>
-                        <option value="Working Professional">Working Professional</option>
-                        <option value="Founder">Founder</option>
-                        <option value="Freelancer">Freelancer</option>
-                        <option value="Other">Other</option>
-                      </select>
+                        onChange={(value) => setFormData((prev) => ({ ...prev, currentStatus: value }))}
+                        placeholder="-- Click To Choose --"
+                        className="bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                        options={[
+                          { value: "Student", label: "Student" },
+                          { value: "Recent Graduate (0–2 years of experience)", label: "Recent Graduate (0–2 years of experience)" },
+                          { value: "Working Professional", label: "Working Professional" },
+                          { value: "Founder", label: "Founder" },
+                          { value: "Freelancer", label: "Freelancer" },
+                          { value: "Other", label: "Other" },
+                        ]}
+                      />
                     </div>
 
                     {/* DYNAMIC CONDITIONAL SHORT-ANSWER FIELDS */}
@@ -1017,7 +1017,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               {step === 3 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
                   <div className="border-b border-brand-secondary/8 pb-4">
-                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
+                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase block mb-1">
                       Membership Focus
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
@@ -1033,22 +1033,21 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         Primary reason for joining DealSchool <span className="text-brand-accent">*</span>
                       </label>
-                      <select
-                        name="primaryReason"
-                        required
+                      <CustomSelect
                         value={formData.primaryReason}
-                        onChange={handleInputChange}
-                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
-                      >
-                        <option value="">Select the closest option...</option>
-                        <option value="Explore a career in VC">Explore a career in VC</option>
-                        <option value="Understand startups & investing">Understand startups & investing</option>
-                        <option value="Improve startup evaluation skills">Improve startup evaluation skills</option>
-                        <option value="Prepare for startup or VC internships">Prepare for startup or VC internships</option>
-                        <option value="Learn directly from founders & investors">Learn directly from founders & investors</option>
-                        <option value="Expand network">Expand network</option>
-                        <option value="Other">Other (please specify)</option>
-                      </select>
+                        onChange={(value) => setFormData((prev) => ({ ...prev, primaryReason: value }))}
+                        placeholder="Select the closest option..."
+                        className="bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                        options={[
+                          { value: "Explore a career in VC", label: "Explore a career in VC" },
+                          { value: "Understand startups & investing", label: "Understand startups & investing" },
+                          { value: "Improve startup evaluation skills", label: "Improve startup evaluation skills" },
+                          { value: "Prepare for startup or VC internships", label: "Prepare for startup or VC internships" },
+                          { value: "Learn directly from founders & investors", label: "Learn directly from founders & investors" },
+                          { value: "Expand network", label: "Expand network" },
+                          { value: "Other", label: "Other (please specify)" },
+                        ]}
+                      />
                     </div>
 
                     {formData.primaryReason === "Other" && (
@@ -1094,7 +1093,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               {step === 4 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
                   <div className="border-b border-brand-secondary/8 pb-4">
-                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
+                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase block mb-1">
                       Analytical Lens
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
@@ -1157,18 +1156,17 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         Q3: In an early-stage startup, what matters most? <span className="text-brand-accent">*</span>
                       </label>
-                      <select
-                        name="assessmentQ3"
-                        required
+                      <CustomSelect
                         value={formData.assessmentQ3}
-                        onChange={handleInputChange}
-                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
-                      >
-                        <option value="">Choose your conviction...</option>
-                        <option value="Founder">Founder: team, grit, pedigree</option>
-                        <option value="Product">Product: usability, differentiation</option>
-                        <option value="Market">Market: size, demand, tailwind</option>
-                      </select>
+                        onChange={(value) => setFormData((prev) => ({ ...prev, assessmentQ3: value }))}
+                        placeholder="Choose your conviction..."
+                        className="bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                        options={[
+                          { value: "Founder", label: "Founder: team, grit, pedigree" },
+                          { value: "Product", label: "Product: usability, differentiation" },
+                          { value: "Market", label: "Market: size, demand, tailwind" },
+                        ]}
+                      />
                       <p className="text-[10px] text-brand-neutral/60 leading-normal font-sans italic">
                         Hint: Execution team resilience (Founder), breakthrough usability (Product), or massive systemic demand (Market)?
                       </p>
@@ -1198,7 +1196,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               {step === 5 && (
                 <form onSubmit={handleNextStep} className="space-y-5">
                   <div className="border-b border-brand-secondary/8 pb-4">
-                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.25em] font-bold uppercase block mb-1">
+                    <span className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase block mb-1">
                       Final Step
                     </span>
                     <h4 id="modal-step-title" className="font-serif text-xl md:text-2xl font-bold text-brand-text mb-1">
@@ -1261,20 +1259,19 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
                         How did you hear about DealSchool? <span className="text-brand-accent">*</span>
                       </label>
-                      <select
-                        name="discoverySource"
-                        required
+                      <CustomSelect
                         value={formData.discoverySource}
-                        onChange={handleInputChange}
-                        className="w-full bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
-                      >
-                        <option value="">Select how you found us...</option>
-                        <option value="LinkedIn">LinkedIn</option>
-                        <option value="Social Media">Social Media (Instagram / Twitter)</option>
-                        <option value="College">College / Campus</option>
-                        <option value="Friend / Referral">Friend / Referral</option>
-                        <option value="Other">Other</option>
-                      </select>
+                        onChange={(value) => setFormData((prev) => ({ ...prev, discoverySource: value }))}
+                        placeholder="Select how you found us..."
+                        className="bg-white text-brand-text px-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                        options={[
+                          { value: "LinkedIn", label: "LinkedIn" },
+                          { value: "Social Media", label: "Social Media (Instagram / Twitter)" },
+                          { value: "College", label: "College / Campus" },
+                          { value: "Friend / Referral", label: "Friend / Referral" },
+                          { value: "Other", label: "Other" },
+                        ]}
+                      />
                     </div>
 
                     {formData.discoverySource === "Other" && (
@@ -1350,7 +1347,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
                   {/* What happens next */}
                   <div className="bg-[#F7F5F1] border border-brand-secondary/10 rounded-sm px-6 py-5 text-left space-y-3 max-w-sm mx-auto">
-                    <p className="font-mono text-[9px] text-brand-accent uppercase tracking-[0.2em] font-bold">What Happens Next</p>
+                    <p className="font-mono text-[9px] text-brand-accent uppercase tracking-[0.1em] font-bold">What Happens Next</p>
                     <ul className="space-y-2.5">
                       {[
                         "Our team will review your application within 5 business days.",

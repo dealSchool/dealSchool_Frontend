@@ -93,10 +93,10 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
             <img src={dealschoolLogo} alt="DealSchool" className="w-9 h-9 object-contain" />
           </div>
           <div>
-            <span className="font-sans text-lg font-black text-[#FAFAF8] tracking-widest uppercase block leading-tight">
+            <span className="font-serif text-lg font-black text-[#FAFAF8] tracking-widest uppercase block leading-tight">
               DEAL<span className="text-brand-accent">SCHOOL</span>
             </span>
-            <span className="font-mono text-[8px] text-[#FAFAF8]/40 uppercase tracking-[0.25em]">
+            <span className="font-mono text-[8px] text-[#FAFAF8]/40 uppercase tracking-[0.12em]">
               Venture Fellowship · Middha Ventures
             </span>
           </div>
@@ -117,7 +117,7 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
 
           {/* What you'll actually do */}
           <div className="space-y-2">
-            <span className="font-mono text-[9px] text-[#FAFAF8]/35 uppercase tracking-[0.22em] block">
+            <span className="font-mono text-[9px] text-[#FAFAF8]/35 uppercase tracking-[0.11em] block">
               What you'll do
             </span>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -157,7 +157,7 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
 
           {/* 4-Phase strip */}
           <div className="space-y-2">
-            <span className="font-mono text-[9px] text-[#FAFAF8]/35 uppercase tracking-[0.22em] block">
+            <span className="font-mono text-[9px] text-[#FAFAF8]/35 uppercase tracking-[0.11em] block">
               10-week curriculum
             </span>
             <div className="flex gap-0 overflow-hidden rounded-sm border border-white/[0.07]">
@@ -217,7 +217,7 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
           <div className="lg:hidden flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <img src={dealschoolLogo} alt="DealSchool" className="w-8 h-8 object-contain" />
-              <span className="font-sans text-base font-black text-brand-text tracking-widest uppercase">
+              <span className="font-serif text-base font-black text-brand-text tracking-widest uppercase">
                 DEAL<span className="text-brand-accent">SCHOOL</span>
               </span>
             </div>
@@ -231,7 +231,7 @@ export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, o
 
           {/* Heading */}
           <div className="space-y-1">
-            <span className="font-mono text-[9px] text-brand-accent tracking-[0.3em] font-bold uppercase block">
+            <span className="font-mono text-[9px] text-brand-accent tracking-[0.14em] font-bold uppercase block">
               Admissions Board
             </span>
             <h1 className="font-serif text-[32px] font-bold text-brand-text leading-tight">

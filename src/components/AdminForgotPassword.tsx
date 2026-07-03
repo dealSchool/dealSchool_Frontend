@@ -58,7 +58,7 @@ export const AdminForgotPassword: React.FC<Props> = ({ onBack }) => {
           <div className="mx-auto h-12 w-12 bg-brand-accent/10 border border-[#D4A62A]/25 rounded-md flex items-center justify-center text-brand-accent">
             <Shield className="h-6 w-6" />
           </div>
-          <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.25em] font-bold block uppercase">
+          <span className="font-mono text-[9px] text-[#D4A62A] tracking-[0.12em] font-bold block uppercase">
             Account Recovery
           </span>
           <h3 className="font-serif text-2xl font-bold text-brand-text">Reset Password</h3>

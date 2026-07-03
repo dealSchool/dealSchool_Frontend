@@ -543,7 +543,7 @@ export const DealSchoolLogo: React.FC<{ className?: string }> = ({ className = "
         <span className="font-serif tracking-widest font-black leading-none text-brand-text text-base md:text-lg">
           DEAL<span className="text-brand-accent">SCHOOL</span>
         </span>
-        <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-brand-neutral font-medium leading-none mt-1">
+        <span className="font-mono text-[8px] uppercase tracking-[0.12em] text-brand-neutral font-medium leading-none mt-1">
           Venture Fellowship
         </span>
       </div>

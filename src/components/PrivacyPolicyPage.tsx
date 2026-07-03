@@ -37,7 +37,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
       {/* Header Section */}
       <div className="border-b border-[#111111]/10 pb-10 mb-12 space-y-6">
         <div>
-          <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+          <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block">
             PRIVACY POLICY
           </span>
         </div>

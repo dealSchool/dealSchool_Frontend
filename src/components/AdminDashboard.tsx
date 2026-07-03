@@ -3,13 +3,14 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, logOutAdmin } from "../firebase";
 import { FellowshipApplication, ContactMessage } from "../types";
 import { AdminChangePassword } from "./AdminChangePassword";
+import { CustomSelect } from "./CustomSelect";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
 import {
   Search, ShieldAlert, LogOut, X, Mail, Trash2,
   AlertTriangle, CheckCircle2, User, ExternalLink,
   MessageSquare, KeyRound, CreditCard, RefreshCw,
   ArrowLeft, Phone, MapPin, FileText, Clock,
-  Eye, Users, ChevronDown,
+  Eye, Users,
 } from "lucide-react";
 
 const goToSite = () => {
@@ -47,7 +48,7 @@ const CONTACT_STATUS_CFG: Record<string, { dot: string; label: string; badge: st
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="flex items-center gap-2 mb-3">
     <div className="w-[3px] h-3.5 bg-[#D4A62A] rounded-full shrink-0" />
-    <span className="font-mono text-[9px] text-[#082C6C] uppercase tracking-[0.2em] font-bold">{children}</span>
+    <span className="font-mono text-[9px] text-[#082C6C] uppercase tracking-[0.1em] font-bold">{children}</span>
   </div>
 );
 
@@ -602,7 +603,7 @@ export const AdminDashboard: React.FC = () => {
             <span className="font-sans text-sm font-bold text-white tracking-tight">DealSchool</span>
           </div>
           <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/15">
-            <span className="font-mono text-[9px] text-[#D4A62A] uppercase tracking-[0.25em] font-bold">Admissions Board</span>
+            <span className="font-mono text-[9px] text-[#D4A62A] uppercase tracking-[0.12em] font-bold">Admissions Board</span>
             <button
               onClick={goToSite}
               className="flex items-center gap-1 font-mono text-[9px] text-white/45 hover:text-white uppercase tracking-wider transition-colors cursor-pointer group"
@@ -669,7 +670,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
               <div className="min-w-0 flex flex-col gap-1.5">
                 <span className="block font-serif text-[24px] font-black leading-none text-white">{value}</span>
-                <span className="block font-mono text-[9px] text-white/40 uppercase tracking-[0.18em] truncate">{label}</span>
+                <span className="block font-mono text-[9px] text-white/40 uppercase tracking-[0.09em] truncate">{label}</span>
               </div>
             </div>
           ))}
@@ -750,37 +751,43 @@ export const AdminDashboard: React.FC = () => {
 
                   {/* Archetype select */}
                   <div className="relative min-w-[155px]">
-                    <select
+                    <CustomSelect
                       value={sectorFilter}
-                      onChange={(e) => setSectorFilter(e.target.value)}
-                      className="w-full appearance-none bg-white text-brand-text pl-3 pr-9 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] cursor-pointer rounded-sm font-mono tracking-wide hover:border-brand-secondary/40 transition-colors"
-                    >
-                      <option value="all">Archetype · All</option>
-                      <option value="Student">Student</option>
-                      <option value="Recent Graduate (0–2 years of experience)">Recent Grad</option>
-                      <option value="Working Professional">Working Pro</option>
-                      <option value="Founder">Founder</option>
-                      <option value="Freelancer">Freelancer</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-secondary/40 pointer-events-none" />
+                      onChange={setSectorFilter}
+                      placeholder="Archetype · All"
+                      font="mono"
+                      className="bg-white text-brand-text pl-3 pr-3 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] rounded-sm tracking-wide hover:border-brand-secondary/40 transition-colors"
+                      chevronClassName="h-3.5 w-3.5 text-brand-secondary/40"
+                      options={[
+                        { value: "all", label: "Archetype · All" },
+                        { value: "Student", label: "Student" },
+                        { value: "Recent Graduate (0–2 years of experience)", label: "Recent Grad" },
+                        { value: "Working Professional", label: "Working Pro" },
+                        { value: "Founder", label: "Founder" },
+                        { value: "Freelancer", label: "Freelancer" },
+                        { value: "Other", label: "Other" },
+                      ]}
+                    />
                   </div>
 
                   {/* Status select */}
                   <div className="relative min-w-[135px]">
-                    <select
+                    <CustomSelect
                       value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full appearance-none bg-white text-brand-text pl-3 pr-9 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] cursor-pointer rounded-sm font-mono tracking-wide hover:border-brand-secondary/40 transition-colors"
-                    >
-                      <option value="all">Status · All</option>
-                      <option value="pending">Pending</option>
-                      <option value="under_review">Auditing</option>
-                      <option value="interview_invited">Interview</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="declined">Declined</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-secondary/40 pointer-events-none" />
+                      onChange={setStatusFilter}
+                      placeholder="Status · All"
+                      font="mono"
+                      className="bg-white text-brand-text pl-3 pr-3 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] rounded-sm tracking-wide hover:border-brand-secondary/40 transition-colors"
+                      chevronClassName="h-3.5 w-3.5 text-brand-secondary/40"
+                      options={[
+                        { value: "all", label: "Status · All" },
+                        { value: "pending", label: "Pending" },
+                        { value: "under_review", label: "Auditing" },
+                        { value: "interview_invited", label: "Interview" },
+                        { value: "accepted", label: "Accepted" },
+                        { value: "declined", label: "Declined" },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -807,7 +814,7 @@ export const AdminDashboard: React.FC = () => {
                       <thead>
                         <tr style={{ background: "linear-gradient(90deg, #061a42 0%, #082C6C 60%, #0D3B8E 100%)" }}>
                           {["Name / ID", "Email", "City", "Current Role", "Company", "Status"].map((col) => (
-                            <th key={col} className="px-4 py-3 text-left font-mono text-[9px] font-bold text-white/60 uppercase tracking-[0.18em] whitespace-nowrap select-none">
+                            <th key={col} className="px-4 py-3 text-left font-mono text-[9px] font-bold text-white/60 uppercase tracking-[0.09em] whitespace-nowrap select-none">
                               {col}
                             </th>
                           ))}
@@ -921,14 +928,20 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div className="h-5 w-px bg-brand-secondary/15 hidden md:block" />
                   <div className="relative min-w-[135px]">
-                    <select value={contactStatusFilter} onChange={(e) => setContactStatusFilter(e.target.value)}
-                      className="w-full appearance-none bg-white text-brand-text pl-3 pr-9 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] cursor-pointer rounded-sm font-mono tracking-wide hover:border-brand-secondary/40 transition-colors">
-                      <option value="all">Status · All</option>
-                      <option value="unread">Unread</option>
-                      <option value="read">Read</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-secondary/40 pointer-events-none" />
+                    <CustomSelect
+                      value={contactStatusFilter}
+                      onChange={setContactStatusFilter}
+                      placeholder="Status · All"
+                      font="mono"
+                      className="bg-white text-brand-text pl-3 pr-3 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] rounded-sm tracking-wide hover:border-brand-secondary/40 transition-colors"
+                      chevronClassName="h-3.5 w-3.5 text-brand-secondary/40"
+                      options={[
+                        { value: "all", label: "Status · All" },
+                        { value: "unread", label: "Unread" },
+                        { value: "read", label: "Read" },
+                        { value: "archived", label: "Archived" },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -1029,7 +1042,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="shrink-0 border-b border-white/10" style={{ background: "linear-gradient(135deg, #061a42 0%, #0D3B8E 100%)" }}>
                           {/* Top bar */}
                           <div className="flex items-center justify-between px-5 pt-4">
-                            <span className="font-mono text-[8px] text-white/25 uppercase tracking-[0.3em]">Applicant Profile</span>
+                            <span className="font-mono text-[8px] text-white/25 uppercase tracking-[0.14em]">Applicant Profile</span>
                             <button
                               onClick={() => setSelectedApp(null)}
                               className="h-7 w-7 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
@@ -1113,7 +1126,7 @@ export const AdminDashboard: React.FC = () => {
                           <div className="bg-white border border-brand-secondary/15 rounded-sm p-4 space-y-3 shadow-sm">
                             <div className="flex items-center gap-2 pb-2 border-b border-brand-secondary/10">
                               <div className="w-[3px] h-3.5 bg-[#D4A62A] rounded-full shrink-0" />
-                              <span className="font-mono text-[9px] text-[#082C6C] uppercase tracking-[0.2em] font-bold">Background · {selectedApp.currentStatus}</span>
+                              <span className="font-mono text-[9px] text-[#082C6C] uppercase tracking-[0.1em] font-bold">Background · {selectedApp.currentStatus}</span>
                             </div>
 
                             {selectedApp.currentStatus === "Student" && (
@@ -1335,7 +1348,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="shrink-0 border-t border-[#082C6C]/10 bg-white">
                           {/* Footer header */}
                           <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#082C6C]/8">
-                            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#082C6C] font-bold">
+                            <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#082C6C] font-bold">
                               Admission Decision
                             </span>
                             <span className={`font-mono text-[8px] px-2.5 py-1 rounded-full font-bold uppercase border ${appSC.badge}`}>
@@ -1435,7 +1448,7 @@ export const AdminDashboard: React.FC = () => {
                         <div className="shrink-0 border-b border-white/10" style={{ background: "linear-gradient(135deg, #061a42 0%, #0D3B8E 100%)" }}>
                           {/* Top bar */}
                           <div className="flex items-center justify-between px-5 pt-4">
-                            <span className="font-mono text-[8px] text-white/25 uppercase tracking-[0.3em]">Message Detail</span>
+                            <span className="font-mono text-[8px] text-white/25 uppercase tracking-[0.14em]">Message Detail</span>
                             <button
                               onClick={() => setSelectedContact(null)}
                               className="h-7 w-7 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
@@ -1493,7 +1506,7 @@ export const AdminDashboard: React.FC = () => {
                         {/* Pinned footer */}
                         <div className="shrink-0 border-t border-[#082C6C]/10 bg-white">
                           <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#082C6C]/8">
-                            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#082C6C] font-bold">
+                            <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#082C6C] font-bold">
                               Manage Message
                             </span>
                             <span className={`font-mono text-[8px] px-2.5 py-1 rounded-full font-bold uppercase border ${contactSC.badge}`}>

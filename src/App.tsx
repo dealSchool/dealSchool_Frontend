@@ -22,6 +22,8 @@ import { PaymentCallback } from "./components/PaymentCallback";
 import { TermsAndConditionsPage } from "./components/TermsAndConditionsPage";
 import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { RefundCancellationPage } from "./components/RefundCancellationPage";
+import { FAQPage } from "./components/FAQPage";
+import { CustomSelect } from "./components/CustomSelect";
 import { auth } from "./firebase";
 import tusshaarImg from "./assets/Tusshaar.jpg.jpeg";
 import rishabhImg from "./assets/Rishabh.png";
@@ -59,7 +61,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type AppPage = "home" | "about" | "program" | "team" | "contact" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin-login" | "admin";
+type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin-login" | "admin";
 
 const FoundingTeamSection: React.FC<{ className?: string }> = ({ className = "" }) => {
   const founders = [
@@ -192,6 +194,7 @@ const PAGE_PATHS: Record<string, AppPage> = {
   "/program": "program",
   "/team": "team",
   "/contact": "contact",
+  "/faq": "faq",
   "/terms-and-conditions": "terms-and-conditions",
   "/privacy-policy": "privacy-policy",
   "/refund-and-cancellation": "refund-and-cancellation",
@@ -205,6 +208,7 @@ const PATH_FROM_PAGE: Record<AppPage, string> = {
   program: "/program",
   team: "/team",
   contact: "/contact",
+  faq: "/faq",
   "terms-and-conditions": "/terms-and-conditions",
   "privacy-policy": "/privacy-policy",
   "refund-and-cancellation": "/refund-and-cancellation",
@@ -375,7 +379,7 @@ export default function App() {
 
                   <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
                     <div className="max-w-2xl space-y-6">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-1">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-1">
                         An Initiative by Middha Ventures
                       </span>
 
@@ -481,7 +485,7 @@ export default function App() {
                 <section className="py-20 border-b border-[#111111]/10 bg-brand-bg/50">
                   <div className="max-w-7xl mx-auto px-4 md:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-2">
                         Fellow Testimonials
                       </span>
                       <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text tracking-tight">
@@ -560,7 +564,7 @@ export default function App() {
                 <section className="py-20 bg-[#FAF7F0] border-b border-brand-secondary/10">
                   <div className="max-w-7xl mx-auto px-4 md:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-2">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-2">
                         Methodology
                       </span>
                       <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#111111]">
@@ -608,7 +612,7 @@ export default function App() {
                 <section className="py-24 border-b border-brand-secondary/10">
                   <div className="max-w-7xl mx-auto px-4 md:px-8">
                     <div className="max-w-[750px] text-left">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-4">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-4">
                         An Initiative by Middha Ventures
                       </span>
                       <p className="font-serif text-lg md:text-xl text-brand-secondary leading-relaxed">
@@ -628,7 +632,7 @@ export default function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.3em] uppercase block">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.14em] uppercase block">
                         Cohort seats fill fast. We cap it at 20.
                       </span>
                       <h2 className="font-serif text-4xl sm:text-5xl md:text-[54px] font-black tracking-tight leading-[1.05] text-white">
@@ -664,7 +668,7 @@ export default function App() {
                 
                 {/* Intro block */}
                 <div className="max-w-3xl space-y-6">
-                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block">
                     Why We Built DealSchool
                   </span>
                   
@@ -709,7 +713,7 @@ export default function App() {
                 {/* Philosophy Pillars */}
                 <div className="space-y-10">
                   <div className="text-center max-w-xl mx-auto">
-                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-1">
+                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-1">
                       Sovereign Principles
                     </span>
                     <h2 className="font-serif text-2xl md:text-3xl font-bold text-brand-text">Our Philosophy</h2>
@@ -762,7 +766,7 @@ export default function App() {
                 
                 {/* Intro block */}
                 <div className="max-w-3xl space-y-4">
-                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                  <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block">
                     Curriculum Map & Frameworks
                   </span>
                   
@@ -857,7 +861,7 @@ export default function App() {
                 <div className="bg-brand-secondary border-b border-brand-accent/20 py-16 md:py-24 relative overflow-hidden">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-accent/[0.08] via-transparent to-transparent pointer-events-none" />
                   <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
-                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block mb-4">
+                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-4">
                       Advisors & General Partners
                     </span>
                     <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#FAFAF8]">
@@ -887,7 +891,7 @@ export default function App() {
                   {/* Left Column (Details & Info) */}
                   <div className="lg:col-span-5 space-y-8">
                     <div className="space-y-4">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.25em] uppercase block">
+                      <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block">
                         Direct Inquiry Portal
                       </span>
                       
@@ -997,17 +1001,18 @@ export default function App() {
                             <label className="block font-mono text-[9px] text-brand-secondary uppercase font-bold tracking-wider">
                               Subject <span className="text-brand-accent">*</span>
                             </label>
-                            <select
-                              required
+                            <CustomSelect
                               value={contactForm.subject}
-                              onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                              className="w-full bg-white text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 cursor-pointer transition-all"
-                            >
-                              <option value="Application Inquiry">Application Inquiry — Cohort 1</option>
-                              <option value="Syllabus/Brochure Request">Venture Curriculum / Brochure</option>
-                              <option value="Operator Collaboration">Partner / Mentor Engagement</option>
-                              <option value="Other">General Question</option>
-                            </select>
+                              onChange={(value) => setContactForm({ ...contactForm, subject: value })}
+                              placeholder="Select a subject"
+                              className="bg-white text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
+                              options={[
+                                { value: "Application Inquiry", label: "Application Inquiry — Cohort 1" },
+                                { value: "Syllabus/Brochure Request", label: "Venture Curriculum / Brochure" },
+                                { value: "Operator Collaboration", label: "Partner / Mentor Engagement" },
+                                { value: "Other", label: "General Question" },
+                              ]}
+                            />
                           </div>
 
                           {/* Message Textarea */}
@@ -1092,6 +1097,13 @@ export default function App() {
 
                 </div>
               </div>
+            )}
+
+            {activePage === "faq" && (
+              <FAQPage
+                onApplyClick={handleApplyClick}
+                onChangePage={handlePageChange}
+              />
             )}
 
             {activePage === "terms-and-conditions" && (
