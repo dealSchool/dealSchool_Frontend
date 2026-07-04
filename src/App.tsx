@@ -342,7 +342,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-brand-dark-blue relative overflow-x-hidden bg-[#FCFAF6] text-[#111111]">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-brand-dark-blue relative overflow-x-clip bg-[#FCFAF6] text-[#111111]">
       
       {/* Decorative Background Textures - Artistic Flair Branding Watermark */}
       <div className="fixed bottom-12 left-12 pointer-events-none opacity-[0.025] select-none -z-10 hidden xl:block">
@@ -384,7 +384,7 @@ export default function App() {
                       </span>
 
                       <h1 className="font-serif italic text-5xl sm:text-6xl md:text-[68px] leading-[0.95] md:leading-[0.9] text-brand-text tracking-tight mb-8">
-                        Built for those who want a <span className="text-brand-accent">seat at the table</span>, <span className="block font-sans not-italic font-bold text-brand-text mt-3 md:mt-4">not a seat in the classroom.</span>
+                        not a seat in the classroom. <span className="text-brand-accent">seat at the table</span>,
                       </h1>
 
                       <p className="font-serif text-base md:text-lg text-brand-neutral leading-relaxed max-w-xl opacity-90">

@@ -3,6 +3,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, logOutAdmin } from "../firebase";
 import { FellowshipApplication, ContactMessage } from "../types";
 import { AdminChangePassword } from "./AdminChangePassword";
+import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
 import {
@@ -10,7 +11,7 @@ import {
   AlertTriangle, CheckCircle2, User, ExternalLink,
   MessageSquare, KeyRound, CreditCard, RefreshCw,
   ArrowLeft, Phone, MapPin, FileText, Clock,
-  Eye, Users,
+  Eye, Users, Ban, CalendarCog,
 } from "lucide-react";
 
 const goToSite = () => {
@@ -36,6 +37,7 @@ const APP_STATUS_CFG: Record<string, {
   interview_invited: { dot: "bg-purple-500",       label: "Interview", badge: "bg-purple-50 text-purple-700 border border-purple-200",   darkBadge: "bg-purple-400/20 text-purple-300 border border-purple-400/30",    avatarRing: "ring-purple-400",  avatarBg: "bg-purple-100",  avatarText: "text-purple-700" },
   accepted:          { dot: "bg-emerald-500",      label: "Accepted",  badge: "bg-emerald-50 text-emerald-700 border border-emerald-200",darkBadge: "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30", avatarRing: "ring-emerald-400", avatarBg: "bg-emerald-100", avatarText: "text-emerald-700" },
   declined:          { dot: "bg-red-500",          label: "Declined",  badge: "bg-red-50 text-red-600 border border-red-200",            darkBadge: "bg-red-400/20 text-red-300 border border-red-400/30",             avatarRing: "ring-red-400",     avatarBg: "bg-red-100",     avatarText: "text-red-700" },
+  cancelled:         { dot: "bg-gray-400",         label: "Cancelled", badge: "bg-gray-100 text-gray-600 border border-gray-300",        darkBadge: "bg-white/10 text-white/60 border border-white/20",                avatarRing: "ring-gray-300",    avatarBg: "bg-gray-100",    avatarText: "text-gray-600" },
 };
 
 const CONTACT_STATUS_CFG: Record<string, { dot: string; label: string; badge: string; darkBadge: string }> = {
@@ -71,6 +73,15 @@ export const AdminDashboard: React.FC = () => {
   const [dbError, setDbError] = useState<string | null>(null);
 
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showCohortSettings, setShowCohortSettings] = useState(false);
+
+  const [cancelModal, setCancelModal] = useState<{
+    appId: string;
+    applicantName: string;
+    hasPaid: boolean;
+  } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     message: string;
@@ -499,6 +510,59 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleCreatePaymentLink = async (appId: string) => {
+    setResendingPaymentLink(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${backendUrl}/api/payment/create-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ applicationId: appId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      showToast("Payment link created and sent!", "success");
+    } catch (err: any) {
+      showToast(`Create link failed: ${err.message}`, "error");
+    } finally {
+      setResendingPaymentLink(false);
+    }
+  };
+
+  const handleCancelAndRefund = async () => {
+    if (!cancelModal || isCancelling) return;
+    setIsCancelling(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${backendUrl}/api/applications/${cancelModal.appId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(cancelReason.trim() ? { reason: cancelReason.trim() } : {}),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const updated = data.application;
+      setApplications((prev) => prev.map((a) => a.id === updated.id ? { ...a, ...updated } : a));
+      if (selectedApp?.id === updated.id) setSelectedApp((prev) => prev ? { ...prev, ...updated } : null);
+
+      const refundMsg = data.refundPercent > 0
+        ? `Cancelled. ${data.refundPercent}% refund initiated${data.refundAmountPaise ? ` (₹${(data.refundAmountPaise / 100).toFixed(0)})` : ""}.`
+        : "Application cancelled. No refund applicable.";
+      showToast(refundMsg, "success");
+      setCancelModal(null);
+      setCancelReason("");
+    } catch (err: any) {
+      showToast(`Cancellation failed: ${err.message}`, "error");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const filteredApps = applications.filter((app) => {
     const term = appSearch.toLowerCase();
     const searchText =
@@ -585,6 +649,14 @@ export const AdminDashboard: React.FC = () => {
       ? { label: "Link Expired",     cls: "bg-orange-50 text-orange-700 border border-orange-200" }
     : selectedApp.status === "accepted" && selectedApp.paymentStatus === "processing"
       ? { label: "Generating…",      cls: "bg-blue-50 text-blue-700 border border-blue-200" }
+    : selectedApp.status === "accepted" && (selectedApp.paymentStatus === "error" || selectedApp.paymentStatus === "failed")
+      ? { label: "Link Failed",      cls: "bg-red-50 text-red-700 border border-red-200" }
+    : selectedApp.status === "cancelled" && selectedApp.paymentStatus === "refund_pending"
+      ? { label: "Refund Processing", cls: "bg-blue-50 text-blue-700 border border-blue-200" }
+    : selectedApp.status === "cancelled" && selectedApp.paymentStatus === "refunded"
+      ? { label: "Refunded",         cls: "bg-emerald-50 text-emerald-700 border border-emerald-200" }
+    : selectedApp.status === "cancelled" && selectedApp.paymentStatus === "refund_failed"
+      ? { label: "Refund Failed",    cls: "bg-red-50 text-red-700 border border-red-200" }
     : null;
   const contactSC = CONTACT_STATUS_CFG[selectedContact?.status ?? "read"] ?? CONTACT_STATUS_CFG.read;
 
@@ -632,6 +704,12 @@ export const AdminDashboard: React.FC = () => {
             className="h-8 w-8 flex items-center justify-center rounded text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
           >
             <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => setShowCohortSettings(true)}
+            className="hidden md:flex h-8 items-center gap-1.5 px-3 font-mono text-[10px] text-white/50 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer uppercase tracking-wider"
+          >
+            <CalendarCog className="h-3.5 w-3.5" /> Cohort
           </button>
           <button
             onClick={() => setShowChangePassword(true)}
@@ -786,6 +864,7 @@ export const AdminDashboard: React.FC = () => {
                         { value: "interview_invited", label: "Interview" },
                         { value: "accepted", label: "Accepted" },
                         { value: "declined", label: "Declined" },
+                        { value: "cancelled", label: "Cancelled" },
                       ]}
                     />
                   </div>
@@ -828,6 +907,10 @@ export const AdminDashboard: React.FC = () => {
                             : app.status === "accepted" && app.paymentStatus === "link_sent"  ? { label: "Awaiting",   cls: "bg-amber-50 text-amber-700 border border-amber-200" }
                             : app.status === "accepted" && app.paymentStatus === "expired"    ? { label: "Expired",    cls: "bg-orange-50 text-orange-700 border border-orange-200" }
                             : app.status === "accepted" && app.paymentStatus === "processing" ? { label: "Processing", cls: "bg-blue-50 text-blue-700 border border-blue-200" }
+                            : app.status === "accepted" && (app.paymentStatus === "error" || app.paymentStatus === "failed") ? { label: "Failed", cls: "bg-red-50 text-red-700 border border-red-200" }
+                            : app.status === "cancelled" && app.paymentStatus === "refund_pending" ? { label: "Refunding", cls: "bg-blue-50 text-blue-700 border border-blue-200" }
+                            : app.status === "cancelled" && app.paymentStatus === "refunded"       ? { label: "Refunded",  cls: "bg-emerald-50 text-emerald-700 border border-emerald-200" }
+                            : app.status === "cancelled" && app.paymentStatus === "refund_failed"  ? { label: "Refund Failed", cls: "bg-red-50 text-red-700 border border-red-200" }
                             : null;
                           return (
                             <tr
@@ -1148,7 +1231,7 @@ export const AdminDashboard: React.FC = () => {
                               <div className="grid grid-cols-2 gap-2.5">
                                 <InfoRow label="Current Role" value={selectedApp.currentRole} />
                                 <InfoRow label="Company" value={selectedApp.companyName} />
-                                <InfoRow label="Experience" value={selectedApp.yearsOfExperience ? `${selectedApp.yearsOfExperience} yrs` : undefined} />
+                                <InfoRow label="Experience" value={selectedApp.yearsOfExperience} />
                               </div>
                             )}
                             {selectedApp.currentStatus === "Founder" && (
@@ -1168,7 +1251,7 @@ export const AdminDashboard: React.FC = () => {
                             {selectedApp.currentStatus === "Freelancer" && (
                               <div className="grid grid-cols-2 gap-2.5">
                                 <InfoRow label="Area of Work" value={selectedApp.areaOfWork} />
-                                <InfoRow label="Experience" value={selectedApp.yearsOfExperience ? `${selectedApp.yearsOfExperience} yrs` : undefined} />
+                                <InfoRow label="Experience" value={selectedApp.yearsOfExperience} />
                                 {selectedApp.freelancerLinkedinProfile && (
                                   <div className="col-span-2">
                                     <a href={selectedApp.freelancerLinkedinProfile} target="_blank" rel="noopener noreferrer"
@@ -1294,9 +1377,24 @@ export const AdminDashboard: React.FC = () => {
                                       Creating Link…
                                     </span>
                                   )}
-                                  {selectedApp.paymentStatus === "error" && (
+                                  {(selectedApp.paymentStatus === "error" || selectedApp.paymentStatus === "failed") && (
                                     <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-full font-bold uppercase">
                                       Creation Failed
+                                    </span>
+                                  )}
+                                  {selectedApp.paymentStatus === "refund_pending" && (
+                                    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full font-bold uppercase">
+                                      Refund Processing
+                                    </span>
+                                  )}
+                                  {selectedApp.paymentStatus === "refunded" && (
+                                    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full font-bold uppercase">
+                                      <CheckCircle2 className="h-3.5 w-3.5" /> Refunded
+                                    </span>
+                                  )}
+                                  {selectedApp.paymentStatus === "refund_failed" && (
+                                    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-full font-bold uppercase">
+                                      Refund Failed — Needs Manual Review
                                     </span>
                                   )}
                                   {!selectedApp.paymentStatus && (
@@ -1328,7 +1426,7 @@ export const AdminDashboard: React.FC = () => {
                                   <InfoRow label="Paid At" value={renderTimestamp(selectedApp.paidAt)} mono />
                                 )}
 
-                                {selectedApp.paymentStatus === "expired" && (
+                                {["expired", "error", "failed"].includes(selectedApp.paymentStatus || "") && (
                                   <button
                                     onClick={() => handleResendPaymentLink(selectedApp.id)}
                                     disabled={resendingPaymentLink}
@@ -1337,6 +1435,41 @@ export const AdminDashboard: React.FC = () => {
                                     <RefreshCw className={`h-3 w-3 ${resendingPaymentLink ? "animate-spin" : ""}`} />
                                     {resendingPaymentLink ? "Sending…" : "Resend Payment Link"}
                                   </button>
+                                )}
+                                {!selectedApp.paymentStatus && (
+                                  <button
+                                    onClick={() => handleCreatePaymentLink(selectedApp.id)}
+                                    disabled={resendingPaymentLink}
+                                    className="w-full py-2.5 bg-brand-secondary hover:bg-brand-dark-blue text-white font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <CreditCard className={`h-3 w-3 ${resendingPaymentLink ? "animate-pulse" : ""}`} />
+                                    {resendingPaymentLink ? "Creating…" : "Create Payment Link"}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Cancellation / refund details — only for cancelled applications */}
+                          {selectedApp.status === "cancelled" && (
+                            <div className="border border-brand-secondary/15 rounded-sm overflow-hidden">
+                              <div className="px-3.5 py-2.5 bg-[#FAFAF8] border-b border-brand-secondary/10 flex items-center gap-2">
+                                <Ban className="h-3.5 w-3.5 text-orange-500" />
+                                <span className="font-mono text-[9px] uppercase tracking-wider text-orange-600 font-bold">
+                                  Cancellation Details
+                                </span>
+                              </div>
+                              <div className="p-3.5 space-y-2.5">
+                                <div className="grid grid-cols-2 gap-2.5">
+                                  <InfoRow label="Cancelled At" value={renderTimestamp(selectedApp.cancelledAt)} mono />
+                                  <InfoRow
+                                    label="Refund"
+                                    value={selectedApp.refundPercent != null ? `${selectedApp.refundPercent}%` : undefined}
+                                    mono
+                                  />
+                                </div>
+                                {selectedApp.cancellationReason && (
+                                  <InfoRow label="Reason" value={selectedApp.cancellationReason} />
                                 )}
                               </div>
                             </div>
@@ -1408,6 +1541,21 @@ export const AdminDashboard: React.FC = () => {
                             >
                               <X className="h-3.5 w-3.5" /> Decline Application
                             </button>
+
+                            {/* Cancel & Refund — only meaningful once accepted */}
+                            {selectedApp.status === "accepted" && (
+                              <button
+                                onClick={() => setCancelModal({
+                                  appId: selectedApp.id,
+                                  applicantName: selectedApp.fullName,
+                                  hasPaid: selectedApp.paymentStatus === "paid",
+                                })}
+                                disabled={isActioning}
+                                className="w-full py-2.5 font-mono text-[10px] font-bold uppercase tracking-wider rounded-sm border cursor-pointer transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 bg-white text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300"
+                              >
+                                <Ban className="h-3.5 w-3.5" /> Cancel &amp; Refund
+                              </button>
+                            )}
 
                             {/* Danger zone */}
                             <div className="pt-2 border-t border-dashed border-[#082C6C]/10">
@@ -1577,6 +1725,68 @@ export const AdminDashboard: React.FC = () => {
     {/* ════════ CHANGE PASSWORD MODAL ════════ */}
     {showChangePassword && (
       <AdminChangePassword onClose={() => setShowChangePassword(false)} />
+    )}
+
+    {/* ════════ COHORT SETTINGS MODAL ════════ */}
+    {showCohortSettings && (
+      <CohortSettingsPanel
+        backendUrl={backendUrl}
+        showToast={showToast}
+        onClose={() => setShowCohortSettings(false)}
+      />
+    )}
+
+    {/* ════════ CANCEL & REFUND MODAL ════════ */}
+    {cancelModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(10, 14, 22, 0.72)", backdropFilter: "blur(4px)" }}>
+        <div className="bg-white border border-orange-500/30 rounded-sm shadow-2xl w-full max-w-md p-7 space-y-5">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 h-10 w-10 rounded-full bg-orange-100/60 flex items-center justify-center">
+              <Ban className="h-5 w-5 text-orange-600" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg font-bold text-brand-text">
+                Cancel {cancelModal.applicantName}&apos;s Enrolment{cancelModal.hasPaid ? " & Refund" : ""}
+              </h3>
+              <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                {cancelModal.hasPaid
+                  ? "The refund tier (100% / 50% / 0%) is computed automatically from today's date vs. the cohort start date, and processed via Razorpay."
+                  : "This applicant has not completed payment — cancelling will not create a refund. Any pending payment link will be invalidated."}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+              Reason (optional)
+            </label>
+            <textarea
+              rows={3}
+              maxLength={500}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="e.g. Personal emergency"
+              className="w-full bg-[#FCFAF6] text-brand-text px-3 py-2.5 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-xs resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setCancelModal(null); setCancelReason(""); }}
+              disabled={isCancelling}
+              className="flex-1 py-2.5 bg-white border border-brand-secondary/25 text-brand-secondary font-mono text-xs font-bold uppercase tracking-wider hover:bg-brand-secondary/5 transition-all rounded-sm cursor-pointer disabled:opacity-50"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleCancelAndRefund}
+              disabled={isCancelling}
+              className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all rounded-sm cursor-pointer disabled:opacity-50"
+            >
+              {isCancelling ? "Processing…" : "Confirm Cancellation"}
+            </button>
+          </div>
+        </div>
+      </div>
     )}
 
     {/* ════════ CONFIRM MODAL ════════ */}

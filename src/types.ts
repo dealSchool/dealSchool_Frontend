@@ -31,7 +31,7 @@ export interface FellowshipApplication {
   fullName: string;
   mobileNumber: string;
   email: string;
-  linkedinUrl: string;
+  linkedinUrl?: string;
   city: string;
   currentStatus: string;
 
@@ -72,16 +72,30 @@ export interface FellowshipApplication {
   discoverySource: string;
   discoverySourceOther?: string;
 
-  status: "pending" | "under_review" | "interview_invited" | "accepted" | "declined";
+  status: "pending" | "under_review" | "interview_invited" | "accepted" | "declined" | "cancelled";
   createdAt: any;
   updatedAt: any;
 
   // Payment fields — written only by Cloud Functions (admin SDK)
-  paymentStatus?: "processing" | "link_sent" | "paid" | "expired" | "error";
+  paymentStatus?: "link_sent" | "processing" | "error" | "expired" | "failed" | "paid" | "refund_pending" | "refunded" | "refund_failed";
   rzpPaymentLinkId?: string;   // Razorpay lnk_XXXX
+  rzpPaymentLinkUrl?: string;
   rzpPaymentId?: string;       // Razorpay pay_XXXX after successful payment
   paymentLinkSentAt?: any;
   paidAt?: any;
+
+  // Cancellation / refund fields — set by POST /api/applications/[id]/cancel
+  cancelledAt?: any;
+  cancellationReason?: string;
+  refundPercent?: number; // 0, 50, or 100
+  rzpRefundId?: string;
+}
+
+export interface CohortSettings {
+  startDate: string;   // ISO-8601
+  feePaise: number;
+  feeInRupees: number;
+  feeDisplay: string;  // e.g. "₹1000"
 }
 
 export interface PaymentRecord {

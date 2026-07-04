@@ -207,7 +207,6 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         PHONE_REGEX.test(formData.mobileNumber.trim()) &&
         formData.email.trim() !== "" &&
         formData.email.includes("@") &&
-        formData.linkedinUrl.trim() !== "" &&
         formData.city.trim() !== ""
       );
     }
@@ -238,14 +237,12 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         case "Founder":
           return (
             formData.startupName.trim() !== "" &&
-            formData.industrySector.trim() !== "" &&
-            formData.startupLinkedinProfile.trim() !== ""
+            formData.industrySector.trim() !== ""
           );
         case "Freelancer":
           return (
             formData.areaOfWork.trim() !== "" &&
-            formData.yearsOfExperience.trim() !== "" &&
-            formData.freelancerLinkedinProfile.trim() !== ""
+            formData.yearsOfExperience.trim() !== ""
           );
         case "Other":
           return formData.otherStatusSpecify.trim() !== "";
@@ -573,14 +570,13 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       {/* LinkedIn URL */}
                       <div className="space-y-1.5">
                         <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                          LinkedIn Profile <span className="text-brand-accent">*</span>
+                          LinkedIn Profile <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                         </label>
                         <div className="relative">
                           <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                           <input
                             type="url"
                             name="linkedinUrl"
-                            required
                             maxLength={LIMITS.linkedinUrl}
                             value={formData.linkedinUrl}
                             onChange={handleInputChange}
@@ -620,13 +616,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       <div className="space-y-1">
                         <p className="font-mono text-[10px] font-bold text-amber-800 uppercase tracking-wider">Already Applied</p>
                         <p className="font-sans text-xs text-amber-700 leading-relaxed">
-                          {dupCheck.message.replace("admin@dealschool.in", "").trim()}{" "}
-                          <a
-                            href="mailto:admin@dealschool.in"
-                            className="font-semibold underline underline-offset-2 hover:text-amber-900 transition-colors"
-                          >
-                            admin@dealschool.in
-                          </a>
+                          {dupCheck.message.replace("admin@dealschool.in", "").trim()}
                         </p>
                       </div>
                     </div>
@@ -847,15 +837,16 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           </div>
                           <div className="space-y-1">
                             <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Years of Experience <span className="text-brand-accent">*</span></label>
-                            <input
-                              type="text"
-                              name="yearsOfExperience"
-                              required
-                              maxLength={LIMITS.yearsOfExperience}
+                            <CustomSelect
                               value={formData.yearsOfExperience}
-                              onChange={handleInputChange}
-                              placeholder="4.5 Years"
-                              className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                              onChange={(value) => setFormData((prev) => ({ ...prev, yearsOfExperience: value }))}
+                              placeholder="Select years of experience..."
+                              className="bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                              options={[
+                                { value: "0–2 years", label: "0–2 years" },
+                                { value: "2–5 years", label: "2–5 years" },
+                                { value: "5+ years", label: "5+ years" },
+                              ]}
                             />
                           </div>
                         </motion.div>
@@ -898,11 +889,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Startup LinkedIn Profile <span className="text-brand-accent">*</span></label>
+                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Startup LinkedIn Profile <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                             <input
                               type="url"
                               name="startupLinkedinProfile"
-                              required
                               maxLength={LIMITS.startupLinkedin}
                               value={formData.startupLinkedinProfile}
                               onChange={handleInputChange}
@@ -937,24 +927,24 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             </div>
                             <div className="space-y-1">
                               <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Years of Experience <span className="text-brand-accent">*</span></label>
-                              <input
-                               type="text"
-                               name="yearsOfExperience"
-                               required
-                               maxLength={LIMITS.yearsOfExperience}
-                               value={formData.yearsOfExperience}
-                               onChange={handleInputChange}
-                               placeholder="3 Years"
-                               className="w-full bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                              <CustomSelect
+                                value={formData.yearsOfExperience}
+                                onChange={(value) => setFormData((prev) => ({ ...prev, yearsOfExperience: value }))}
+                                placeholder="Select years of experience..."
+                                className="bg-brand-bg text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-xs md:text-sm h-10"
+                                options={[
+                                  { value: "0–2 years", label: "0–2 years" },
+                                  { value: "2–5 years", label: "2–5 years" },
+                                  { value: "5+ years", label: "5+ years" },
+                                ]}
                               />
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">LinkedIn Profile <span className="text-brand-accent">*</span></label>
+                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">LinkedIn Profile <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                             <input
                               type="url"
                               name="freelancerLinkedinProfile"
-                              required
                               maxLength={LIMITS.freelancerLinkedin}
                               value={formData.freelancerLinkedinProfile}
                               onChange={handleInputChange}
