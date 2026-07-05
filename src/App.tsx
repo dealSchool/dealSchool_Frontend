@@ -383,8 +383,11 @@ export default function App() {
                         An Initiative by Middha Ventures
                       </span>
 
-                      <h1 className="font-serif italic text-5xl sm:text-6xl md:text-[68px] leading-[0.95] md:leading-[0.9] text-brand-text tracking-tight mb-8">
-                        not a seat in the classroom. <span className="text-brand-accent">seat at the table</span>,
+                      <h1 className="font-sans not-italic font-bold text-5xl sm:text-6xl md:text-[68px] leading-[0.95] md:leading-[0.9] text-brand-text tracking-tight mb-8">
+                        Built for those who want a <span className="text-brand-accent">seat at the table</span>,{" "}
+                        <span className="block font-sans not-italic font-bold text-brand-text mt-3 md:mt-4">
+                          not a seat in the classroom.
+                        </span>
                       </h1>
 
                       <p className="font-serif text-base md:text-lg text-brand-neutral leading-relaxed max-w-xl opacity-90">
