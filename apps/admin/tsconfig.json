@@ -15,17 +15,16 @@
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@shared/*": ["../../packages/shared/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "exclude": [
     "node_modules",
-    "dist",
-    "functions"
+    "dist"
   ]
 }

@@ -15,23 +15,16 @@ import {
 import { ApplyModal } from "./components/ApplyModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
-import { AdminDashboard } from "./components/AdminDashboard";
-import { AdminLoginForm } from "./components/AdminLoginForm";
-import { AdminForgotPassword } from "./components/AdminForgotPassword";
 import { PaymentCallback } from "./components/PaymentCallback";
 import { TermsAndConditionsPage } from "./components/TermsAndConditionsPage";
 import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { RefundCancellationPage } from "./components/RefundCancellationPage";
 import { FAQPage } from "./components/FAQPage";
 import { CustomSelect } from "./components/CustomSelect";
-import { auth } from "./firebase";
-import { API_URL } from "./config";
+import { API_URL } from "@shared/config";
 import tusshaarImg from "./assets/Tusshaar.jpg.jpeg";
 import rishabhImg from "./assets/Rishabh.png";
-import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
-
-const ADMIN_EMAIL = "admin@dealschool.in";
-import { 
+import {
   Compass, 
   Search, 
   BarChart4, 
@@ -62,7 +55,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin-login" | "admin";
+type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation";
 
 const FoundingTeamSection: React.FC<{ className?: string }> = ({ className = "" }) => {
   const founders = [
@@ -199,8 +192,6 @@ const PAGE_PATHS: Record<string, AppPage> = {
   "/terms-and-conditions": "terms-and-conditions",
   "/privacy-policy": "privacy-policy",
   "/refund-and-cancellation": "refund-and-cancellation",
-  "/admin-login": "admin-login",
-  "/admin": "admin",
 };
 
 const PATH_FROM_PAGE: Record<AppPage, string> = {
@@ -213,8 +204,6 @@ const PATH_FROM_PAGE: Record<AppPage, string> = {
   "terms-and-conditions": "/terms-and-conditions",
   "privacy-policy": "/privacy-policy",
   "refund-and-cancellation": "/refund-and-cancellation",
-  "admin-login": "/admin-login",
-  admin: "/admin",
 };
 
 function pageFromPathname(pathname: string): AppPage {
@@ -226,11 +215,6 @@ export default function App() {
   const [activePage, setActivePage] = useState<AppPage>(
     pageFromPathname(window.location.pathname)
   );
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [adminLoginView, setAdminLoginView] = useState<"login" | "forgotPassword">("login");
-  const [authError, setAuthError] = useState<string | null>(null);
-
   // Razorpay payment callback — detected from URL query params on mount
   const [paymentCallbackParams, setPaymentCallbackParams] = useState<URLSearchParams | null>(null);
 
@@ -268,31 +252,6 @@ export default function App() {
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // Reject any Google (or email) account that isn't the authorised admin.
-      // Sign them out immediately — never set currentUser — so the dashboard
-      // is never rendered even for a frame.
-      if (user && user.email !== ADMIN_EMAIL) {
-        signOut(auth);
-        setAuthError("This Google account is not authorised for admin access. Please use the admin email.");
-        return; // onAuthStateChanged will fire again with null
-      }
-
-      setCurrentUser(user);
-      setAuthChecked(true);
-      const page = pageFromPathname(window.location.pathname);
-      if (user && page === "admin-login") {
-        setActivePage("admin");
-        window.history.replaceState({}, "", "/admin");
-      } else if (!user && page === "admin") {
-        setActivePage("admin-login");
-        window.history.replaceState({}, "", "/admin-login");
-      }
-    });
-    return unsubscribe;
   }, []);
 
   const handlePageChange = (pageId: AppPage) => {
@@ -351,9 +310,7 @@ export default function App() {
       </div>
 
       {/* Premium Top Navigation */}
-      {activePage !== "admin-login" && activePage !== "admin" && (
-        <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
-      )}
+      <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
 
       {/* RENDER PAGES DYNAMICALLY USING SMOOTH TRANSITIONS */}
       <main className="flex-grow">
@@ -1130,28 +1087,12 @@ export default function App() {
               />
             )}
 
-            {activePage === "admin-login" && (
-              adminLoginView === "forgotPassword"
-                ? <AdminForgotPassword onBack={() => setAdminLoginView("login")} />
-                : <AdminLoginForm
-                    onForgotPassword={() => setAdminLoginView("forgotPassword")}
-                    authError={authError}
-                    onClearAuthError={() => setAuthError(null)}
-                  />
-            )}
-
-            {activePage === "admin" && authChecked && currentUser && (
-              <AdminDashboard />
-            )}
-
           </motion.div>
         </AnimatePresence>
       </main>
 
       {/* GLOBAL FOOTER REFERENCES */}
-      {activePage !== "admin-login" && activePage !== "admin" && (
-        <FooterPanel onChangePage={handlePageChange} />
-      )}
+      <FooterPanel onChangePage={handlePageChange} />
 
       {/* Razorpay payment callback overlay */}
       {paymentCallbackParams && (
@@ -1162,9 +1103,7 @@ export default function App() {
       )}
 
       {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
-      {activePage !== "admin-login" && activePage !== "admin" && (
-        <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
-      )}
+      <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
 
     </div>
   );

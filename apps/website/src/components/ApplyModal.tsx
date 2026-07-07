@@ -10,7 +10,7 @@ import {
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
 import { CustomSelect } from "./CustomSelect";
-import { API_URL } from "../config";
+import { API_URL } from "@shared/config";
 
 interface ApplyModalProps {
   isOpen: boolean;

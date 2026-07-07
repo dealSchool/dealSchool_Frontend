@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { getFriendlyAuthError } from "../firebase";
+import { getFriendlyAuthError } from "@shared/firebase";
 import { Shield, AlertTriangle, Eye, EyeOff, CheckCircle2, Lock } from "lucide-react";
 
 interface Props {

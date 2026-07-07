@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { signInAdminWithGoogle, signInAdminWithEmail, getFriendlyAuthError } from "../firebase";
+import { signInAdminWithGoogle, signInAdminWithEmail, getFriendlyAuthError } from "@shared/firebase";
 import { AlertTriangle, LogIn, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
 

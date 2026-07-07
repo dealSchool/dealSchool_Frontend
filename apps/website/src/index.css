@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap');
+@import "tailwindcss";
+
+/*
+ * Site-wide type system: exactly two typefaces.
+ * Oswald (condensed, headline-weight grotesque) drives every heading and
+ * every tracked/uppercase micro-label (the old --font-mono role — eyebrow
+ * tags, buttons, step numbers — reads as headline-adjacent, not body text).
+ * Helvetica drives all body copy. --font-serif and --font-mono are kept as
+ * aliases of --font-heading so existing font-serif/font-mono classes
+ * throughout the app resolve to Oswald without a mass rename.
+ */
+@theme {
+  --font-heading: "Oswald", "Arial Narrow", sans-serif;
+  --font-serif: var(--font-heading);
+  --font-mono: var(--font-heading);
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --color-brand-bg: #FAFAF8;
+  --color-brand-text: #111111;
+  --color-brand-accent: #D4A62A;
+  --color-brand-secondary: #0D3B8E;
+  --color-brand-dark-blue: #082C6C;
+  --color-brand-neutral: #5F6368;
+}
+
+@layer base {
+  body {
+    background-color: #FAFAF8;
+    color: #111111;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Custom premium animations matching the design brief */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes orb-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 166, 42, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(212, 166, 42, 0.75);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes line-upward {
+  from {
+    stroke-dashoffset: 600;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes grid-drift {
+  0% {
+    transform: translateY(0px) rotate(15deg);
+  }
+  100% {
+    transform: translateY(-40px) rotate(15deg);
+  }
+}
+
+/* Detail drawer animations */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1;   }
+}
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Scroll support styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(44, 44, 44, 0.15);
+  border-radius: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(44, 44, 44, 0.3);
+}
+

@@ -1,33 +1,20 @@
 {
-  "name": "react-example",
+  "name": "dealschool-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0 --force",
-    "build": "vite build",
-    "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
-    "firebase": "^12.14.0",
-    "lucide-react": "^0.546.0",
-    "motion": "^12.23.24",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
-    "vite": "^6.2.3"
+    "dev:website": "npm run dev -w apps/website",
+    "dev:admin": "npm run dev -w apps/admin",
+    "build": "npm run build -w apps/website && npm run build -w apps/admin",
+    "build:website": "npm run build -w apps/website",
+    "build:admin": "npm run build -w apps/admin",
+    "lint": "npm run lint -w apps/website && npm run lint -w apps/admin"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.14.0",
-    "autoprefixer": "^10.4.21",
-    "esbuild": "^0.25.0",
-    "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "typescript": "~5.8.2"
   }
 }

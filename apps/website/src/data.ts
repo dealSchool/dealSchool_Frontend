@@ -1,4 +1,4 @@
-import { JourneyStage, Mentor, MemoPage } from "./types";
+import { JourneyStage, Mentor, MemoPage } from "@shared/types";
 
 export const JOURNEY_STAGES: JourneyStage[] = [
   {

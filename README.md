@@ -6,12 +6,16 @@ DealSchool is a full-stack web application for a 10-week, cohort-based venture c
 
 ## Architecture
 
-The project is split into two repositories that run side-by-side:
+The frontend is an npm-workspaces monorepo with two independently deployed Vite apps, plus a separate backend repo:
 
-| Repo | Stack | Port | Purpose |
+| Package | Stack | Port | Purpose |
 |------|-------|------|---------|
-| **dealschool_new** (this repo) | Vite + React 19 + TypeScript + Tailwind v4 | `3000` | Public website, application form, admin dashboard UI |
+| **apps/website** (this repo) | Vite + React 19 + TypeScript + Tailwind v4 | `3000` | Public marketing site + application form, deployed to `dealschool.in` |
+| **apps/admin** (this repo) | Vite + React 19 + TypeScript + Tailwind v4 | `3001` | Admin dashboard, deployed separately to `admin.dealschool.in` |
+| **packages/shared** (this repo) | TypeScript | — | Firebase Auth init, shared types, and the backend API URL — imported by both apps via the `@shared/*` alias |
 | **dealschool_backend** | Next.js 15 (App Router) + Firebase Admin SDK | `3001` | REST API, Firestore writes, email delivery, Razorpay integration |
+
+Splitting the admin dashboard into its own app means public visitors never download admin code, and the admin origin can be locked down independently (separate hosting rules, IP allowlisting, etc.) from the marketing site.
 
 **Firebase** is used for:
 - **Auth** — admin login via email/password and Google OAuth (client-side, in the frontend only)
@@ -59,16 +63,16 @@ firebase deploy --only firestore:rules
 
 ---
 
-## 2. Frontend Setup (`dealschool_new`)
+## 2. Frontend Setup (this repo)
 
 ```bash
 git clone https://github.com/your-org/dealschool_new.git
 cd dealschool_new
-npm install
+npm install   # installs both apps/website and apps/admin via npm workspaces
 ```
 
 ### Environment variables
-Copy the example file and fill in your values:
+Copy the example file and fill in your values. This single `.env.local` lives at the **repo root** and is shared by both apps (each app's `vite.config.ts` points `envDir` at the root):
 ```bash
 cp .env.example .env.local
 ```
@@ -89,14 +93,21 @@ VITE_ADMIN_EMAIL=admin@dealschool.in
 
 # Backend API URL
 VITE_BACKEND_URL=http://localhost:3001
+
+# Optional — where the website's footer "[Admin Portal]" link points.
+# Defaults to https://admin.dealschool.in if unset (see packages/shared/config.ts).
+# VITE_ADMIN_URL=http://localhost:3001
 ```
 
 ### Run
 ```bash
-npm run dev        # starts at http://localhost:3000
-npm run build      # production build → dist/
-npm run preview    # preview the production build locally
-npm run lint       # TypeScript type check
+npm run dev:website    # apps/website → http://localhost:3000
+npm run dev:admin      # apps/admin   → http://localhost:3001
+
+npm run build          # production build of both apps
+npm run build:website  # → apps/website/dist
+npm run build:admin    # → apps/admin/dist
+npm run lint            # TypeScript type check, both apps
 ```
 
 ---
@@ -174,7 +185,7 @@ Open `http://localhost:3000` in your browser.
 
 ## 5. Admin Dashboard
 
-The admin panel is at `/admin-login`. Sign in with the Firebase Auth credentials for the admin email you created in Step 1.1. Only that exact email address is authorised — any other account is rejected immediately.
+The admin panel is its own app (`apps/admin`), served from its own origin (`admin.dealschool.in` in production, `http://localhost:3001` in dev). Sign in with the Firebase Auth credentials for the admin email you created in Step 1.1. Only that exact email address is authorised — any other account is rejected immediately.
 
 From the dashboard you can:
 - View and filter fellowship applications by status
@@ -202,14 +213,31 @@ Set `RAZORPAY_WEBHOOK_SECRET` in your backend environment to the secret generate
 
 ## 7. Deployment
 
-### Frontend — Firebase Hosting
+### Frontend — GitHub Actions → VPS
+`.github/workflows/deploy.yml` builds both apps on every push to `main` and deploys them to two separate directories on the VPS via SSH/SCP:
+
+| App | Build output | VPS path | Domain |
+|-----|--------------|----------|--------|
+| Website | `apps/website/dist` | `/var/www/dealschool-frontend` | `dealschool.in` |
+| Admin | `apps/admin/dist` | `/var/www/dealschool-admin` | `admin.dealschool.in` |
+
+**One-time manual setup on the VPS (not part of this repo):**
+1. Create `/var/www/dealschool-admin` alongside the existing `/var/www/dealschool-frontend`.
+2. Add an nginx server block for `admin.dealschool.in` serving that directory (with SPA fallback to `index.html`, same as the existing website vhost).
+3. Point `admin.dealschool.in` at the VPS in DNS (A/CNAME record).
+
+No extra secret is needed for the website footer's admin link — it defaults to
+`https://admin.dealschool.in` (see `packages/shared/config.ts`). Only set a
+`VITE_ADMIN_URL` secret if that domain ever changes.
+
+### Frontend — Firebase Hosting (alternative)
 ```bash
-cd dealschool_new
-npm run build
+npm run build:website
 firebase deploy --only hosting
 ```
+`firebase.json` is currently configured for a single site serving `apps/website/dist`. To also host the admin app on Firebase, create a second Firebase Hosting site and target (`firebase hosting:sites:create`, then add a `"target"` entry in `firebase.json` pointing at `apps/admin/dist`).
 
-Update `VITE_BACKEND_URL` to your production backend URL before building.
+Update `VITE_BACKEND_URL` to your production value before building.
 
 ### Backend — Node.js host (Railway, Render, Fly.io, VPS)
 ```bash
@@ -227,22 +255,36 @@ Set all `.env.local` variables as environment variables in your hosting dashboar
 ## Project Structure
 
 ```
-dealschool_new/                    ← this repo
-├── src/
-│   ├── App.tsx                    # All pages + client-side routing (SPA)
-│   ├── firebase.ts                # Firebase Auth init + helper functions
-│   ├── types.ts                   # TypeScript interfaces (Application, Contact, Payment)
-│   ├── data.ts                    # Static content (founders, curriculum, etc.)
-│   └── components/
-│       ├── HeaderNavbar.tsx
-│       ├── FooterPanel.tsx
-│       ├── ApplyModal.tsx         # 5-step application form → POST /api/applications
-│       ├── AdminLoginForm.tsx
-│       ├── AdminForgotPassword.tsx
-│       ├── AdminDashboard.tsx     # Full admin panel (applications + contacts)
-│       ├── AdminChangePassword.tsx
-│       ├── PaymentCallback.tsx    # Razorpay post-payment landing UI
-│       └── SVGIllustrations.tsx
+dealschool_new/                    ← this repo (npm workspaces monorepo)
+├── package.json                   # root — workspaces + build/dev delegating scripts
+├── .env.local                     # shared by both apps (VITE_* vars)
+├── packages/
+│   └── shared/                    # imported by both apps as "@shared/*"
+│       ├── firebase.ts            # Firebase Auth init + helper functions
+│       ├── types.ts               # TypeScript interfaces (Application, Contact, Payment)
+│       └── config.ts              # VITE_BACKEND_URL / VITE_ADMIN_URL
+├── apps/
+│   ├── website/                   # public marketing site → dealschool.in
+│   │   ├── src/
+│   │   │   ├── App.tsx            # Public pages + client-side routing (SPA)
+│   │   │   ├── data.ts            # Static content (founders, curriculum, etc.)
+│   │   │   └── components/
+│   │   │       ├── HeaderNavbar.tsx
+│   │   │       ├── FooterPanel.tsx
+│   │   │       ├── ApplyModal.tsx # 5-step application form → POST /api/applications
+│   │   │       ├── PaymentCallback.tsx  # Razorpay post-payment landing UI
+│   │   │       └── SVGIllustrations.tsx
+│   │   └── vite.config.ts
+│   └── admin/                     # admin dashboard → admin.dealschool.in
+│       ├── src/
+│       │   ├── App.tsx            # Login/forgot-password/dashboard switch
+│       │   └── components/
+│       │       ├── AdminLoginForm.tsx
+│       │       ├── AdminForgotPassword.tsx
+│       │       ├── AdminDashboard.tsx     # Full admin panel (applications + contacts)
+│       │       ├── AdminChangePassword.tsx
+│       │       └── CohortSettingsPanel.tsx
+│       └── vite.config.ts
 ├── firestore.rules                # All direct client access denied
 ├── firebase.json                  # Firebase Hosting + Firestore config
 └── .env.example

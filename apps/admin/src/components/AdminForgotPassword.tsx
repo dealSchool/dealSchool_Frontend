@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { callAdminForgotPassword, getFriendlyAuthError, getPasswordResetCooldownMs } from "../firebase";
+import { callAdminForgotPassword, getFriendlyAuthError, getPasswordResetCooldownMs } from "@shared/firebase";
 import { Shield, AlertTriangle, ArrowLeft, CheckCircle2, Clock } from "lucide-react";
 
 interface Props {

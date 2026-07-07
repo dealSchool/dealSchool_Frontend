@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build website + admin
         run: npm run build
         env:
           VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
@@ -32,7 +32,7 @@ jobs:
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
           VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
 
-      - name: Clean old build
+      - name: Clean old builds
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -40,16 +40,28 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             rm -rf /var/www/dealschool-frontend/*
+            rm -rf /var/www/dealschool-admin/*
 
-      - name: Deploy to VPS
+      - name: Deploy website to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "dist/*"
+          source: "apps/website/dist/*"
           target: "/var/www/dealschool-frontend"
-          strip_components: 1
+          strip_components: 3
+          overwrite: true
+
+      - name: Deploy admin to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "apps/admin/dist/*"
+          target: "/var/www/dealschool-admin"
+          strip_components: 3
           overwrite: true
 
       - name: Fix permissions
@@ -60,3 +72,4 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             sudo chown -R www-data:www-data /var/www/dealschool-frontend
+            sudo chown -R www-data:www-data /var/www/dealschool-admin

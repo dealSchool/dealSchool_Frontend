@@ -4,7 +4,7 @@ import {
   adminReauthAndChangePassword,
   adminReauthGoogleAndChangePassword,
   getFriendlyAuthError,
-} from "../firebase";
+} from "@shared/firebase";
 import { AlertTriangle, Eye, EyeOff, CheckCircle2, Lock, X, ShieldCheck, LogIn } from "lucide-react";
 
 interface Props {

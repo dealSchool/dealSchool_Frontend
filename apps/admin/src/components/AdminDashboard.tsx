@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, logOutAdmin } from "../firebase";
-import { FellowshipApplication, ContactMessage } from "../types";
+import { auth, logOutAdmin } from "@shared/firebase";
+import { FellowshipApplication, ContactMessage } from "@shared/types";
 import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
-import { API_URL } from "../config";
+import { API_URL } from "@shared/config";
 import {
   Search, ShieldAlert, LogOut, X, Mail, Trash2,
   AlertTriangle, CheckCircle2, User, ExternalLink,

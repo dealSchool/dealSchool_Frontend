@@ -6,7 +6,7 @@
 import React from "react";
 import { DealSchoolLogo } from "./SVGIllustrations";
 import { Mail, MapPin, ArrowUp } from "lucide-react";
-import { auth } from "../firebase";
+import { ADMIN_URL } from "@shared/config";
 
 interface FooterPanelProps {
   onChangePage?: (
@@ -20,8 +20,6 @@ interface FooterPanelProps {
       | "terms-and-conditions"
       | "privacy-policy"
       | "refund-and-cancellation"
-      | "admin-login"
-      | "admin"
   ) => void;
 }
 
@@ -121,18 +119,12 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
             >
               Refund &amp; Cancellation Policy
             </button>
-            <button
-              onClick={() => {
-                if (onChangePage) {
-                  const destination = auth.currentUser ? "admin" : "admin-login";
-                  onChangePage(destination);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
+            <a
+              href={ADMIN_URL}
               className="text-[#FAFAF8]/25 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0"
             >
               [Admin Portal]
-            </button>
+            </a>
           </div>
           <button
             onClick={scrollHeightTop}

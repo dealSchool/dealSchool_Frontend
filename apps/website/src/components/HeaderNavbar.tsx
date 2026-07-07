@@ -9,8 +9,8 @@ import { Menu, X, ArrowUpRight } from "lucide-react";
 
 interface HeaderNavbarProps {
   onApplyClick: () => void;
-  activePage: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin";
-  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => void;
+  activePage: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation";
+  onChangePage: (page: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation") => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -38,7 +38,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     { label: "FAQ", id: "faq" as const },
   ];
 
-  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin") => {
+  const handlePageClick = (pageId: "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation") => {
     setMobileMenuOpen(false);
     onChangePage(pageId);
     window.scrollTo({

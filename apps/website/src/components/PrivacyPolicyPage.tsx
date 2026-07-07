@@ -18,8 +18,6 @@ interface PrivacyPolicyPageProps {
       | "terms-and-conditions"
       | "privacy-policy"
       | "refund-and-cancellation"
-      | "admin-login"
-      | "admin"
   ) => void;
 }
 

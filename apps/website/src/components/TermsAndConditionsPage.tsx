@@ -16,8 +16,6 @@ interface TermsAndConditionsPageProps {
       | "team"
       | "contact"
       | "terms-and-conditions"
-      | "admin-login"
-      | "admin"
   ) => void;
 }
 

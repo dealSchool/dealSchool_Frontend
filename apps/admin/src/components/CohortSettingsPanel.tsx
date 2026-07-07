@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Calendar, IndianRupee, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
-import { auth } from "../firebase";
-import { CohortSettings } from "../types";
-import { API_URL } from "../config";
+import { auth } from "@shared/firebase";
+import { CohortSettings } from "@shared/types";
+import { API_URL } from "@shared/config";
 
 interface Props {
   onClose: () => void;
