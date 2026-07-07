@@ -183,8 +183,8 @@ export const AdminDashboard: React.FC = () => {
       if (signal?.aborted) return;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/api/applications?limit=10&after=${cursor}`
-        : `${API_URL}/api/applications?limit=10`;
+        ? `${API_URL}/applications?limit=10&after=${cursor}`
+        : `${API_URL}/applications?limit=10`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); setDbError("Access denied."); setDbLoading(false); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -218,8 +218,8 @@ export const AdminDashboard: React.FC = () => {
       if (signal?.aborted) return;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/api/contacts?limit=10&after=${cursor}`
-        : `${API_URL}/api/contacts?limit=10`;
+        ? `${API_URL}/contacts?limit=10&after=${cursor}`
+        : `${API_URL}/contacts?limit=10`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -350,7 +350,7 @@ export const AdminDashboard: React.FC = () => {
     setIsActioning(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/applications/${appId}`, {
+      const res = await fetch(`${API_URL}/applications/${appId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: transitionStatus }),
@@ -386,7 +386,7 @@ export const AdminDashboard: React.FC = () => {
         setIsActioning(true);
         try {
           const token = await getToken();
-          const res = await fetch(`${API_URL}/api/applications/${appId}`, {
+          const res = await fetch(`${API_URL}/applications/${appId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -420,7 +420,7 @@ export const AdminDashboard: React.FC = () => {
     setIsActioning(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/applications/${appId}?confirmed=true`, {
+      const res = await fetch(`${API_URL}/applications/${appId}?confirmed=true`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -445,7 +445,7 @@ export const AdminDashboard: React.FC = () => {
     setIsActioning(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
+      const res = await fetch(`${API_URL}/contacts/${contactId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: targetStatus }),
@@ -471,7 +471,7 @@ export const AdminDashboard: React.FC = () => {
         setIsActioning(true);
         try {
           const token = await getToken();
-          const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
+          const res = await fetch(`${API_URL}/contacts/${contactId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -492,7 +492,7 @@ export const AdminDashboard: React.FC = () => {
     setResendingPaymentLink(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/payment/resend`, {
+      const res = await fetch(`${API_URL}/payment/resend`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ applicationId: appId }),
@@ -513,7 +513,7 @@ export const AdminDashboard: React.FC = () => {
     setResendingPaymentLink(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/payment/create-link`, {
+      const res = await fetch(`${API_URL}/payment/create-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ applicationId: appId }),
@@ -535,7 +535,7 @@ export const AdminDashboard: React.FC = () => {
     setIsCancelling(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/api/applications/${cancelModal.appId}/cancel`, {
+      const res = await fetch(`${API_URL}/applications/${cancelModal.appId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(cancelReason.trim() ? { reason: cancelReason.trim() } : {}),

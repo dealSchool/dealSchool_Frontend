@@ -307,7 +307,7 @@ export default function App() {
     setContactError(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/contacts`, {
+      const res = await fetch(`${API_URL}/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

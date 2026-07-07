@@ -22,7 +22,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast }) => 
       try {
         const token = await auth.currentUser?.getIdToken();
         if (!token) throw new Error("Not authenticated");
-        const res = await fetch(`${API_URL}/api/settings/cohort`, {
+        const res = await fetch(`${API_URL}/settings/cohort`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -64,7 +64,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast }) => 
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error("Not authenticated");
-      const res = await fetch(`${API_URL}/api/settings/cohort`, {
+      const res = await fetch(`${API_URL}/settings/cohort`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),

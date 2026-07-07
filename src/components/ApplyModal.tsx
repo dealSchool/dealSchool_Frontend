@@ -177,7 +177,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     setDupCheck({ checking: true, alreadyApplied: false, message: null, triggeredBy: field });
     try {
       const body = field === "email" ? { email: trimmed } : { phone: trimmed };
-      const res = await fetch(`${API_URL}/api/applications/check`, {
+      const res = await fetch(`${API_URL}/applications/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -294,7 +294,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       // Exclude resumeLink from spread; send only resumeUrl so the backend
       // receives a single canonical key for the resume URL.
       const { resumeLink, ...rest } = formData;
-      const res = await fetch(`${API_URL}/api/applications`, {
+      const res = await fetch(`${API_URL}/applications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...rest, resumeUrl: resumeLink }),
