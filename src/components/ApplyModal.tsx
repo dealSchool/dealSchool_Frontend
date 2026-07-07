@@ -10,6 +10,7 @@ import {
   Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
 } from "lucide-react";
 import { CustomSelect } from "./CustomSelect";
+import { API_URL } from "../config";
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -175,9 +176,8 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     if (!trimmed) return;
     setDupCheck({ checking: true, alreadyApplied: false, message: null, triggeredBy: field });
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
       const body = field === "email" ? { email: trimmed } : { phone: trimmed };
-      const res = await fetch(`${backendUrl}/api/applications/check`, {
+      const res = await fetch(`${API_URL}/api/applications/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -291,11 +291,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
       // Exclude resumeLink from spread; send only resumeUrl so the backend
       // receives a single canonical key for the resume URL.
       const { resumeLink, ...rest } = formData;
-      const res = await fetch(`${backendUrl}/api/applications`, {
+      const res = await fetch(`${API_URL}/api/applications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...rest, resumeUrl: resumeLink }),

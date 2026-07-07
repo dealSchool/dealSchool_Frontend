@@ -25,6 +25,7 @@ import { RefundCancellationPage } from "./components/RefundCancellationPage";
 import { FAQPage } from "./components/FAQPage";
 import { CustomSelect } from "./components/CustomSelect";
 import { auth } from "./firebase";
+import { API_URL } from "./config";
 import tusshaarImg from "./assets/Tusshaar.jpg.jpeg";
 import rishabhImg from "./assets/Rishabh.png";
 import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
@@ -306,8 +307,7 @@ export default function App() {
     setContactError(null);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-      const res = await fetch(`${backendUrl}/api/contacts`, {
+      const res = await fetch(`${API_URL}/api/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

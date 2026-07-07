@@ -6,6 +6,7 @@ import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
+import { API_URL } from "../config";
 import {
   Search, ShieldAlert, LogOut, X, Mail, Trash2,
   AlertTriangle, CheckCircle2, User, ExternalLink,
@@ -165,8 +166,6 @@ export const AdminDashboard: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-
   const getToken = async (): Promise<string> => {
     const token = await auth.currentUser?.getIdToken();
     if (!token) throw new Error("Not authenticated");
@@ -184,8 +183,8 @@ export const AdminDashboard: React.FC = () => {
       if (signal?.aborted) return;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${backendUrl}/api/applications?limit=10&after=${cursor}`
-        : `${backendUrl}/api/applications?limit=10`;
+        ? `${API_URL}/api/applications?limit=10&after=${cursor}`
+        : `${API_URL}/api/applications?limit=10`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); setDbError("Access denied."); setDbLoading(false); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -206,7 +205,7 @@ export const AdminDashboard: React.FC = () => {
       setDbError("Failed to load applications. Please refresh.");
       setDbLoading(false);
     }
-  }, [backendUrl]);
+  }, []);
 
   const fetchContactPage = useCallback(async (
     page: number,
@@ -219,8 +218,8 @@ export const AdminDashboard: React.FC = () => {
       if (signal?.aborted) return;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${backendUrl}/api/contacts?limit=10&after=${cursor}`
-        : `${backendUrl}/api/contacts?limit=10`;
+        ? `${API_URL}/api/contacts?limit=10&after=${cursor}`
+        : `${API_URL}/api/contacts?limit=10`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -238,7 +237,7 @@ export const AdminDashboard: React.FC = () => {
       if (err?.name === "AbortError") return;
       console.error("Failed to load contacts:", err);
     }
-  }, [backendUrl]);
+  }, []);
 
   const goToAppPage = async (page: number) => {
     if (page === appPage || appPageLoading || page < 1) return;
@@ -351,7 +350,7 @@ export const AdminDashboard: React.FC = () => {
     setIsActioning(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${backendUrl}/api/applications/${appId}`, {
+      const res = await fetch(`${API_URL}/api/applications/${appId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: transitionStatus }),
@@ -387,7 +386,7 @@ export const AdminDashboard: React.FC = () => {
         setIsActioning(true);
         try {
           const token = await getToken();
-          const res = await fetch(`${backendUrl}/api/applications/${appId}`, {
+          const res = await fetch(`${API_URL}/api/applications/${appId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -421,7 +420,7 @@ export const AdminDashboard: React.FC = () => {
     setIsActioning(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${backendUrl}/api/applications/${appId}?confirmed=true`, {
+      const res = await fetch(`${API_URL}/api/applications/${appId}?confirmed=true`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -446,7 +445,7 @@ export const AdminDashboard: React.FC = () => {
     setIsActioning(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${backendUrl}/api/contacts/${contactId}`, {
+      const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: targetStatus }),
@@ -472,7 +471,7 @@ export const AdminDashboard: React.FC = () => {
         setIsActioning(true);
         try {
           const token = await getToken();
-          const res = await fetch(`${backendUrl}/api/contacts/${contactId}`, {
+          const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -493,7 +492,7 @@ export const AdminDashboard: React.FC = () => {
     setResendingPaymentLink(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${backendUrl}/api/payment/resend`, {
+      const res = await fetch(`${API_URL}/api/payment/resend`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ applicationId: appId }),
@@ -514,7 +513,7 @@ export const AdminDashboard: React.FC = () => {
     setResendingPaymentLink(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${backendUrl}/api/payment/create-link`, {
+      const res = await fetch(`${API_URL}/api/payment/create-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ applicationId: appId }),
@@ -536,7 +535,7 @@ export const AdminDashboard: React.FC = () => {
     setIsCancelling(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${backendUrl}/api/applications/${cancelModal.appId}/cancel`, {
+      const res = await fetch(`${API_URL}/api/applications/${cancelModal.appId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(cancelReason.trim() ? { reason: cancelReason.trim() } : {}),
@@ -1730,7 +1729,6 @@ export const AdminDashboard: React.FC = () => {
     {/* ════════ COHORT SETTINGS MODAL ════════ */}
     {showCohortSettings && (
       <CohortSettingsPanel
-        backendUrl={backendUrl}
         showToast={showToast}
         onClose={() => setShowCohortSettings(false)}
       />

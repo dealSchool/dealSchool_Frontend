@@ -2,14 +2,14 @@ import React, { useState, useEffect } from "react";
 import { X, Calendar, IndianRupee, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { auth } from "../firebase";
 import { CohortSettings } from "../types";
+import { API_URL } from "../config";
 
 interface Props {
   onClose: () => void;
-  backendUrl: string;
   showToast: (message: string, type?: "success" | "error") => void;
 }
 
-export const CohortSettingsPanel: React.FC<Props> = ({ onClose, backendUrl, showToast }) => {
+export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, backendUrl, show
       try {
         const token = await auth.currentUser?.getIdToken();
         if (!token) throw new Error("Not authenticated");
-        const res = await fetch(`${backendUrl}/api/settings/cohort`, {
+        const res = await fetch(`${API_URL}/api/settings/cohort`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -39,7 +39,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, backendUrl, show
         setLoading(false);
       }
     })();
-  }, [backendUrl]);
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +64,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, backendUrl, show
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error("Not authenticated");
-      const res = await fetch(`${backendUrl}/api/settings/cohort`, {
+      const res = await fetch(`${API_URL}/api/settings/cohort`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
