@@ -6,7 +6,7 @@ import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
-import { API_URL } from "@shared/config";
+import { API_URL, WEBSITE_URL } from "@shared/config";
 import {
   Search, ShieldAlert, LogOut, X, Mail, Trash2,
   AlertTriangle, CheckCircle2, User, ExternalLink,
@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 
 const goToSite = () => {
-  window.history.pushState({}, "", "/");
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.location.href = WEBSITE_URL;
 };
 
 const getInitials = (name: string): string => {

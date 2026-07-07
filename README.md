@@ -94,10 +94,12 @@ VITE_ADMIN_EMAIL=admin@dealschool.in
 # Backend API URL
 VITE_BACKEND_URL=http://localhost:3001
 
-# Optional — where the website's footer "[Admin Portal]" link points.
-# Defaults to https://admin.dealschool.in if unset (see packages/shared/config.ts).
-# VITE_ADMIN_URL=http://localhost:3001
+# Optional — where the admin app's "Back to website" links point.
+# Defaults to https://dealschool.in if unset (see packages/shared/config.ts).
+# VITE_WEBSITE_URL=http://localhost:3000
 ```
+
+Note: the public website has no link to the admin app anywhere (by design — the footer's old "[Admin Portal]" link was removed). Admin access is by knowing the `admin.dealschool.in` URL directly.
 
 ### Run
 ```bash
@@ -226,10 +228,6 @@ Set `RAZORPAY_WEBHOOK_SECRET` in your backend environment to the secret generate
 2. Add an nginx server block for `admin.dealschool.in` serving that directory (with SPA fallback to `index.html`, same as the existing website vhost).
 3. Point `admin.dealschool.in` at the VPS in DNS (A/CNAME record).
 
-No extra secret is needed for the website footer's admin link — it defaults to
-`https://admin.dealschool.in` (see `packages/shared/config.ts`). Only set a
-`VITE_ADMIN_URL` secret if that domain ever changes.
-
 ### Frontend — Firebase Hosting (alternative)
 ```bash
 npm run build:website
@@ -262,7 +260,7 @@ dealschool_new/                    ← this repo (npm workspaces monorepo)
 │   └── shared/                    # imported by both apps as "@shared/*"
 │       ├── firebase.ts            # Firebase Auth init + helper functions
 │       ├── types.ts               # TypeScript interfaces (Application, Contact, Payment)
-│       └── config.ts              # VITE_BACKEND_URL / VITE_ADMIN_URL
+│       └── config.ts              # VITE_BACKEND_URL / VITE_WEBSITE_URL
 ├── apps/
 │   ├── website/                   # public marketing site → dealschool.in
 │   │   ├── src/

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { signInAdminWithGoogle, signInAdminWithEmail, getFriendlyAuthError } from "@shared/firebase";
+import { WEBSITE_URL } from "@shared/config";
 import { AlertTriangle, LogIn, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import dealschoolLogo from "../assets/images/dealschool_logo_1781074477214.png";
 
@@ -10,8 +11,7 @@ interface Props {
 }
 
 const goToSite = () => {
-  window.history.pushState({}, "", "/");
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.location.href = WEBSITE_URL;
 };
 
 export const AdminLoginForm: React.FC<Props> = ({ onForgotPassword, authError, onClearAuthError }) => {

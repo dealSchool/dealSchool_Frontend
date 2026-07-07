@@ -6,7 +6,6 @@
 import React from "react";
 import { DealSchoolLogo } from "./SVGIllustrations";
 import { Mail, MapPin, ArrowUp } from "lucide-react";
-import { ADMIN_URL } from "@shared/config";
 
 interface FooterPanelProps {
   onChangePage?: (
@@ -119,12 +118,6 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
             >
               Refund &amp; Cancellation Policy
             </button>
-            <a
-              href={ADMIN_URL}
-              className="text-[#FAFAF8]/25 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0"
-            >
-              [Admin Portal]
-            </a>
           </div>
           <button
             onClick={scrollHeightTop}
