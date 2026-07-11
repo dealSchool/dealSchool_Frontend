@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Check, ArrowRight, AlertCircle, User, Mail, Phone, MapPin, Download } from "lucide-react";
+import { API_URL } from "@shared/config";
 
 interface BrochureModalProps {
   isOpen: boolean;
@@ -97,8 +98,7 @@ export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose })
     setErrorMessage(null);
 
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-      const res = await fetch(`${backendUrl}/brochure-requests`, {
+      const res = await fetch(`${API_URL}/brochure-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
