@@ -1915,24 +1915,29 @@ export const AdminDashboard: React.FC = () => {
 
                         {/* Scrollable content */}
                         <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-5 bg-[#F8F7F5]">
-                          <div className="bg-white rounded-sm border border-brand-secondary/10 p-4 shadow-sm grid grid-cols-2 gap-4">
-                            <InfoRow label="Contact Number" value={selectedBrochureRequest.contact} mono />
-                            <InfoRow label="City" value={selectedBrochureRequest.city} />
-                            <InfoRow label="IP Address" value={selectedBrochureRequest.ip} mono />
-                            <InfoRow label="Requested At" value={renderShortDate(selectedBrochureRequest.createdAt)} mono />
+                          <div className="bg-white rounded-sm border border-brand-secondary/10 p-4 shadow-sm space-y-4">
+                            <InfoRow label="Email Address" value={selectedBrochureRequest.email} mono />
+                            <div className="grid grid-cols-2 gap-4">
+                              <InfoRow label="Contact Number" value={selectedBrochureRequest.contact} mono />
+                              <InfoRow label="City" value={selectedBrochureRequest.city} />
+                              <InfoRow label="IP Address" value={selectedBrochureRequest.ip} mono />
+                              <InfoRow label="Requested At" value={renderShortDate(selectedBrochureRequest.createdAt)} mono />
+                            </div>
                           </div>
                           <div className="flex gap-2.5">
                             <a
                               href={`mailto:${selectedBrochureRequest.email}`}
-                              className="flex-1 py-2.5 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[10px] font-bold uppercase tracking-wide rounded-sm transition-all flex items-center justify-center gap-1.5"
+                              className="flex-1 min-w-0 py-2.5 px-3 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[11px] font-bold rounded-sm transition-all flex items-center justify-center gap-1.5"
                             >
-                              <Mail className="h-3 w-3" /> Email
+                              <Mail className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{selectedBrochureRequest.email}</span>
                             </a>
                             <a
                               href={`tel:${selectedBrochureRequest.contact}`}
-                              className="flex-1 py-2.5 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[10px] font-bold uppercase tracking-wide rounded-sm transition-all flex items-center justify-center gap-1.5"
+                              className="flex-1 min-w-0 py-2.5 px-3 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[11px] font-bold rounded-sm transition-all flex items-center justify-center gap-1.5"
                             >
-                              <Phone className="h-3 w-3" /> Call
+                              <Phone className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{selectedBrochureRequest.contact}</span>
                             </a>
                           </div>
                         </div>
