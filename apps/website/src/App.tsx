@@ -215,7 +215,7 @@ export default function App() {
   const [activePage, setActivePage] = useState<AppPage>(
     pageFromPathname(window.location.pathname)
   );
-  // Razorpay payment callback — detected from URL query params on mount
+  // Payment gateway callback — detected from URL query params on mount
   const [paymentCallbackParams, setPaymentCallbackParams] = useState<URLSearchParams | null>(null);
 
   useEffect(() => {
@@ -1094,7 +1094,7 @@ export default function App() {
       {/* GLOBAL FOOTER REFERENCES */}
       <FooterPanel onChangePage={handlePageChange} />
 
-      {/* Razorpay payment callback overlay */}
+      {/* Payment gateway callback overlay */}
       {paymentCallbackParams && (
         <PaymentCallback
           params={paymentCallbackParams}

@@ -1,6 +1,6 @@
 # DealSchool — VC Fellowship Platform
 
-DealSchool is a full-stack web application for a 10-week, cohort-based venture capital fellowship by Middha Ventures. Applicants discover the programme, apply online, and pay the fellowship fee. Admins review applications, manage statuses, and trigger Razorpay payment links — all from a password-protected dashboard.
+DealSchool is a full-stack web application for a 10-week, cohort-based venture capital fellowship by Middha Ventures. Applicants discover the programme, apply online, and pay the fellowship fee. Admins review applications, manage statuses, and trigger Cashfree payment links — all from a password-protected dashboard.
 
 ---
 
@@ -13,7 +13,7 @@ The frontend is an npm-workspaces monorepo with two independently deployed Vite 
 | **apps/website** (this repo) | Vite + React 19 + TypeScript + Tailwind v4 | `3000` | Public marketing site + application form, deployed to `dealschool.in` |
 | **apps/admin** (this repo) | Vite + React 19 + TypeScript + Tailwind v4 | `3001` | Admin dashboard, deployed separately to `admin.dealschool.in` |
 | **packages/shared** (this repo) | TypeScript | — | Firebase Auth init, shared types, and the backend API URL — imported by both apps via the `@shared/*` alias |
-| **dealschool_backend** | Next.js 15 (App Router) + Firebase Admin SDK | `3001` | REST API, Firestore writes, email delivery, Razorpay integration |
+| **dealschool_backend** | Next.js 15 (App Router) + Firebase Admin SDK | `3001` | REST API, Firestore writes, email delivery, Cashfree integration |
 
 Splitting the admin dashboard into its own app means public visitors never download admin code, and the admin origin can be locked down independently (separate hosting rules, IP allowlisting, etc.) from the marketing site.
 
@@ -29,7 +29,7 @@ Firestore security rules deny all direct client access — every form submission
 
 - Node.js 18+
 - A Firebase project with Firestore and Authentication enabled
-- A Razorpay account (test keys work for local development)
+- A Cashfree account (test keys work for local development)
 - A Gmail or Google Workspace account for SMTP (with an App Password)
 - Firebase CLI: `npm install -g firebase-tools`
 
@@ -192,7 +192,7 @@ The admin panel is its own app (`apps/admin`), served from its own origin (`admi
 From the dashboard you can:
 - View and filter fellowship applications by status
 - Move applications through the pipeline: **Pending → Auditing → Interview → Accepted / Declined**
-- Accepting an application automatically creates a Razorpay payment link and emails it to the applicant
+- Accepting an application automatically creates a Cashfree payment link and emails it to the applicant
 - View, mark, and archive contact form inquiries
 - Resend a payment link if an applicant missed it
 

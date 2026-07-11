@@ -335,7 +335,7 @@ export const AdminDashboard: React.FC = () => {
     const confirmMessages: Record<string, string> = {
       under_review:      "Move to Auditing? A status update email will be sent to the applicant.",
       interview_invited: "Invite to Interview? A notification email will be sent to the applicant.",
-      accepted:          "Accept as Fellow? A Razorpay payment link will be created and emailed to the applicant.",
+      accepted:          "Accept as Fellow? A Cashfree payment link will be created and emailed to the applicant.",
       declined:          "Decline this application? A rejection email will be sent to the applicant.",
     };
     const message = confirmMessages[transitionStatus] ?? `Change status to "${transitionStatus.replace(/_/g, " ")}"?`;
@@ -430,7 +430,7 @@ export const AdminDashboard: React.FC = () => {
       setApplications((prev) => prev.filter((a) => a.id !== appId));
       setSelectedApp(null);
       setPaymentWarningModal(null);
-      showToast("Application deleted. Process the refund via Razorpay dashboard.", "success");
+      showToast("Application deleted. Process the refund via Cashfree dashboard.", "success");
     } catch (err: any) {
       console.error("Error force-deleting application:", err);
       showToast(`Delete failed: ${err.message}`, "error");
@@ -1404,7 +1404,7 @@ export const AdminDashboard: React.FC = () => {
 
                                 {selectedApp.rzpPaymentId && (
                                   <div>
-                                    <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-1">Razorpay ID</span>
+                                    <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-1">Payment ID</span>
                                     <div className="flex items-center gap-2">
                                       <code className="font-mono text-[10px] text-brand-secondary bg-[#FAFAF8] border border-brand-secondary/10 px-2 py-1 rounded-sm flex-1 truncate">
                                         {selectedApp.rzpPaymentId}
@@ -1748,7 +1748,7 @@ export const AdminDashboard: React.FC = () => {
               </h3>
               <p className="font-sans text-xs text-brand-neutral leading-relaxed">
                 {cancelModal.hasPaid
-                  ? "The refund tier (100% / 50% / 0%) is computed automatically from today's date vs. the cohort start date, and processed via Razorpay."
+                  ? "The refund tier (100% / 50% / 0%) is computed automatically from today's date vs. the cohort start date, and processed via Cashfree."
                   : "This applicant has not completed payment — cancelling will not create a refund. Any pending payment link will be invalidated."}
               </p>
             </div>
@@ -1840,7 +1840,7 @@ export const AdminDashboard: React.FC = () => {
               { label: "Applicant", value: paymentWarningModal.applicantName },
               { label: "Email",     value: paymentWarningModal.applicantEmail },
               { label: "Amount",    value: paymentWarningModal.feeDisplay },
-              ...(paymentWarningModal.rzpPaymentId ? [{ label: "Razorpay ID", value: paymentWarningModal.rzpPaymentId }] : []),
+              ...(paymentWarningModal.rzpPaymentId ? [{ label: "Payment ID", value: paymentWarningModal.rzpPaymentId }] : []),
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between gap-4">
                 <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-wider">{label}</span>
@@ -1851,7 +1851,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-sm">
             <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="font-sans text-xs text-amber-700 leading-relaxed">
-              Issue the refund <strong>manually</strong> via the Razorpay dashboard.
+              Issue the refund <strong>manually</strong> via the Cashfree dashboard.
             </p>
           </div>
           <div className="flex gap-3">
@@ -1893,7 +1893,7 @@ export const AdminDashboard: React.FC = () => {
               { label: "Applicant", value: statusChangeWarningModal.applicantName },
               { label: "Email",     value: statusChangeWarningModal.applicantEmail },
               { label: "Amount",    value: statusChangeWarningModal.feeDisplay },
-              ...(statusChangeWarningModal.rzpPaymentId ? [{ label: "Razorpay ID", value: statusChangeWarningModal.rzpPaymentId }] : []),
+              ...(statusChangeWarningModal.rzpPaymentId ? [{ label: "Payment ID", value: statusChangeWarningModal.rzpPaymentId }] : []),
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between gap-4">
                 <span className="font-mono text-[10px] text-brand-neutral uppercase tracking-wider">{label}</span>
@@ -1904,7 +1904,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-sm">
             <CreditCard className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="font-sans text-xs text-amber-700 leading-relaxed">
-              If declining, issue a <strong>manual</strong> refund via the Razorpay dashboard.
+              If declining, issue a <strong>manual</strong> refund via the Cashfree dashboard.
             </p>
           </div>
           <div className="flex gap-3">
