@@ -139,7 +139,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onApplyClick, onChangePage }) 
                     transition={{ duration: 0.25, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <p className="font-sans text-sm sm:text-base text-brand-neutral leading-relaxed px-5 sm:px-6 pl-12 sm:pl-14 pb-5 sm:pb-6 max-w-3xl">
+                    <p className="font-sans text-sm sm:text-base text-brand-secondary leading-relaxed px-5 sm:px-6 pl-12 sm:pl-14 pb-5 sm:pb-6 max-w-3xl">
                       {item.answer}
                     </p>
                   </motion.div>
