@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, logOutAdmin } from "@shared/firebase";
-import { FellowshipApplication, ContactMessage } from "@shared/types";
+import { FellowshipApplication, ContactMessage, BrochureRequest } from "@shared/types";
 import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
@@ -12,7 +12,7 @@ import {
   AlertTriangle, CheckCircle2, User, ExternalLink,
   MessageSquare, KeyRound, CreditCard, RefreshCw,
   ArrowLeft, Phone, MapPin, FileText, Clock,
-  Eye, Users, Ban, CalendarCog,
+  Eye, Users, Ban, CalendarCog, Download,
 } from "lucide-react";
 
 const goToSite = () => {
@@ -69,6 +69,7 @@ export const AdminDashboard: React.FC = () => {
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [applications, setApplications] = useState<FellowshipApplication[]>([]);
   const [contacts, setContacts] = useState<ContactMessage[]>([]);
+  const [brochureRequests, setBrochureRequests] = useState<BrochureRequest[]>([]);
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -126,16 +127,18 @@ export const AdminDashboard: React.FC = () => {
     setConfirmModal({ message, onConfirm });
   };
 
-  const [activeTab, setActiveTab] = useState<"applications" | "contacts">("applications");
+  const [activeTab, setActiveTab] = useState<"applications" | "contacts" | "brochures">("applications");
 
   const [appSearch, setAppSearch]         = useState("");
   const [sectorFilter, setSectorFilter]   = useState("all");
   const [statusFilter, setStatusFilter]   = useState("all");
   const [contactSearch, setContactSearch] = useState("");
   const [contactStatusFilter, setContactStatusFilter] = useState("all");
+  const [brochureSearch, setBrochureSearch] = useState("");
 
   const [selectedApp, setSelectedApp]         = useState<FellowshipApplication | null>(null);
   const [selectedContact, setSelectedContact] = useState<ContactMessage | null>(null);
+  const [selectedBrochureRequest, setSelectedBrochureRequest] = useState<BrochureRequest | null>(null);
 
   const [resendingPaymentLink, setResendingPaymentLink] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
@@ -154,8 +157,16 @@ export const AdminDashboard: React.FC = () => {
   const [contactPageLoading, setContactPageLoading] = useState(false);
   const contactPageRef                              = useRef(1);
 
+  const [brochurePage, setBrochurePage]               = useState(1);
+  const [brochurePageCursors, setBrochurePageCursors] = useState<(string | null)[]>([null]);
+  const [brochureTotalPages, setBrochureTotalPages]   = useState(1);
+  const [brochureHasMore, setBrochureHasMore]         = useState(false);
+  const [brochurePageLoading, setBrochurePageLoading] = useState(false);
+  const brochurePageRef                               = useRef(1);
+
   const [appCounts, setAppCounts]         = useState({ total: 0, pending: 0, under_review: 0, accepted: 0, paid: 0 });
   const [contactCounts, setContactCounts] = useState({ total: 0, unread: 0 });
+  const [brochureCounts, setBrochureCounts] = useState({ total: 0 });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -238,6 +249,38 @@ export const AdminDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchBrochurePage = useCallback(async (
+    page: number,
+    cursors: (string | null)[],
+    signal?: AbortSignal,
+  ) => {
+    if (!auth.currentUser) return;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      if (signal?.aborted) return;
+      const cursor = cursors[page - 1] ?? null;
+      const url    = cursor
+        ? `${API_URL}/brochure-requests?limit=10&after=${cursor}`
+        : `${API_URL}/brochure-requests?limit=10`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
+      if (res.status === 401) { setIsAdminAuthorized(false); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { requests: list, hasMore, nextCursor, total } = await res.json();
+      setBrochureRequests(list as BrochureRequest[]);
+      setBrochureHasMore(hasMore);
+      if (nextCursor) {
+        setBrochurePageCursors((prev) => { const c = [...prev]; c[page] = nextCursor; return c; });
+        setBrochureTotalPages((prev) => Math.max(prev, page + 1));
+      } else {
+        setBrochureTotalPages(page);
+      }
+      if (total !== undefined) setBrochureCounts({ total });
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      console.error("Failed to load brochure requests:", err);
+    }
+  }, []);
+
   const goToAppPage = async (page: number) => {
     if (page === appPage || appPageLoading || page < 1) return;
     if (page > 1 && !appPageCursors[page - 1]) return;
@@ -260,31 +303,48 @@ export const AdminDashboard: React.FC = () => {
     setContactPageLoading(false);
   };
 
+  const goToBrochurePage = async (page: number) => {
+    if (page === brochurePage || brochurePageLoading || page < 1) return;
+    if (page > 1 && !brochurePageCursors[page - 1]) return;
+    setBrochurePageLoading(true);
+    setSelectedBrochureRequest(null);
+    await fetchBrochurePage(page, brochurePageCursors);
+    setBrochurePage(page);
+    brochurePageRef.current = page;
+    setBrochurePageLoading(false);
+  };
+
   useEffect(() => {
     if (!currentUser || !isAdminAuthorized) {
       setApplications([]);
       setContacts([]);
+      setBrochureRequests([]);
       setAppPage(1); setAppPageCursors([null]); setAppTotalPages(1); setAppHasMore(false);
       setContactPage(1); setContactPageCursors([null]); setContactTotalPages(1); setContactHasMore(false);
+      setBrochurePage(1); setBrochurePageCursors([null]); setBrochureTotalPages(1); setBrochureHasMore(false);
       return;
     }
 
     setDbLoading(true);
     setDbError(null);
 
-    const initialAppCursors     = [null] as (string | null)[];
-    const initialContactCursors = [null] as (string | null)[];
+    const initialAppCursors      = [null] as (string | null)[];
+    const initialContactCursors  = [null] as (string | null)[];
+    const initialBrochureCursors = [null] as (string | null)[];
 
     const initialController = new AbortController();
     fetchAppPage(1, initialAppCursors, initialController.signal);
     fetchContactPage(1, initialContactCursors, initialController.signal);
+    fetchBrochurePage(1, initialBrochureCursors, initialController.signal);
 
-    const appCursorsRef     = { current: initialAppCursors };
-    const contactCursorsRef = { current: initialContactCursors };
+    const appCursorsRef      = { current: initialAppCursors };
+    const contactCursorsRef  = { current: initialContactCursors };
+    const brochureCursorsRef = { current: initialBrochureCursors };
 
     const syncCursors = () => {
       setAppPageCursors((c) => { appCursorsRef.current = c; return c; });
       setContactPageCursors((c) => { contactCursorsRef.current = c; return c; });
+      setBrochurePageCursors((c) => { brochureCursorsRef.current = c; return c; });
     };
 
     let pollController: AbortController | null = null;
@@ -294,6 +354,7 @@ export const AdminDashboard: React.FC = () => {
       syncCursors();
       fetchAppPage(appPageRef.current, appCursorsRef.current, pollController.signal);
       fetchContactPage(contactPageRef.current, contactCursorsRef.current, pollController.signal);
+      fetchBrochurePage(brochurePageRef.current, brochureCursorsRef.current, pollController.signal);
     }, 15000);
 
     return () => {
@@ -301,13 +362,14 @@ export const AdminDashboard: React.FC = () => {
       pollController?.abort();
       clearInterval(interval);
     };
-  }, [currentUser, isAdminAuthorized, fetchAppPage, fetchContactPage]);
+  }, [currentUser, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage]);
 
   const handleLogout = async () => {
     try {
       await logOutAdmin();
       setSelectedApp(null);
       setSelectedContact(null);
+      setSelectedBrochureRequest(null);
     } catch (err: any) {
       console.error("Logout failure:", err);
     }
@@ -581,6 +643,12 @@ export const AdminDashboard: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const filteredBrochureRequests = brochureRequests.filter((b) => {
+    const term = brochureSearch.toLowerCase();
+    const searchText = (b.name || "") + (b.email || "") + (b.contact || "") + (b.city || "");
+    return !term || searchText.toLowerCase().includes(term);
+  });
+
   const renderTimestamp = (ts: any): string => {
     if (!ts) return "N/A";
     let date: Date;
@@ -694,6 +762,7 @@ export const AdminDashboard: React.FC = () => {
               await Promise.all([
                 fetchAppPage(appPage, appPageCursors),
                 fetchContactPage(contactPage, contactPageCursors),
+                fetchBrochurePage(brochurePage, brochurePageCursors),
               ]);
               showToast("Data refreshed", "success");
             }}
@@ -754,16 +823,18 @@ export const AdminDashboard: React.FC = () => {
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1">
-          {(["applications", "contacts"] as const).map((tab) => {
-            const count = tab === "applications" ? applications.length : contacts.length;
-            const label = tab === "applications" ? `Applications` : `Messages`;
+          {(["applications", "contacts", "brochures"] as const).map((tab) => {
+            const count = tab === "applications" ? applications.length : tab === "contacts" ? contacts.length : brochureRequests.length;
+            const label = tab === "applications" ? `Applications` : tab === "contacts" ? `Messages` : `Brochures`;
             const active = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => {
-                  if (tab === "applications") { setActiveTab("applications"); setSelectedContact(null); }
-                  else { setActiveTab("contacts"); setSelectedApp(null); }
+                  setActiveTab(tab);
+                  if (tab !== "applications") setSelectedApp(null);
+                  if (tab !== "contacts") setSelectedContact(null);
+                  if (tab !== "brochures") setSelectedBrochureRequest(null);
                 }}
                 className={`flex items-center gap-2 px-5 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold ${
                   active
@@ -1100,16 +1171,104 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </>
             )}
+
+            {/* BROCHURES tab */}
+            {activeTab === "brochures" && (
+              <>
+                <div className="bg-white border border-brand-secondary/10 rounded-sm px-4 py-3 shadow-sm flex flex-wrap items-center gap-3">
+                  <div className="flex-1 min-w-[200px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-neutral/50" />
+                    <input type="text" value={brochureSearch} onChange={(e) => setBrochureSearch(e.target.value)}
+                      placeholder="Search name, email, contact, city…"
+                      className="w-full bg-[#F6F5F2] text-brand-text pl-9 pr-3 py-2 border border-brand-secondary/15 focus:outline-none focus:border-[#082C6C] focus:bg-white text-xs rounded-sm transition-all" />
+                  </div>
+                </div>
+
+                {filteredBrochureRequests.length === 0 && (
+                  <div className="bg-white border border-brand-secondary/10 p-12 text-center rounded-sm shadow-sm">
+                    <p className="font-serif text-base font-bold text-brand-text">No Brochure Requests Found</p>
+                    <p className="font-sans text-xs text-brand-neutral mt-1">Adjust your search, or check back once someone requests the brochure.</p>
+                  </div>
+                )}
+
+                <div className="bg-white border border-brand-secondary/10 rounded-sm overflow-hidden shadow-sm divide-y divide-brand-secondary/8">
+                  {filteredBrochureRequests.map((b) => {
+                    const isSelected = selectedBrochureRequest?.id === b.id;
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => setSelectedBrochureRequest(b)}
+                        className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-[#082C6C]/[0.06] border-l-[3px] border-l-[#D4A62A]"
+                            : "border-l-[3px] border-l-transparent hover:bg-[#082C6C]/[0.03]"
+                        }`}
+                      >
+                        {/* Initials avatar */}
+                        <div className="w-9 h-9 rounded-full bg-brand-secondary/10 flex items-center justify-center shrink-0 ring-2 ring-brand-secondary/15">
+                          <span className="font-mono text-[11px] font-black text-brand-secondary">
+                            {getInitials(b.name)}
+                          </span>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-sans text-sm font-semibold text-brand-text truncate max-w-[160px]">
+                              {b.name}
+                            </span>
+                            {b.city && (
+                              <span className="font-mono text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-full bg-brand-secondary/10 text-brand-secondary">
+                                {b.city}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-sans text-xs text-brand-neutral truncate mt-0.5">
+                            <span className="opacity-70">{b.email}</span>
+                            <span className="mx-1 opacity-40">·</span>
+                            <span className="font-mono opacity-70">{b.contact}</span>
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right hidden sm:block">
+                          <span className="font-mono text-[9px] text-brand-neutral block">{renderShortDate(b.createdAt)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {brochureTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-1 flex-wrap pt-1">
+                    <button onClick={() => goToBrochurePage(brochurePage - 1)} disabled={brochurePage === 1 || brochurePageLoading}
+                      className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                      Prev
+                    </button>
+                    {Array.from({ length: brochureTotalPages }, (_, i) => i + 1).map((p) => (
+                      <button key={p} onClick={() => goToBrochurePage(p)} disabled={brochurePageLoading}
+                        className={`w-8 h-8 font-mono text-[10px] font-bold rounded-sm border transition-all cursor-pointer ${
+                          p === brochurePage ? "bg-brand-secondary text-white border-brand-secondary" : "bg-white border-brand-secondary/20 text-brand-neutral hover:bg-brand-secondary/5"
+                        }`}>
+                        {brochurePageLoading && p === brochurePage ? <RefreshCw className="h-3 w-3 animate-spin mx-auto" /> : p}
+                      </button>
+                    ))}
+                    <button onClick={() => goToBrochurePage(brochurePage + 1)} disabled={!brochureHasMore || brochurePageLoading}
+                      className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* ── DETAIL DRAWER ── */}
-          {((activeTab === "applications" && selectedApp !== null) || (activeTab === "contacts" && selectedContact !== null)) && (
+          {((activeTab === "applications" && selectedApp !== null) || (activeTab === "contacts" && selectedContact !== null) || (activeTab === "brochures" && selectedBrochureRequest !== null)) && (
           <div className="fixed inset-0 z-50 flex" style={{ animation: "fadeInBackdrop 0.2s ease-out" }}>
             {/* Blurred left half — click to dismiss */}
             <div
               className="w-[42%] h-full cursor-pointer"
               style={{ backdropFilter: "blur(4px) brightness(0.68)", backgroundColor: "rgba(6, 26, 66, 0.30)" }}
-              onClick={() => { setSelectedApp(null); setSelectedContact(null); }}
+              onClick={() => { setSelectedApp(null); setSelectedContact(null); setSelectedBrochureRequest(null); }}
             />
             {/* Drawer panel — right half */}
             <div className="w-[58%] h-full flex flex-col bg-white shadow-2xl border-l border-[#082C6C]/20 overflow-hidden" style={{ animation: "slideInRight 0.28s cubic-bezier(0.25,0.46,0.45,0.94)" }}>
@@ -1707,6 +1866,87 @@ export const AdminDashboard: React.FC = () => {
                       </p>
                       <p className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-wider">
                         {filteredContacts.length} message{filteredContacts.length !== 1 ? "s" : ""} in view
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── BROCHURE REQUEST DETAIL ── */}
+              {activeTab === "brochures" && (
+                <>
+                  {selectedBrochureRequest ? (
+                      <>
+                        {/* Header */}
+                        <div className="shrink-0 border-b border-white/10" style={{ background: "linear-gradient(135deg, #061a42 0%, #0D3B8E 100%)" }}>
+                          <div className="flex items-center justify-between px-5 pt-4">
+                            <span className="font-mono text-[8px] text-white/25 uppercase tracking-[0.14em]">Brochure Request</span>
+                            <button
+                              onClick={() => setSelectedBrochureRequest(null)}
+                              className="h-7 w-7 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+                              title="Close"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="flex items-start gap-4 px-5 pt-3 pb-5">
+                            <div className="rounded-full bg-white/15 border-2 border-[#D4A62A]/70 flex items-center justify-center shrink-0 shadow-lg" style={{ width: "3.25rem", height: "3.25rem" }}>
+                              <span className="font-serif text-base font-black text-white">
+                                {getInitials(selectedBrochureRequest.name)}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-serif text-xl font-bold text-white leading-tight mb-1.5">
+                                {selectedBrochureRequest.name}
+                              </h3>
+                              <a
+                                href={`mailto:${selectedBrochureRequest.email}`}
+                                className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1"
+                              >
+                                <Mail className="h-3 w-3" /> {selectedBrochureRequest.email}
+                              </a>
+                              <div className="font-mono text-[9px] text-white/35 flex items-center gap-1.5">
+                                <Clock className="h-2.5 w-2.5" />
+                                <span>{renderTimestamp(selectedBrochureRequest.createdAt)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Scrollable content */}
+                        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-5 bg-[#F8F7F5]">
+                          <div className="bg-white rounded-sm border border-brand-secondary/10 p-4 shadow-sm grid grid-cols-2 gap-4">
+                            <InfoRow label="Contact Number" value={selectedBrochureRequest.contact} mono />
+                            <InfoRow label="City" value={selectedBrochureRequest.city} />
+                            <InfoRow label="IP Address" value={selectedBrochureRequest.ip} mono />
+                            <InfoRow label="Requested At" value={renderShortDate(selectedBrochureRequest.createdAt)} mono />
+                          </div>
+                          <div className="flex gap-2.5">
+                            <a
+                              href={`mailto:${selectedBrochureRequest.email}`}
+                              className="flex-1 py-2.5 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[10px] font-bold uppercase tracking-wide rounded-sm transition-all flex items-center justify-center gap-1.5"
+                            >
+                              <Mail className="h-3 w-3" /> Email
+                            </a>
+                            <a
+                              href={`tel:${selectedBrochureRequest.contact}`}
+                              className="flex-1 py-2.5 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[10px] font-bold uppercase tracking-wide rounded-sm transition-all flex items-center justify-center gap-1.5"
+                            >
+                              <Phone className="h-3 w-3" /> Call
+                            </a>
+                          </div>
+                        </div>
+                      </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-2">
+                      <div className="h-10 w-10 rounded-full bg-brand-secondary/5 flex items-center justify-center">
+                        <Download className="h-5 w-5 text-brand-neutral/30" />
+                      </div>
+                      <p className="font-serif italic text-sm text-brand-neutral">
+                        Select a request to view details
+                      </p>
+                      <p className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-wider">
+                        {filteredBrochureRequests.length} request{filteredBrochureRequests.length !== 1 ? "s" : ""} in view
                       </p>
                     </div>
                   )}

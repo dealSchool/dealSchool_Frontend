@@ -126,3 +126,14 @@ export interface ContactMessage {
   status: "unread" | "read" | "archived";
   createdAt: any;
 }
+
+export interface BrochureRequest {
+  id: string;
+  name: string;
+  contact: string;
+  email: string;
+  city: string;
+  ip: string;
+  createdAt: any;
+  updatedAt: any;
+}
