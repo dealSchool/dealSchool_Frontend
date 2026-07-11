@@ -37,7 +37,7 @@ const glowVariants = {
 export const StaircaseIllustration: React.FC = () => {
   return (
     <motion.div 
-      className="relative w-full aspect-[16/10] mx-auto flex items-center justify-center p-4 bg-transparent"
+      className="relative w-full max-w-[700px] aspect-[16/10] mx-auto flex items-center justify-center p-4 bg-transparent"
       {...floatingYAnimation}
     >
       <svg
@@ -60,7 +60,7 @@ export const StaircaseIllustration: React.FC = () => {
         </g>
 
         {/* Boardroom Table lit with bright amber glow */}
-        <g transform="translate(480, 100)">
+        <g transform="translate(420, -45)">
           {/* Table shadow */}
           <polygon points="0,150 160,80 320,150 160,220" fill="#0D3B8E" fillOpacity="0.04" />
           
@@ -79,7 +79,7 @@ export const StaircaseIllustration: React.FC = () => {
         </g>
 
         {/* 3D Isometric Staircase */}
-        <g transform="translate(100, 160)">
+        <g transform="translate(100, 220)">
           {/* Stairs blocks */}
           {/* Step 1 */}
           <polygon points="50,220 120,220 120,250 50,250" fill="#0D3B8E" fillOpacity="0.08" />
@@ -109,9 +109,9 @@ export const StaircaseIllustration: React.FC = () => {
 
         {/* The Gold Path Line running up the stairs towards the Boardroom Table */}
         <motion.path
-          d="M 50 490 L 150 370 L 190 345 L 230 295 L 270 270 L 310 220 L 350 195 L 390 145 L 430 120 L 600 195"
+          d="M 50 490 L 150 430 L 190 405 L 230 355 L 270 305 L 310 255 L 350 195 C 410 155, 480 125, 580 95"
           stroke="#D4A62A"
-          strokeWidth="3.5"
+          strokeWidth="4"
           strokeLinecap="round"
           strokeLinejoin="round"
           initial={{ pathLength: 0 }}
@@ -126,17 +126,17 @@ export const StaircaseIllustration: React.FC = () => {
         />
 
         {/* Gold Glow Pulse at the base and table intersection */}
-        <circle cx="600" cy="195" r="7" fill="#D4A62A" />
-        <circle cx="600" cy="195" r="16" stroke="#D4A62A" strokeOpacity="0.3" strokeWidth="2">
+        <circle cx="580" cy="95" r="7" fill="#D4A62A" />
+        <circle cx="580" cy="95" r="16" stroke="#D4A62A" strokeOpacity="0.3" strokeWidth="2">
           <animate attributeName="r" values="7;25;7" dur="2.5s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="1;0;1" dur="2.5s" repeatCount="indefinite" />
         </circle>
 
-        {/* Floating text metadata labels */}
-        <g fontFamily="var(--font-mono)" fontSize="13" letterSpacing="0.08em" fontWeight="600">
-          <text x="70" y="475" fill="#0D3B8E" fillOpacity="0.55">ENTRY: AMBITIOUS THINKING</text>
-          <text x="240" y="270" fill="#0D3B8E" fillOpacity="0.55">ANALYSIS &amp; METRICS</text>
-          <text x="560" y="80" textAnchor="end" fill="#D4A62A" fillOpacity="0.9">DESTINATION: VC BOARDROOM</text>
+        {/* Floating text metadata labels - Sequoia/McKinsey style */}
+        <g fontFamily="Helvetica, Arial, sans-serif" fontSize="13" fontWeight="bold" letterSpacing="0.06em">
+          <text x="70" y="475" fill="#2D3748">ENTRY: AMBITIOUS THINKING</text>
+          <text x="240" y="325" fill="#2D3748">ANALYSIS & METRICS</text>
+          <text x="580" y="20" fill="#D4A62A" fontWeight="900" textAnchor="middle">DESTINATION: VC BOARDROOM</text>
         </g>
       </svg>
     </motion.div>
@@ -178,10 +178,10 @@ export const CertificateKeyIllustration: React.FC = () => {
           <line x1="30" y1="130" x2="260" y2="130" stroke="#0D3B8E" strokeOpacity="0.15" strokeWidth="3" />
 
           {/* Authentic Completion Text */}
-          <text x="30" y="215" fill="#D4A62A" fontFamily="var(--font-mono)" fontSize="11" fontWeight="bold" letterSpacing="0.05em">
+          <text x="30" y="215" fill="#D4A62A" fontFamily="Helvetica, Arial, sans-serif" fontSize="11" fontWeight="bold" letterSpacing="0.05em">
             COHORT 1 COMPLETION
           </text>
-          <text x="30" y="232" fill="#5F6368" fontFamily="var(--font-sans)" fontSize="9">
+          <text x="30" y="232" fill="#5F6368" fontFamily="Helvetica, Arial, sans-serif" fontSize="9">
             Middha Ventures Fellowship Credentials
           </text>
 
@@ -319,7 +319,7 @@ export const MarketAnalysisIllustration: React.FC = () => {
         <circle cx="400" cy="260" r="7" fill="#D4A62A" />
 
         {/* Labels */}
-        <g fill="#5F6368" fontFamily="var(--font-mono)" fontSize="11" letterSpacing="0.05em">
+        <g fill="#5F6368" fontFamily="Helvetica, Arial, sans-serif" fontSize="11" letterSpacing="0.05em">
           <text x="360" y="160" textAnchor="end">LIQUIDITY MULTIPLES</text>
           <text x="440" y="310">REVENUE COHORTS</text>
           <text x="400" y="480" textAnchor="middle">QUANTITATIVE SYSTEM CO-EFFICIENTS</text>
@@ -370,7 +370,7 @@ export const CollaborationIllustration: React.FC = () => {
           </circle>
         </g>
 
-        {/* Figure 1 (Left - Analyst/Screening) */}
+        {/* Figure 1 (Left - Analyst/Sourcing) */}
         <g transform="translate(160, 200)">
           {/* Stand point shadow */}
           <ellipse cx="0" cy="50" rx="20" ry="10" fill="#0D3B8E" fillOpacity="0.08" />
@@ -416,9 +416,9 @@ export const CollaborationIllustration: React.FC = () => {
         <path d="M 180,180 Q 300,150 420,180" stroke="#D4A62A" strokeWidth="1.5" fill="none" strokeOpacity="0.4" />
         <path d="M 420,240 Q 300,300 180,240" stroke="#D4A62A" strokeWidth="1.5" fill="none" strokeOpacity="0.4" />
 
-        {/* Screening and decision headers */}
-        <g fill="#5F6368" fontFamily="var(--font-mono)" fontSize="10" letterSpacing="0.05em">
-          <text x="120" y="270" textAnchor="middle">SCREENING INPUTS</text>
+        {/* Sourcing and decision headers */}
+        <g fill="#5F6368" fontFamily="Helvetica, Arial, sans-serif" fontSize="10" letterSpacing="0.05em">
+          <text x="120" y="270" textAnchor="middle">SOURCING INPUTS</text>
           <text x="480" y="270" textAnchor="middle">DILIGENCE INSIGHTS</text>
           <text x="300" y="60" textAnchor="middle">COMMITTEE DECISIVE CONVICTION</text>
         </g>
@@ -515,7 +515,7 @@ export const CirclePersonIllustration: React.FC = () => {
         </g>
 
         {/* Labels */}
-        <g fill="#5F6368" fontFamily="var(--font-mono)" fontSize="11" letterSpacing="0.05em">
+        <g fill="#5F6368" fontFamily="Helvetica, Arial, sans-serif" fontSize="11" letterSpacing="0.05em">
           <text x="300" y="420" textAnchor="middle">INSIGHTS ACCUMULATE TO CONVICTION</text>
           <text x="170" y="315" textAnchor="end">RAW DATA</text>
           <text x="430" y="315" textAnchor="start">INVESTMENT PORTFOLIO</text>
@@ -543,7 +543,7 @@ export const DealSchoolLogo: React.FC<{ className?: string }> = ({ className = "
         <span className="font-serif tracking-widest font-black leading-none text-brand-text text-base md:text-lg">
           DEAL<span className="text-brand-accent">SCHOOL</span>
         </span>
-        <span className="font-mono text-[8px] uppercase tracking-[0.12em] text-brand-neutral font-medium leading-none mt-1">
+        <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-brand-neutral font-medium leading-none mt-1">
           Venture Fellowship
         </span>
       </div>

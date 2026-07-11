@@ -19,6 +19,8 @@ interface FooterPanelProps {
       | "terms-and-conditions"
       | "privacy-policy"
       | "refund-and-cancellation"
+      | "admin-login"
+      | "admin"
   ) => void;
 }
 
@@ -52,73 +54,93 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
                 <Mail className="h-3.5 w-3.5 text-brand-accent" />
                 <span>support@dealschool.in</span>
               </div>
-
             </div>
           </div>
 
-          {/* Underwriting credits */}
-          <div className="space-y-3 md:col-span-2">
+          {/* Quick Links */}
+          <div className="space-y-3 md:col-span-1">
             <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase">
-              UNDERWRITTEN BY
+              Quick Links
             </h5>
-            <div className="space-y-2 font-sans text-xs text-[#FAFAF8]/80 leading-relaxed">
-              <p className="font-bold text-white">Middha Ventures</p>
-              <p className="text-[#FAFAF8]/60 text-[10px] leading-relaxed">
-                Middha Ventures is a Navi Mumbai-based family office investing at the intersection of Consumer Tech and Strategic Capital, backing the next wave of builders.
-              </p>
-            </div>
+            <ul className="space-y-2 font-mono text-[11px] font-bold tracking-wider uppercase">
+              {[
+                { label: "Home", id: "home" as const },
+                { label: "About", id: "about" as const },
+                { label: "Program", id: "program" as const },
+                { label: "Team", id: "team" as const },
+                { label: "Contact", id: "contact" as const },
+                { label: "FAQ", id: "faq" as const },
+              ].map((link) => (
+                <li key={link.id}>
+                  <button
+                    onClick={() => {
+                      if (onChangePage) {
+                        onChangePage(link.id);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    className="text-[#FAFAF8]/60 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 text-left font-mono"
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
+
+          {/* Legal & Admin */}
+          <div className="space-y-3 md:col-span-1">
+            <h5 className="font-mono text-[9px] text-brand-accent tracking-[0.12em] font-bold uppercase">
+              Legal 
+            </h5>
+            <ul className="space-y-2 font-mono text-[11px] font-bold tracking-wider uppercase">
+              <li>
+                <button
+                  onClick={() => {
+                    if (onChangePage) {
+                      onChangePage("terms-and-conditions");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                  className="text-[#FAFAF8]/60 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 text-left font-mono"
+                >
+                  Terms &amp; Conditions
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (onChangePage) {
+                      onChangePage("privacy-policy");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                  className="text-[#FAFAF8]/60 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 text-left font-mono"
+                >
+                  Privacy Policy
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (onChangePage) {
+                      onChangePage("refund-and-cancellation");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                  className="text-[#FAFAF8]/60 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 text-left font-mono"
+                >
+                  Refund &amp; Cancellation
+                </button>
+              </li>
+            </ul>
+          </div>
+
         </div>
 
         {/* Footer Base copyright metadata */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 text-[10px] font-mono text-[#FAFAF8]/40 uppercase tracking-widest leading-none">
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <span>&copy; {new Date().getFullYear()} DEALSCHOOL. AN INITIATIVE BY MIDDHA VENTURES. ALL RIGHTS RESERVED.</span>
-            <button
-              onClick={() => {
-                if (onChangePage) {
-                  onChangePage("faq");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
-            >
-              FAQ
-            </button>
-            <button
-              onClick={() => {
-                if (onChangePage) {
-                  onChangePage("terms-and-conditions");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
-            >
-              Terms &amp; Conditions
-            </button>
-            <button
-              onClick={() => {
-                if (onChangePage) {
-                  onChangePage("privacy-policy");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
-            >
-              Privacy Policy
-            </button>
-            <button
-              onClick={() => {
-                if (onChangePage) {
-                  onChangePage("refund-and-cancellation");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-              className="text-[#FAFAF8]/50 hover:text-brand-accent transition-colors cursor-pointer bg-transparent border-none p-0 uppercase"
-            >
-              Refund &amp; Cancellation Policy
-            </button>
-          </div>
+          <span>&copy; {new Date().getFullYear()} DEALSCHOOL. AN INITIATIVE BY MIDDHA VENTURES. ALL RIGHTS RESERVED.</span>
           <button
             onClick={scrollHeightTop}
             className="group flex items-center gap-2 hover:text-[#FAFAF8] transition-all bg-[#FAFAF8]/5 px-3 py-1.5 rounded-sm border border-[#FAFAF8]/10 cursor-pointer"

@@ -13,18 +13,25 @@ import {
   CirclePersonIllustration,
 } from "./components/SVGIllustrations";
 import { ApplyModal } from "./components/ApplyModal";
+import { BrochureModal } from "./components/BrochureModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
+import { AdminDashboard } from "./components/AdminDashboard";
+import { AdminLoginForm } from "./components/AdminLoginForm";
+import { AdminForgotPassword } from "./components/AdminForgotPassword";
 import { PaymentCallback } from "./components/PaymentCallback";
 import { TermsAndConditionsPage } from "./components/TermsAndConditionsPage";
 import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { RefundCancellationPage } from "./components/RefundCancellationPage";
 import { FAQPage } from "./components/FAQPage";
 import { CustomSelect } from "./components/CustomSelect";
-import { API_URL } from "@shared/config";
+import { auth } from "./firebase";
 import tusshaarImg from "./assets/Tusshaar.jpg.jpeg";
 import rishabhImg from "./assets/Rishabh.png";
-import {
+import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+
+const ADMIN_EMAIL = "admin@dealschool.in";
+import { 
   Compass, 
   Search, 
   BarChart4, 
@@ -55,7 +62,110 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation";
+const curriculum = [
+  {
+    week: "Week 1",
+    title: "Foundations of Venture",
+    content: [
+      "Intro to how the VC ecosystem works: fund structures, stages of a startup's lifecycle",
+      "Core venture terminology and how exits create returns",
+      "Hands-on exercise: assess whether a sample startup is investment-ready"
+    ]
+  },
+  {
+    week: "Week 2",
+    title: "Learning to See Like an Investor",
+    content: [
+      "Open discussion unpacking Week 1 concepts and doubts",
+      "Build a shared framework for what makes a startup fundable",
+      "Shadow a live startup-screening sheet to see how VCs evaluate inbound pitches in real time",
+      "Group discussion on what was observed",
+      "Independent screening assignment during the week"
+    ]
+  },
+  {
+    week: "Week 3",
+    title: "Screening in Practice",
+    content: [
+      "Fellows run their own screening evaluations on assigned startups",
+      "Present initial findings for feedback",
+      "Structured framework for evaluating startups + debrief of the practical",
+      "Doubt session to close out the module"
+    ]
+  },
+  {
+    week: "Week 4",
+    title: "Live Pitch Calls",
+    content: [
+      "Live pitch calls with real founders across the week",
+      "Practice structured note-taking as if evaluating for investment",
+      "Practice asking sharp, relevant questions"
+    ]
+  },
+  {
+    week: "Week 5",
+    title: "Market Sizing & Competitive Mapping",
+    content: [
+      "Group debrief of pitch calls: comparing notes, identifying red/green flags",
+      "Calibrate evaluation standards across the cohort",
+      "Intro to market sizing (TAM/SAM/SOM) and competitive landscape mapping",
+      "Group practical: choose a sector, build out market sizing and competitor maps"
+    ]
+  },
+  {
+    week: "Week 6",
+    title: "Final Pitch Evaluations",
+    content: [
+      "Internal team discussion to align before final evaluations",
+      "Present evaluated startups for structured feedback",
+      "Feedback covers both pitch quality and investment thesis",
+      "Doubt session ahead of due diligence modules"
+    ]
+  },
+  {
+    week: "Week 7",
+    title: "The Founder's Side",
+    content: [
+      "Explore the founder's journey: idea validation, early team, product, growth",
+      "Understand what founders experience while fundraising",
+      "Intro to due diligence: what it covers, the process, and a DD checklist",
+      "Practical exercise applying the DD checklist to a simulated startup"
+    ]
+  },
+  {
+    week: "Week 8",
+    title: "Due Diligence in the Room",
+    content: [
+      "Breather day",
+      "Deeper dive into the DD workflow",
+      "Founder/investor role-play run by Middha Ventures' internal team",
+      "See how negotiation and questioning unfold from both sides of the table"
+    ]
+  },
+  {
+    week: "Week 9",
+    title: "Deal Mechanics",
+    content: [
+      "How DD findings translate into an investment recommendation / DD report",
+      "Term sheets, shareholders' agreements (SHA), and cap tables",
+      "Investment process and wire transfer mechanics",
+      "Guidance on presenting sourcing and evaluation work",
+      "Final doubt session before the venture simulation"
+    ]
+  },
+  {
+    week: "Week 10",
+    title: "The Venture Simulation",
+    content: [
+      "Final venture simulation: source, evaluate, and pitch a startup at a given stage",
+      "Judged live by VC mentors",
+      "Separately present the single best startup evaluated across the fellowship",
+      "Wrap-up: recap of the journey, feedback collection, certification"
+    ]
+  }
+];
+
+type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "admin-login" | "admin";
 
 const FoundingTeamSection: React.FC<{ className?: string }> = ({ className = "" }) => {
   const founders = [
@@ -192,6 +302,8 @@ const PAGE_PATHS: Record<string, AppPage> = {
   "/terms-and-conditions": "terms-and-conditions",
   "/privacy-policy": "privacy-policy",
   "/refund-and-cancellation": "refund-and-cancellation",
+  "/admin-login": "admin-login",
+  "/admin": "admin",
 };
 
 const PATH_FROM_PAGE: Record<AppPage, string> = {
@@ -204,6 +316,8 @@ const PATH_FROM_PAGE: Record<AppPage, string> = {
   "terms-and-conditions": "/terms-and-conditions",
   "privacy-policy": "/privacy-policy",
   "refund-and-cancellation": "/refund-and-cancellation",
+  "admin-login": "/admin-login",
+  admin: "/admin",
 };
 
 function pageFromPathname(pathname: string): AppPage {
@@ -212,9 +326,16 @@ function pageFromPathname(pathname: string): AppPage {
 
 export default function App() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isBrochureModalOpen, setIsBrochureModalOpen] = useState(false);
+  const [openWeek, setOpenWeek] = useState<number | null>(0);
   const [activePage, setActivePage] = useState<AppPage>(
     pageFromPathname(window.location.pathname)
   );
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(auth.currentUser);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [adminLoginView, setAdminLoginView] = useState<"login" | "forgotPassword">("login");
+  const [authError, setAuthError] = useState<string | null>(null);
+
   // Payment gateway callback — detected from URL query params on mount
   const [paymentCallbackParams, setPaymentCallbackParams] = useState<URLSearchParams | null>(null);
 
@@ -245,6 +366,10 @@ export default function App() {
     setIsApplyModalOpen(true);
   };
 
+  const handleBrochureClick = () => {
+    setIsBrochureModalOpen(true);
+  };
+
   useEffect(() => {
     const onPopState = () => {
       setActivePage(pageFromPathname(window.location.pathname));
@@ -252,6 +377,31 @@ export default function App() {
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // Reject any Google (or email) account that isn't the authorised admin.
+      // Sign them out immediately — never set currentUser — so the dashboard
+      // is never rendered even for a frame.
+      if (user && user.email !== ADMIN_EMAIL) {
+        signOut(auth);
+        setAuthError("This Google account is not authorised for admin access. Please use the admin email.");
+        return; // onAuthStateChanged will fire again with null
+      }
+
+      setCurrentUser(user);
+      setAuthChecked(true);
+      const page = pageFromPathname(window.location.pathname);
+      if (user && page === "admin-login") {
+        setActivePage("admin");
+        window.history.replaceState({}, "", "/admin");
+      } else if (!user && page === "admin") {
+        setActivePage("admin-login");
+        window.history.replaceState({}, "", "/admin-login");
+      }
+    });
+    return unsubscribe;
   }, []);
 
   const handlePageChange = (pageId: AppPage) => {
@@ -266,7 +416,8 @@ export default function App() {
     setContactError(null);
 
     try {
-      const res = await fetch(`${API_URL}/contacts`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+      const res = await fetch(`${backendUrl}/api/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -310,7 +461,9 @@ export default function App() {
       </div>
 
       {/* Premium Top Navigation */}
-      <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <HeaderNavbar onApplyClick={handleApplyClick} activePage={activePage} onChangePage={handlePageChange} />
+      )}
 
       {/* RENDER PAGES DYNAMICALLY USING SMOOTH TRANSITIONS */}
       <main className="flex-grow">
@@ -388,9 +541,9 @@ export default function App() {
 
                       <div className="p-6 space-y-2 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
                         <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">₹18K</div>
-                        <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">Student Pricing</div>
+                        <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">Pricing</div>
                         <p className="font-serif text-xs text-brand-neutral max-w-xs mx-auto">
-                          Priced for students. Not professionals. Not webinars.
+                          One price. Ten weeks. Zero fluff.
                         </p>
                       </div>
 
@@ -575,8 +728,16 @@ export default function App() {
                       <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-4">
                         An Initiative by Middha Ventures
                       </span>
-                      <p className="font-serif text-lg md:text-xl text-brand-secondary leading-relaxed">
-                        DealSchool is built within the <span className="font-bold text-brand-text">Middha Ventures</span> ecosystem, drawing practical insights from active participation in portfolio companies including <span className="text-brand-accent font-serif font-bold italic">Sochu</span>, <span className="text-brand-accent font-serif font-bold italic">Fitreak</span>, and <span className="text-brand-accent font-serif font-bold italic">Ruskle</span>. The platform reflects real-world experience in screening, evaluating, and supporting early-stage ventures.
+                      <p className="font-serif text-lg md:text-xl text-[#5F6368] leading-relaxed">
+                        Middha Ventures is a Navi Mumbai-based family office actively investing in early-stage startups at the intersection of consumer technology and strategic capital, backing the next wave of ambitious builders.{" "}
+                        <a 
+                          href="https://middhaventures.com/" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-brand-accent hover:underline underline-offset-4 ml-1 inline-flex items-center font-bold"
+                        >
+                          Know more
+                        </a>
                       </p>
                     </div>
                   </div>
@@ -739,77 +900,109 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Sequential Phase Syllabus Grid */}
-                <section className="space-y-6">
-                  <h3 className="font-serif text-xl font-bold text-brand-text border-b border-brand-secondary/10 pb-2">The Four Phases</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
-                    {/* Phase 1 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">01</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 1 - 2</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 1 — The Ecosystem</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        Build the map before evaluating deals. Understand startups, markets, and macroeconomic venture ecosystems inside robust frameworks.
-                      </p>
-                    </div>
-
-                    {/* Phase 2 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">02</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 3 - 4</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 2 — Screening & Evaluation</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        Shadow real pitch calls. Develop rigorous qualitative screening instincts. Learn exactly how professional investors evaluate opportunities in under 20 minutes.
-                      </p>
-                    </div>
-
-                    {/* Phase 3 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">03</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 5 - 6</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 3 — The Founder Side</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        Understand founders deeply. Shift from evaluating standard slide decks to assessing raw human capabilities, executive limits, and conviction drivers.
-                      </p>
-                    </div>
-
-                    {/* Phase 4 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">04</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 7 - 10</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 4 — Due Diligence & Deal Mechanics</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        The critical work between the pitch and the investment. Deep dive into raw financial data rooms, custom reference calls, Cap Table dilution, and term sheet mechanics.
-                      </p>
-                    </div>
-
+                {/* Curriculum Accordion Section */}
+                <section className="space-y-8 py-4">
+                  <div className="border-b border-brand-secondary/10 pb-4">
+                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-1">
+                      The DealSchool Curriculum
+                    </span>
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-brand-text tracking-tight">
+                      A 10-Week Venture Capital Fellowship
+                    </h2>
                   </div>
 
-                  {/* Week 10 Specific Box */}
-                  <div className="bg-brand-secondary text-brand-bg rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 border border-brand-accent/15">
-                    <div className="space-y-2 max-w-xl">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-widest block uppercase">WEEK 10 SPECIAL</span>
-                      <h4 className="font-serif text-lg font-bold text-white">Week 10 — Something You Must Experience Yourself</h4>
-                      <p className="font-serif text-xs text-brand-bg opacity-85 leading-relaxed">
-                        A secretive, immersive concluding weekend. Details of syllabus graduation exercises, live boardroom defensibility scenarios, and network operations are strictly available inside our program brochure.
-                      </p>
-                    </div>
-                    <div className="flex items-center">
-                      <button
-                        onClick={handleApplyClick}
-                        className="px-6 py-3.5 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer whitespace-nowrap"
-                      >
-                        Request Program Brochure
-                      </button>
-                    </div>
+                  <div className="space-y-4 max-w-4xl mx-auto">
+                    {curriculum.map((item, index) => {
+                      const isOpen = openWeek === index;
+                      return (
+                        <div
+                          key={index}
+                          className={`bg-brand-bg border rounded-sm overflow-hidden transition-all duration-300 ${
+                            isOpen
+                              ? "border-brand-accent shadow-md"
+                              : "border-brand-secondary/15 hover:border-brand-secondary/35 shadow-xs"
+                          }`}
+                        >
+                          {/* Accordion Trigger Header */}
+                          <button
+                            onClick={() => setOpenWeek(isOpen ? null : index)}
+                            className="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4 cursor-pointer focus:outline-none"
+                          >
+                            <div className="flex items-baseline gap-4 sm:gap-6">
+                              <span className="font-mono text-sm sm:text-base text-brand-accent font-bold select-none whitespace-nowrap">
+                                {item.week}
+                              </span>
+                              <span className="font-serif text-base sm:text-lg md:text-xl font-bold text-brand-text tracking-tight">
+                                {item.title}
+                              </span>
+                            </div>
+                            <div className="flex-shrink-0 text-brand-neutral hover:text-brand-text transition-colors">
+                              <motion.div
+                                animate={{ rotate: isOpen ? 180 : 0 }}
+                                transition={{ duration: 0.25, ease: "easeInOut" }}
+                              >
+                                <svg
+                                  className="h-5 w-5 stroke-current fill-none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </motion.div>
+                            </div>
+                          </button>
+
+                          {/* Accordion Content Panel */}
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3, ease: "easeInOut" }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-5 pb-6 sm:px-6 sm:pb-8 border-t border-brand-secondary/5 pt-4 bg-[#FAF7F0]/30">
+                                  <ul className="space-y-3">
+                                    {item.content.map((point, pIdx) => (
+                                      <li
+                                        key={pIdx}
+                                        className="flex items-start gap-3 text-sm text-brand-neutral leading-relaxed"
+                                      >
+                                        <span className="h-1.5 w-1.5 rounded-full bg-brand-accent mt-2 flex-shrink-0" />
+                                        <span className="font-sans text-brand-secondary font-medium">
+                                          {point}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
 
-
-
-
+                {/* Request Program Brochure CTA Box */}
+                <div className="bg-brand-secondary text-brand-bg rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 border border-brand-accent/15">
+                  <div className="space-y-2 max-w-xl">
+                    <h3 className="font-serif text-lg font-bold text-white">Request the Program Brochure</h3>
+                    <p className="font-serif text-xs text-brand-bg opacity-85 leading-relaxed">
+                      The Program Brochure provides comprehensive details on the curriculum, practical exercises, live founder interactions, boardroom simulations, networking opportunities, and the overall fellowship experience.
+                    </p>
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      onClick={handleBrochureClick}
+                      className="px-6 py-3.5 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      Request Program Brochure
+                    </button>
+                  </div>
+                </div>
 
               </div>
             )}
@@ -1087,12 +1280,28 @@ export default function App() {
               />
             )}
 
+            {activePage === "admin-login" && (
+              adminLoginView === "forgotPassword"
+                ? <AdminForgotPassword onBack={() => setAdminLoginView("login")} />
+                : <AdminLoginForm
+                    onForgotPassword={() => setAdminLoginView("forgotPassword")}
+                    authError={authError}
+                    onClearAuthError={() => setAuthError(null)}
+                  />
+            )}
+
+            {activePage === "admin" && authChecked && currentUser && (
+              <AdminDashboard />
+            )}
+
           </motion.div>
         </AnimatePresence>
       </main>
 
       {/* GLOBAL FOOTER REFERENCES */}
-      <FooterPanel onChangePage={handlePageChange} />
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <FooterPanel onChangePage={handlePageChange} />
+      )}
 
       {/* Payment gateway callback overlay */}
       {paymentCallbackParams && (
@@ -1103,7 +1312,14 @@ export default function App() {
       )}
 
       {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
-      <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+      )}
+
+      {/* PROGRAM BROCHURE REQUEST MODAL */}
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <BrochureModal isOpen={isBrochureModalOpen} onClose={() => setIsBrochureModalOpen(false)} />
+      )}
 
     </div>
   );
