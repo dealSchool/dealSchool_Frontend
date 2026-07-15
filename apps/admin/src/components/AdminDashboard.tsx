@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, logOutAdmin } from "@shared/firebase";
-import { FellowshipApplication, ContactMessage, BrochureRequest } from "@shared/types";
+import { FellowshipApplication, ContactMessage, BrochureRequest, PaymentMode } from "@shared/types";
 import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
@@ -75,6 +75,9 @@ export const AdminDashboard: React.FC = () => {
 
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showCohortSettings, setShowCohortSettings] = useState(false);
+
+  const [paymentMode, setPaymentMode] = useState<PaymentMode | null>(null);
+  const [paymentModeSaving, setPaymentModeSaving] = useState(false);
 
   const [cancelModal, setCancelModal] = useState<{
     appId: string;
@@ -180,6 +183,59 @@ export const AdminDashboard: React.FC = () => {
     const token = await auth.currentUser?.getIdToken();
     if (!token) throw new Error("Not authenticated");
     return token;
+  };
+
+  useEffect(() => {
+    if (!isAdminAuthorized) { setPaymentMode(null); return; }
+    (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${API_URL}/settings/payment`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setPaymentMode(data.mode);
+      } catch (err: any) {
+        console.error("Error fetching payment mode:", err);
+      }
+    })();
+  }, [isAdminAuthorized]);
+
+  const togglePaymentMode = async (nextMode: PaymentMode) => {
+    setPaymentModeSaving(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/settings/payment`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: nextMode }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setPaymentMode(data.mode);
+      showToast(`Payment mode switched to ${data.mode === "live" ? "Live" : "Sandbox"}.`, "success");
+    } catch (err: any) {
+      console.error("Error updating payment mode:", err);
+      showToast(`Failed to switch payment mode: ${err.message}`, "error");
+    } finally {
+      setPaymentModeSaving(false);
+    }
+  };
+
+  const handlePaymentModeToggle = () => {
+    if (paymentMode == null || paymentModeSaving) return;
+    if (paymentMode === "sandbox") {
+      showConfirm(
+        "This will start charging real money via Cashfree for all new payment links and refunds. Continue?",
+        () => togglePaymentMode("live"),
+      );
+    } else {
+      togglePaymentMode("sandbox");
+    }
   };
 
   const fetchAppPage = useCallback(async (
@@ -772,6 +828,42 @@ export const AdminDashboard: React.FC = () => {
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
+          {paymentMode && (
+            <div
+              className="flex items-center gap-2 px-2.5 h-8 rounded border border-white/10"
+              title={
+                paymentMode === "live"
+                  ? "Live payments are active — new payment links charge real money via Cashfree."
+                  : "Sandbox mode — new payment links do not charge real money."
+              }
+            >
+              <span
+                className={`font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                  paymentMode === "live"
+                    ? "bg-red-400/20 text-red-300 border border-red-400/30"
+                    : "bg-emerald-400/15 text-emerald-300 border border-emerald-400/25"
+                }`}
+              >
+                {paymentModeSaving ? "Updating…" : paymentMode === "live" ? "Live Mode" : "Sandbox Mode"}
+              </span>
+              <button
+                role="switch"
+                aria-checked={paymentMode === "live"}
+                aria-label="Live Payments"
+                disabled={paymentModeSaving}
+                onClick={handlePaymentModeToggle}
+                className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  paymentMode === "live" ? "bg-red-500" : "bg-white/20"
+                }`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
+                    paymentMode === "live" ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setShowCohortSettings(true)}
             className="hidden md:flex h-8 items-center gap-1.5 px-3 font-mono text-[10px] text-white/50 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer uppercase tracking-wider"

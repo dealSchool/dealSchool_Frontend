@@ -98,6 +98,8 @@ export interface CohortSettings {
   feeDisplay: string;  // e.g. "₹1000"
 }
 
+export type PaymentMode = "sandbox" | "live";
+
 export interface PaymentRecord {
   applicationId: string;
   applicantName: string;
