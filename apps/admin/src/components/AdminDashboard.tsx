@@ -2067,6 +2067,7 @@ export const AdminDashboard: React.FC = () => {
       <CohortSettingsPanel
         showToast={showToast}
         onClose={() => setShowCohortSettings(false)}
+        paymentMode={paymentMode}
       />
     )}
 

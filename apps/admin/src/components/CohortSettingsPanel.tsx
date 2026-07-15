@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { X, Calendar, IndianRupee, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { auth } from "@shared/firebase";
-import { CohortSettings } from "@shared/types";
+import { CohortSettings, PaymentMode } from "@shared/types";
 import { API_URL } from "@shared/config";
 
 interface Props {
   onClose: () => void;
   showToast: (message: string, type?: "success" | "error") => void;
+  paymentMode?: PaymentMode | null;
 }
 
-export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast }) => {
+export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast, paymentMode }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +105,21 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast }) => 
           </span>
           <h3 className="font-serif text-xl font-bold text-brand-text">Cohort Settings</h3>
         </div>
+
+        {paymentMode && (
+          <div className="flex items-center justify-center gap-2">
+            <span className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-widest">Payments:</span>
+            <span
+              className={`font-mono text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                paymentMode === "live"
+                  ? "bg-red-50 text-red-600 border border-red-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              }`}
+            >
+              {paymentMode === "live" ? "Live Mode" : "Sandbox Mode"}
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-500/20 p-3 text-red-700 text-xs flex gap-2 items-start">
