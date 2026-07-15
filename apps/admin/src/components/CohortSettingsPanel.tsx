@@ -8,9 +8,17 @@ interface Props {
   onClose: () => void;
   showToast: (message: string, type?: "success" | "error") => void;
   paymentMode?: PaymentMode | null;
+  paymentModeSaving?: boolean;
+  onTogglePaymentMode?: () => void;
 }
 
-export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast, paymentMode }) => {
+export const CohortSettingsPanel: React.FC<Props> = ({
+  onClose,
+  showToast,
+  paymentMode,
+  paymentModeSaving,
+  onTogglePaymentMode,
+}) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,17 +115,35 @@ export const CohortSettingsPanel: React.FC<Props> = ({ onClose, showToast, payme
         </div>
 
         {paymentMode && (
-          <div className="flex items-center justify-center gap-2">
-            <span className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-widest">Payments:</span>
-            <span
-              className={`font-mono text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                paymentMode === "live"
-                  ? "bg-red-50 text-red-600 border border-red-200"
-                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          <div className="bg-[#FCFAF6] border border-brand-accent/20 p-3 rounded-sm flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <span className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">Live Payments</span>
+              <span
+                className={`inline-block font-mono text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                  paymentMode === "live"
+                    ? "bg-red-50 text-red-600 border border-red-200"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                }`}
+              >
+                {paymentModeSaving ? "Updating…" : paymentMode === "live" ? "Live Mode" : "Sandbox Mode"}
+              </span>
+            </div>
+            <button
+              role="switch"
+              aria-checked={paymentMode === "live"}
+              aria-label="Live Payments"
+              disabled={paymentModeSaving}
+              onClick={onTogglePaymentMode}
+              className={`relative inline-flex h-5 w-10 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                paymentMode === "live" ? "bg-red-500" : "bg-brand-secondary/25"
               }`}
             >
-              {paymentMode === "live" ? "Live Mode" : "Sandbox Mode"}
-            </span>
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  paymentMode === "live" ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
           </div>
         )}
 

@@ -830,10 +830,10 @@ export const AdminDashboard: React.FC = () => {
           </button>
           {paymentMode && (
             <div
-              className="flex items-center gap-2 px-2.5 h-8 rounded border border-white/10"
+              className="flex items-center px-2.5 h-8 rounded border border-white/10"
               title={
                 paymentMode === "live"
-                  ? "Live payments are active — new payment links charge real money via Cashfree."
+                  ? "Live payments are active — new payment links charge real money via Cashfree. Toggle it from Cohort settings."
                   : "Sandbox mode — new payment links do not charge real money."
               }
             >
@@ -844,24 +844,8 @@ export const AdminDashboard: React.FC = () => {
                     : "bg-emerald-400/15 text-emerald-300 border border-emerald-400/25"
                 }`}
               >
-                {paymentModeSaving ? "Updating…" : paymentMode === "live" ? "Live Mode" : "Sandbox Mode"}
+                {paymentMode === "live" ? "Live Mode" : "Sandbox Mode"}
               </span>
-              <button
-                role="switch"
-                aria-checked={paymentMode === "live"}
-                aria-label="Live Payments"
-                disabled={paymentModeSaving}
-                onClick={handlePaymentModeToggle}
-                className={`relative inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                  paymentMode === "live" ? "bg-red-500" : "bg-white/20"
-                }`}
-              >
-                <span
-                  className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
-                    paymentMode === "live" ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
             </div>
           )}
           <button
@@ -2068,6 +2052,8 @@ export const AdminDashboard: React.FC = () => {
         showToast={showToast}
         onClose={() => setShowCohortSettings(false)}
         paymentMode={paymentMode}
+        paymentModeSaving={paymentModeSaving}
+        onTogglePaymentMode={handlePaymentModeToggle}
       />
     )}
 
