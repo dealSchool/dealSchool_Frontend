@@ -13,6 +13,7 @@ import {
   CirclePersonIllustration,
 } from "./components/SVGIllustrations";
 import { ApplyModal } from "./components/ApplyModal";
+import { BrochureModal } from "./components/BrochureModal";
 import { HeaderNavbar } from "./components/HeaderNavbar";
 import { FooterPanel } from "./components/FooterPanel";
 import { AdminDashboard } from "./components/AdminDashboard";
@@ -325,6 +326,7 @@ function pageFromPathname(pathname: string): AppPage {
 
 export default function App() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isBrochureModalOpen, setIsBrochureModalOpen] = useState(false);
   const [openWeek, setOpenWeek] = useState<number | null>(0);
   const [activePage, setActivePage] = useState<AppPage>(
     pageFromPathname(window.location.pathname)
@@ -362,6 +364,10 @@ export default function App() {
 
   const handleApplyClick = () => {
     setIsApplyModalOpen(true);
+  };
+
+  const handleBrochureClick = () => {
+    setIsBrochureModalOpen(true);
   };
 
   useEffect(() => {
@@ -1000,7 +1006,7 @@ export default function App() {
                   </div>
                   <div className="flex items-center">
                     <button
-                      onClick={handleApplyClick}
+                      onClick={handleBrochureClick}
                       className="px-6 py-3.5 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer whitespace-nowrap"
                     >
                       Request Program Brochure
@@ -1318,6 +1324,11 @@ export default function App() {
       {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
       {activePage !== "admin-login" && activePage !== "admin" && (
         <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+      )}
+
+      {/* PROGRAM BROCHURE REQUEST MODAL */}
+      {activePage !== "admin-login" && activePage !== "admin" && (
+        <BrochureModal isOpen={isBrochureModalOpen} onClose={() => setIsBrochureModalOpen(false)} />
       )}
 
     </div>
