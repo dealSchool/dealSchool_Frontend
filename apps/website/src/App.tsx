@@ -392,13 +392,23 @@ export default function App() {
                         </p>
                       </div>
 
-                      <div className="p-6 space-y-2 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
-                        <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">₹18K</div>
-                        <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">Student Pricing</div>
-                        <p className="font-serif text-xs text-brand-neutral max-w-xs mx-auto">
-                          Priced for students. Not professionals. Not webinars.
-                        </p>
-                      </div>
+                      <div className="p-6 space-y-1 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
+  <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">
+    ₹18K<span className="align-super text-xl md:text-2xl">*</span>
+  </div>
+
+  <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">
+    Pricing
+  </div>
+
+  <p className="font-serif text-xs text-brand-neutral max-w-xs mx-auto">
+    One price. Ten weeks. Zero fluff.
+  </p>
+
+  <p className="font-sans text-[11px] text-brand-accent tracking-wide">
+    *Exclusive of GST
+  </p>
+</div>
 
                       <div className="p-6 space-y-2 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
                         <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">10 Weeks</div>
