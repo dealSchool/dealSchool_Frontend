@@ -8,7 +8,7 @@ import './index.css';
 // site's navigation. They only render when their exact path is requested
 // directly in the browser's address bar.
 const STANDALONE_ROUTES: Record<string, ComponentType> = {
-  '/landingpage': LandingPage,
+  '/cohort1': LandingPage,
 };
 
 const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/';

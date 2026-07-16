@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X, Check, ArrowRight, Sparkles, User, Mail, FileText,
-  Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet
+  Phone, Globe, MapPin, UploadCloud, CheckCircle2, ChevronRight, AlertCircle, FileSpreadsheet, Loader2
 } from "lucide-react";
 import { CustomSelect } from "./CustomSelect";
 import { API_URL } from "@shared/config";
@@ -19,6 +19,23 @@ interface ApplyModalProps {
 
 // Basic phone format: must start with + or digit, then 5–19 digits/spaces/dashes/parens
 const PHONE_REGEX = /^[+\d][\d\s\-(). ]{4,18}$/;
+
+// Basic client-side email format check — avoids firing obviously-invalid emails at the API
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const DUPLICATE_CHECK_DEBOUNCE_MS = 500;
+
+interface DuplicateFieldState {
+  checking: boolean;
+  alreadyApplied: boolean;
+  message: string | null;
+}
+
+const INITIAL_DUPLICATE_FIELD_STATE: DuplicateFieldState = {
+  checking: false,
+  alreadyApplied: false,
+  message: null,
+};
 
 // Character limits — above industry standard for generous UX
 const LIMITS = {
@@ -55,13 +72,18 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   // Terms & Conditions acknowledgement (required before final submission)
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Duplicate application check
+  // Duplicate application check — tracked independently per field so an
+  // email check result never clobbers a phone check result (and vice versa)
   const [dupCheck, setDupCheck] = useState<{
-    checking: boolean;
-    alreadyApplied: boolean;
-    message: string | null;
-    triggeredBy: "email" | "phone" | null;
-  }>({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
+    email: DuplicateFieldState;
+    phone: DuplicateFieldState;
+  }>({ email: INITIAL_DUPLICATE_FIELD_STATE, phone: INITIAL_DUPLICATE_FIELD_STATE });
+
+  // Debounce timers for the "already applied" check, one per field
+  const dupCheckTimers = useRef<{ email: ReturnType<typeof setTimeout> | null; phone: ReturnType<typeof setTimeout> | null }>({
+    email: null,
+    phone: null,
+  });
 
   // Ref for modal container — used for focus trap
   const modalRef = useRef<HTMLDivElement>(null);
@@ -177,7 +199,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const checkDuplicate = async (field: "email" | "phone", value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    setDupCheck({ checking: true, alreadyApplied: false, message: null, triggeredBy: field });
+    setDupCheck(prev => ({ ...prev, [field]: { checking: true, alreadyApplied: false, message: null } }));
     try {
       const body = field === "email" ? { email: trimmed } : { phone: trimmed };
       const res = await fetch(`${API_URL}/applications/check`, {
@@ -186,30 +208,44 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        setDupCheck(prev => ({ ...prev, checking: false }));
+        // Fail silently on 4xx/5xx — this is a UX nicety, not a hard gate
+        setDupCheck(prev => ({ ...prev, [field]: { ...prev[field], checking: false } }));
         return;
       }
       const data = await res.json();
-      setDupCheck({
-        checking: false,
-        alreadyApplied: data.alreadyApplied === true,
-        message: data.alreadyApplied ? (data.message ?? "You have already applied. Please wait for our team to review your application.") : null,
-        triggeredBy: field,
-      });
+      setDupCheck(prev => ({
+        ...prev,
+        [field]: {
+          checking: false,
+          alreadyApplied: data.alreadyApplied === true,
+          message: data.alreadyApplied ? (data.message ?? "You have already applied. Please wait for our team to review your application.") : null,
+        },
+      }));
     } catch {
-      setDupCheck(prev => ({ ...prev, checking: false }));
+      // Network error — fail silently
+      setDupCheck(prev => ({ ...prev, [field]: { ...prev[field], checking: false } }));
     }
+  };
+
+  // Debounce wrapper — cancels any pending check for the field before
+  // scheduling a new one, so rapid blur/refocus cycles don't pile up requests
+  const scheduleDuplicateCheck = (field: "email" | "phone", value: string) => {
+    const existingTimer = dupCheckTimers.current[field];
+    if (existingTimer) clearTimeout(existingTimer);
+    dupCheckTimers.current[field] = setTimeout(() => {
+      checkDuplicate(field, value);
+    }, DUPLICATE_CHECK_DEBOUNCE_MS);
   };
 
   // Step validation check gates
   const isStepValid = () => {
     if (step === 1) {
       return (
-        !dupCheck.alreadyApplied &&
+        !dupCheck.email.alreadyApplied &&
+        !dupCheck.phone.alreadyApplied &&
         formData.fullName.trim() !== "" &&
         PHONE_REGEX.test(formData.mobileNumber.trim()) &&
-        formData.email.trim() !== "" &&
-        formData.email.includes("@") &&
+        EMAIL_REGEX.test(formData.email.trim()) &&
         formData.city.trim() !== ""
       );
     }
@@ -305,12 +341,14 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
       if (res.status === 409) {
         const data = await res.json().catch(() => ({}));
-        setDupCheck({
-          checking: false,
-          alreadyApplied: true,
-          message: data.error || "You have already applied to DealSchool. Our team will review your application and get in touch.",
-          triggeredBy: "email",
-        });
+        setDupCheck(prev => ({
+          ...prev,
+          email: {
+            checking: false,
+            alreadyApplied: true,
+            message: data.error || "You have already applied to DealSchool. Our team will review your application and get in touch.",
+          },
+        }));
         setStep(1);
         return;
       }
@@ -336,6 +374,9 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
   const resetAndClose = () => {
     onClose();
+    if (dupCheckTimers.current.email) clearTimeout(dupCheckTimers.current.email);
+    if (dupCheckTimers.current.phone) clearTimeout(dupCheckTimers.current.phone);
+    dupCheckTimers.current = { email: null, phone: null };
     // Wait for exit transition to clean up state
     setTimeout(() => {
       setStep(1);
@@ -343,7 +384,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       setErrorMessage(null);
       setSubmittedDocId("");
       setAgreedToTerms(false);
-      setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
+      setDupCheck({ email: INITIAL_DUPLICATE_FIELD_STATE, phone: INITIAL_DUPLICATE_FIELD_STATE });
       setFormData({
         fullName: "",
         mobileNumber: "",
@@ -507,13 +548,13 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             value={formData.mobileNumber}
                             onChange={(e) => {
                               handleInputChange(e);
-                              if (dupCheck.triggeredBy === "phone") {
-                                setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
+                              if (dupCheck.phone.alreadyApplied || dupCheck.phone.checking) {
+                                setDupCheck(prev => ({ ...prev, phone: INITIAL_DUPLICATE_FIELD_STATE }));
                               }
                             }}
                             onBlur={() => {
                               if (PHONE_REGEX.test(formData.mobileNumber.trim())) {
-                                checkDuplicate("phone", formData.mobileNumber);
+                                scheduleDuplicateCheck("phone", formData.mobileNumber);
                               }
                             }}
                             placeholder="+91 98765 43210"
@@ -530,8 +571,11 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             e.g. +91 98765 43210
                           </p>
                         )}
-                        {dupCheck.checking && dupCheck.triggeredBy === "phone" && (
-                          <p className="text-brand-neutral/50 text-[10px] font-mono">Checking...</p>
+                        {dupCheck.phone.checking && (
+                          <p className="text-brand-neutral/50 text-[10px] font-mono flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Checking...
+                          </p>
                         )}
                       </div>
 
@@ -550,21 +594,24 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             value={formData.email}
                             onChange={(e) => {
                               handleInputChange(e);
-                              if (dupCheck.triggeredBy === "email") {
-                                setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
+                              if (dupCheck.email.alreadyApplied || dupCheck.email.checking) {
+                                setDupCheck(prev => ({ ...prev, email: INITIAL_DUPLICATE_FIELD_STATE }));
                               }
                             }}
                             onBlur={() => {
-                              if (formData.email.trim() && formData.email.includes("@")) {
-                                checkDuplicate("email", formData.email);
+                              if (EMAIL_REGEX.test(formData.email.trim())) {
+                                scheduleDuplicateCheck("email", formData.email);
                               }
                             }}
                             placeholder="yourname@example.com"
                             className="w-full bg-white text-brand-text pl-9 pr-3 py-3 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                           />
                         </div>
-                        {dupCheck.checking && dupCheck.triggeredBy === "email" && (
-                          <p className="text-brand-neutral/50 text-[10px] font-mono">Checking...</p>
+                        {dupCheck.email.checking && (
+                          <p className="text-brand-neutral/50 text-[10px] font-mono flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Checking...
+                          </p>
                         )}
                       </div>
                     </div>
@@ -612,14 +659,14 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  {/* Duplicate application warning */}
-                  {dupCheck.alreadyApplied && dupCheck.message && (
+                  {/* Duplicate application warning — inline, non-blocking notice (Continue is disabled via isStepValid) */}
+                  {(dupCheck.email.alreadyApplied || dupCheck.phone.alreadyApplied) && (
                     <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-sm">
                       <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                       <div className="space-y-1">
                         <p className="font-mono text-[10px] font-bold text-amber-800 uppercase tracking-wider">Already Applied</p>
                         <p className="font-sans text-xs text-amber-700 leading-relaxed">
-                          {dupCheck.message.replace("admin@dealschool.in", "").trim()}
+                          {(dupCheck.email.message || dupCheck.phone.message || "").replace("admin@dealschool.in", "").trim()}
                         </p>
                       </div>
                     </div>
@@ -627,7 +674,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
                   <button
                     type="submit"
-                    disabled={!isStepValid() || dupCheck.checking}
+                    disabled={!isStepValid() || dupCheck.email.checking || dupCheck.phone.checking}
                     className="w-full py-3.5 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer rounded-sm"
                   >
                     Continue to Background <ArrowRight className="h-4 w-4" />
