@@ -52,6 +52,9 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   // Resume Link State
   const [resumeLinkError, setResumeLinkError] = useState<string | null>(null);
 
+  // Terms & Conditions acknowledgement (required before final submission)
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
   // Duplicate application check
   const [dupCheck, setDupCheck] = useState<{
     checking: boolean;
@@ -262,7 +265,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     if (step === 5) {
       const resumeOk = isValidUrl(formData.resumeLink) && formData.resumeLink.trim() !== "";
       const sourceOk = formData.discoverySource !== "" && (formData.discoverySource !== "Other" || formData.discoverySourceOther.trim() !== "");
-      return resumeOk && sourceOk;
+      return resumeOk && sourceOk && agreedToTerms;
     }
 
     return true;
@@ -339,6 +342,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       setResumeLinkError(null);
       setErrorMessage(null);
       setSubmittedDocId("");
+      setAgreedToTerms(false);
       setDupCheck({ checking: false, alreadyApplied: false, message: null, triggeredBy: null });
       setFormData({
         fullName: "",
@@ -1281,6 +1285,31 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         <CharCount value={formData.discoverySourceOther} max={LIMITS.discoveryOther} />
                       </div>
                     )}
+
+                    {/* Terms & Conditions consent */}
+                    <div className="flex items-start gap-2.5 pt-1">
+                      <input
+                        id="agreeTerms"
+                        type="checkbox"
+                        required
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border border-brand-secondary/30 text-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20 cursor-pointer"
+                      />
+                      <label htmlFor="agreeTerms" className="font-sans text-xs text-brand-neutral leading-relaxed cursor-pointer select-none">
+                        I have read and agree to the{" "}
+                        <a
+                          href="/terms-and-conditions"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand-accent font-semibold underline hover:text-brand-text transition-colors"
+                        >
+                          Terms &amp; Conditions
+                        </a>{" "}
+                        <span className="text-brand-accent">*</span>
+                      </label>
+                    </div>
                   </div>
 
                   <div className="flex gap-3">

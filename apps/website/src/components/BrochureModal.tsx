@@ -16,8 +16,8 @@ interface BrochureModalProps {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTACT_REGEX = /^\d{7,15}$/;
 
-// Static brochure PDF served from public/ — replace with the real brochure file.
-const BROCHURE_PDF_URL = "/brochure.pdf";
+// Static brochure PDF served from public/
+const BROCHURE_PDF_URL = "/Long%20form%20brochure%20deal%20school.pdf";
 
 export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({ name: "", contact: "", email: "", city: "" });
@@ -84,7 +84,7 @@ export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose })
   const downloadBrochure = () => {
     const link = document.createElement("a");
     link.href = BROCHURE_PDF_URL;
-    link.download = "DealSchool-Program-Brochure.pdf";
+    link.download = "Long form brochure deal school.pdf";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
