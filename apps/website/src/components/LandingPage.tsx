@@ -20,6 +20,10 @@ import {
   Settings2,
   TrendingUp,
   Download,
+  Clock,
+  Globe,
+  CalendarDays,
+  Users,
 } from "lucide-react";
 import { DealSchoolLogo, StaircaseIllustration } from "./SVGIllustrations";
 import { ApplyModal } from "./ApplyModal";
@@ -31,6 +35,7 @@ import { BrochureModal } from "./BrochureModal";
 // navy:    #1C2A5D — headings / primary dark sections
 // navyDark:#141F45 — deepest navy (footer, contrast cards)
 // gold:    #C89A3C — accent color for eyebrows, numerals, primary buttons
+// white:   #FFFFFF — card surfaces that need to pop off the tinted backgrounds
 
 const FEATURE_BAR = [
   { icon: Landmark, label: "Built by Investors" },
@@ -80,6 +85,13 @@ const FELLOWSHIP_OUTCOMES = [
   "A DealSchool Certified Venture Fellow credential",
 ];
 
+const COHORT_STATS = [
+  { icon: CalendarDays, label: "Duration", value: "10 Weeks" },
+  { icon: Globe, label: "Format", value: "Live Online" },
+  { icon: Clock, label: "Commitment", value: "Weekend Sessions" },
+  { icon: Users, label: "Seats", value: "Limited to 20" },
+];
+
 const FAQ_ITEMS = [
   {
     question: "Do I need a finance background?",
@@ -114,7 +126,7 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-[#C89A3C] selection:text-[#1C2A5D] relative overflow-x-clip bg-[#F5EFDF] text-[#1C2A5D]">
       {/* Minimal standalone header — logo only, no site navigation */}
-      <header className="sticky top-0 z-40 bg-[#F5EFDF]/95 backdrop-blur-md border-b border-[#1C2A5D]/10 py-5 lg:py-6 lg:px-12 px-4">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#1C2A5D]/10 shadow-sm py-5 lg:py-6 lg:px-12 px-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-4">
           <DealSchoolLogo />
           <div className="flex items-center gap-3 md:gap-5">
@@ -126,7 +138,7 @@ export const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={handleApplyClick}
-              className="border border-[#1C2A5D] text-[#1C2A5D] px-5 py-2.5 md:px-6 md:py-3 font-mono font-bold text-[11px] md:text-xs uppercase tracking-wider hover:bg-[#1C2A5D] hover:text-[#F5EFDF] transition-all duration-300 flex items-center gap-2 cursor-pointer"
+              className="border border-[#1C2A5D] text-[#1C2A5D] px-5 py-2.5 md:px-6 md:py-3 font-mono font-bold text-[11px] md:text-xs uppercase tracking-wider hover:bg-[#1C2A5D] hover:text-white transition-all duration-300 flex items-center gap-2 cursor-pointer"
             >
               Apply Now <ArrowRight className="h-3.5 w-3.5" />
             </button>
@@ -137,9 +149,9 @@ export const LandingPage: React.FC = () => {
       <main className="flex-grow">
         {/* HERO */}
         <section className="relative overflow-hidden pt-14 pb-16 md:pt-20 md:pb-24 bg-[#F5EFDF]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#C89A3C]/[0.06] via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#C89A3C]/[0.08] via-transparent to-transparent pointer-events-none" />
           <div className="max-w-4xl mx-auto px-4 md:px-8 relative z-10 text-center space-y-6">
-            <span className="font-mono text-xs text-[#C89A3C] font-bold tracking-[0.14em] uppercase block">
+            <span className="inline-flex items-center gap-2 font-mono text-[11px] text-[#C89A3C] font-bold tracking-[0.14em] uppercase bg-white border border-[#C89A3C]/30 rounded-full px-4 py-1.5 shadow-sm">
               An Initiative by Middha Ventures
             </span>
 
@@ -159,13 +171,13 @@ export const LandingPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 pt-4">
               <button
                 onClick={handleApplyClick}
-                className="bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#C89A3C]/25 transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                className="group bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#C89A3C]/25 transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
-                Apply Now <ArrowRight className="h-4 w-4" />
+                Apply Now <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <button
                 onClick={handleBrochureClick}
-                className="border border-[#1C2A5D]/35 px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider text-[#1C2A5D] hover:bg-[#1C2A5D] hover:text-[#F5EFDF] transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer"
+                className="bg-white border border-[#1C2A5D]/25 px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider text-[#1C2A5D] hover:bg-[#1C2A5D] hover:text-white hover:border-[#1C2A5D] transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
               >
                 <Download className="h-4 w-4" /> Download Brochure
               </button>
@@ -182,9 +194,12 @@ export const LandingPage: React.FC = () => {
               {FEATURE_BAR.map(({ icon: Icon, label }) => (
                 <div
                   key={label}
-                  className="flex flex-col items-center text-center gap-2 p-4 bg-white border border-[#1C2A5D]/10 rounded-sm"
+                  className="group relative overflow-hidden flex flex-col items-center text-center gap-3 p-5 bg-white border border-[#1C2A5D]/8 rounded-sm shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                 >
-                  <Icon className="h-5 w-5 text-[#C89A3C]" />
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#C89A3C] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="h-11 w-11 rounded-full bg-[#C89A3C]/10 flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-[#C89A3C]" />
+                  </div>
                   <span className="font-sans text-[11px] font-bold text-[#1C2A5D] leading-tight">
                     {label}
                   </span>
@@ -196,13 +211,20 @@ export const LandingPage: React.FC = () => {
 
         {/* MOST PEOPLE LEARN STARTUPS */}
         <section className="py-20 bg-[#1C2A5D]">
-          <div className="max-w-5xl mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
-              Most people learn startups. <span className="text-[#C89A3C]">Very few learn investing.</span>
-            </h2>
-            <p className="font-serif text-sm md:text-base text-white/70 leading-relaxed">
-              Building and investing are opposite skillsets. Founders learn to pitch, sell, and push forward against every objection. Investors learn to question, diligence, and know when to walk away. DealSchool teaches the second skillset, built for ambitious students, founders, operators, and aspiring investors who want to understand how capital actually gets allocated.
-            </p>
+          <div className="max-w-5xl mx-auto px-4 md:px-8">
+            <span className="font-mono text-xs text-[#C89A3C] font-bold tracking-[0.14em] uppercase block mb-6 text-center md:text-left">
+              The Reality Check
+            </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-white tracking-tight leading-tight">
+                Most people learn startups. <span className="text-[#C89A3C]">Very few learn investing.</span>
+              </h2>
+              <div className="border-l-4 border-[#C89A3C] bg-white/[0.06] rounded-r-sm p-6">
+                <p className="font-serif text-sm md:text-base text-white/80 leading-relaxed">
+                  Building and investing are opposite skillsets. Founders learn to pitch, sell, and push forward against every objection. Investors learn to question, diligence, and know when to walk away. DealSchool teaches the second skillset, built for ambitious students, founders, operators, and aspiring investors who want to understand how capital actually gets allocated.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -216,18 +238,22 @@ export const LandingPage: React.FC = () => {
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1C2A5D] tracking-tight">
                 Who Is This For?
               </h2>
+              <span className="block w-14 h-1 bg-[#C89A3C] rounded-full mx-auto mt-4" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {WHO_IS_THIS_FOR.map(({ icon: Icon, title, desc }, idx) => (
                 <div
                   key={title}
-                  className="bg-[#F5EFDF] border-l-4 border-[#C89A3C] border-y border-r border-[#1C2A5D]/10 rounded-sm p-6 space-y-3 hover:shadow-md transition-all"
+                  className="group relative overflow-hidden bg-white border border-[#1C2A5D]/8 rounded-sm p-6 space-y-3 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                 >
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-[#C89A3C] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-full bg-[#1C2A5D] flex items-center justify-center text-[#C89A3C] font-mono text-xs font-bold shrink-0">
                       {idx + 1}
                     </div>
-                    <Icon className="h-5 w-5 text-[#1C2A5D]" />
+                    <div className="h-9 w-9 rounded-full bg-[#C89A3C]/10 flex items-center justify-center">
+                      <Icon className="h-4 w-4 text-[#C89A3C]" />
+                    </div>
                   </div>
                   <h4 className="font-serif text-base font-bold text-[#1C2A5D]">{title}</h4>
                   <p className="font-sans text-xs text-[#1C2A5D]/70 leading-relaxed">{desc}</p>
@@ -256,16 +282,18 @@ export const LandingPage: React.FC = () => {
                 {JOURNEY_STEPS.map((step, idx) => (
                   <li
                     key={step}
-                    className="flex items-center gap-4 bg-white border border-[#1C2A5D]/10 rounded-sm px-5 py-3.5"
+                    className="flex items-center gap-4 bg-white border border-[#1C2A5D]/8 rounded-sm px-5 py-3.5 shadow-sm hover:shadow-md hover:border-[#C89A3C]/40 transition-all duration-300"
                   >
-                    <span className="font-mono text-xs font-bold text-[#C89A3C] shrink-0">
+                    <div className="h-8 w-8 rounded-full bg-[#C89A3C]/10 border border-[#C89A3C]/30 flex items-center justify-center text-[#C89A3C] font-mono text-xs font-bold shrink-0">
                       {String(idx + 1).padStart(2, "0")}
-                    </span>
+                    </div>
                     <span className="font-sans text-sm font-semibold text-[#1C2A5D]">{step}</span>
                   </li>
                 ))}
-                <li className="flex items-center gap-4 bg-[#1C2A5D] text-[#F5EFDF] rounded-sm px-5 py-4 mt-4">
-                  <Sparkles className="h-4 w-4 text-[#C89A3C] shrink-0" />
+                <li className="flex items-center gap-4 bg-[#1C2A5D] text-white rounded-sm px-5 py-4 mt-4 shadow-md">
+                  <div className="h-8 w-8 rounded-full bg-[#C89A3C]/20 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-4 w-4 text-[#C89A3C]" />
+                  </div>
                   <span className="font-serif text-sm font-bold">Certified Venture Fellow</span>
                 </li>
               </ol>
@@ -281,14 +309,22 @@ export const LandingPage: React.FC = () => {
         <section className="py-20 bg-[#F3E4C1]">
           <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="space-y-6">
+              <span className="font-mono text-xs text-[#C89A3C] font-bold tracking-[0.12em] uppercase block">
+                What You&apos;ll Walk Away With
+              </span>
               <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1C2A5D] tracking-tight">
                 Fellowship Outcomes
               </h2>
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {FELLOWSHIP_OUTCOMES.map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-[#C89A3C] mt-0.5 shrink-0" />
-                    <span className="font-sans text-sm text-[#1C2A5D] font-medium leading-relaxed">
+                  <li
+                    key={item}
+                    className="flex items-start gap-3 bg-white border border-[#1C2A5D]/8 rounded-sm p-4 shadow-sm hover:shadow-md transition-all duration-300"
+                  >
+                    <div className="h-7 w-7 rounded-full bg-[#C89A3C]/10 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="h-4 w-4 text-[#C89A3C]" />
+                    </div>
+                    <span className="font-sans text-sm text-[#1C2A5D] font-medium leading-relaxed pt-0.5">
                       {item}
                     </span>
                   </li>
@@ -296,7 +332,10 @@ export const LandingPage: React.FC = () => {
               </ul>
             </div>
 
-            <div className="space-y-6 bg-[#1C2A5D] rounded-sm p-8">
+            <div className="space-y-6 bg-[#1C2A5D] rounded-sm p-8 shadow-md">
+              <div className="h-11 w-11 rounded-full bg-[#C89A3C]/15 border border-[#C89A3C]/30 flex items-center justify-center">
+                <Users2 className="h-5 w-5 text-[#C89A3C]" />
+              </div>
               <h2 className="font-serif text-2xl md:text-3xl font-bold text-white tracking-tight">
                 Community
               </h2>
@@ -322,29 +361,27 @@ export const LandingPage: React.FC = () => {
               </h2>
             </div>
 
-            <div className="bg-white border border-[#1C2A5D]/15 rounded-sm p-8 md:p-10 shadow-sm">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                <div className="space-y-1">
-                  <div className="font-mono text-[10px] text-[#1C2A5D]/60 uppercase tracking-widest">Duration</div>
-                  <div className="font-serif text-xl font-bold text-[#1C2A5D]">10 Weeks</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="font-mono text-[10px] text-[#1C2A5D]/60 uppercase tracking-widest">Format</div>
-                  <div className="font-serif text-xl font-bold text-[#1C2A5D]">Live Online</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="font-mono text-[10px] text-[#1C2A5D]/60 uppercase tracking-widest">Commitment</div>
-                  <div className="font-serif text-xl font-bold text-[#1C2A5D]">Weekend Sessions</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="font-mono text-[10px] text-[#1C2A5D]/60 uppercase tracking-widest">Seats</div>
-                  <div className="font-serif text-xl font-bold text-[#1C2A5D]">Limited to 20</div>
-                </div>
+            <div className="bg-white border border-[#1C2A5D]/10 rounded-sm p-8 md:p-10 shadow-md">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {COHORT_STATS.map(({ icon: Icon, label, value }) => (
+                  <div
+                    key={label}
+                    className="text-center space-y-2 border border-[#1C2A5D]/8 rounded-sm p-4"
+                  >
+                    <div className="mx-auto h-9 w-9 rounded-full bg-[#C89A3C]/10 flex items-center justify-center">
+                      <Icon className="h-4 w-4 text-[#C89A3C]" />
+                    </div>
+                    <div className="font-mono text-[9px] text-[#1C2A5D]/60 uppercase tracking-widest">{label}</div>
+                    <div className="font-serif text-lg font-bold text-[#1C2A5D]">{value}</div>
+                  </div>
+                ))}
               </div>
 
               <div className="border-t border-[#1C2A5D]/10 mt-8 pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="bg-[#141F45] rounded-sm px-6 py-4 text-center md:text-left">
-                  <div className="font-mono text-[9px] text-[#C89A3C] uppercase tracking-widest mb-1">All-In Price</div>
+                <div className="bg-[#141F45] rounded-sm px-6 py-5 text-center md:text-left w-full md:w-auto">
+                  <span className="inline-block font-mono text-[9px] text-[#1C2A5D] bg-[#C89A3C] rounded-full px-3 py-1 uppercase tracking-widest font-bold mb-2">
+                    All-In Price
+                  </span>
                   <div className="font-serif text-4xl font-black text-white">
                     &#8377;18,000<span className="align-super text-lg text-[#C89A3C]">*</span>
                   </div>
@@ -352,9 +389,9 @@ export const LandingPage: React.FC = () => {
                 </div>
                 <button
                   onClick={handleApplyClick}
-                  className="px-8 py-4 bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] font-mono text-xs font-bold uppercase tracking-wider rounded-sm transition-all shadow-md inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                  className="group px-8 py-4 bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] font-mono text-xs font-bold uppercase tracking-wider rounded-sm transition-all shadow-md inline-flex items-center gap-2 cursor-pointer whitespace-nowrap w-full md:w-auto justify-center"
                 >
-                  Apply Now <ArrowRight className="h-4 w-4" />
+                  Apply Now <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </div>
             </div>
@@ -365,6 +402,9 @@ export const LandingPage: React.FC = () => {
         <section className="py-20 bg-[#F3E4C1]">
           <div className="max-w-3xl mx-auto px-4 md:px-8">
             <div className="text-center max-w-xl mx-auto mb-12">
+              <span className="font-mono text-xs text-[#C89A3C] font-bold tracking-[0.12em] uppercase block mb-2">
+                Questions
+              </span>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1C2A5D] tracking-tight">FAQ</h2>
             </div>
 
@@ -374,16 +414,16 @@ export const LandingPage: React.FC = () => {
                 return (
                   <div
                     key={item.question}
-                    className="bg-[#F5EFDF] border border-[#1C2A5D]/10 rounded-sm overflow-hidden"
+                    className="bg-white border border-[#1C2A5D]/8 rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
                   >
                     <button
                       onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
                       className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer"
                     >
                       <span className="font-sans text-sm font-bold text-[#1C2A5D]">{item.question}</span>
-                      <ChevronDown
-                        className={`h-4 w-4 text-[#C89A3C] shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                      />
+                      <div className={`h-7 w-7 rounded-full bg-[#C89A3C]/10 flex items-center justify-center shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                        <ChevronDown className="h-4 w-4 text-[#C89A3C]" />
+                      </div>
                     </button>
                     <AnimatePresence initial={false}>
                       {isOpen && (
@@ -419,9 +459,9 @@ export const LandingPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-2">
               <button
                 onClick={handleApplyClick}
-                className="px-10 py-5 bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] font-mono text-xs font-bold tracking-widest uppercase rounded-sm transition-all shadow-md inline-flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                className="group px-10 py-5 bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] font-mono text-xs font-bold tracking-widest uppercase rounded-sm transition-all shadow-md inline-flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
-                Apply for Cohort 1 <ArrowRight className="h-4 w-4 text-[#1C2A5D]" />
+                Apply for Cohort 1 <ArrowRight className="h-4 w-4 text-[#1C2A5D] group-hover:translate-x-0.5 transition-transform" />
               </button>
               <button
                 onClick={handleBrochureClick}
