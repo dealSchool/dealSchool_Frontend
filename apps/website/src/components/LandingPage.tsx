@@ -7,7 +7,6 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ArrowRight,
-  Sparkles,
   ChevronDown,
   CheckCircle2,
   Landmark,
@@ -25,7 +24,7 @@ import {
   CalendarDays,
   Users,
 } from "lucide-react";
-import { DealSchoolLogo, StaircaseIllustration } from "./SVGIllustrations";
+import { DealSchoolLogo } from "./SVGIllustrations";
 import { ApplyModal } from "./ApplyModal";
 import { BrochureModal } from "./BrochureModal";
 
@@ -68,14 +67,33 @@ const WHO_IS_THIS_FOR = [
   },
 ];
 
-const JOURNEY_STEPS = [
-  "Curiosity",
-  "Startup Analysis",
-  "Financial Analysis",
-  "Valuation",
-  "Term Sheets",
-  "Investment Thesis",
-  "Investment Committee",
+const FELLOWSHIP_PHASES = [
+  {
+    pill: "Live Deal Flow",
+    number: "01",
+    title: "Screen real startups",
+    desc: "You'll evaluate live inbound deal flow — the same startups landing in Middha Ventures' pipeline. Not case studies from 2015.",
+  },
+  {
+    pill: "Real Founders",
+    number: "02",
+    title: "Sit inside pitch calls",
+    desc: "Shadow founders pitching for actual capital. Watch how investors question a deck in real time.",
+  },
+  {
+    pill: "Real Data Rooms",
+    number: "03",
+    title: "Run due diligence",
+    desc: "Financial data rooms, cap tables, reference calls, term sheets — the unglamorous work that decides a deal.",
+  },
+  {
+    pill: "Live Simulation",
+    pill2: "Signature Week",
+    number: "04",
+    title: "The VC Simulation Room",
+    desc: "Bring everything together in a live venture simulation. Source, evaluate, and pitch a real investment recommendation before active VC mentors — then graduate certified, with induction into the DealSchool alumni network.",
+    highlight: true,
+  },
 ];
 
 const FELLOWSHIP_OUTCOMES = [
@@ -263,45 +281,63 @@ export const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* VENTURE CAPITAL JOURNEY / STAIRCASE */}
-        <section id="curriculum" className="py-20 md:py-24 bg-[#F5EFDF]">
+        {/* WHAT 10 WEEKS LOOKS LIKE */}
+        <section className="py-20 md:py-24 bg-[#F5EFDF]">
           <div className="max-w-6xl mx-auto px-4 md:px-8">
-            <div className="text-center max-w-2xl mx-auto mb-12">
-              <span className="font-mono text-xs text-[#C89A3C] font-bold tracking-[0.12em] uppercase block mb-2">
-                Your Venture Capital Journey
+            <div className="text-center max-w-2xl mx-auto mb-14">
+              <span className="font-mono text-xs text-[#C89A3C] font-bold tracking-[0.14em] uppercase block mb-2">
+                The Fellowship
               </span>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1C2A5D] tracking-tight">
-                Certified Venture Fellow
+                What 10 weeks looks like
               </h2>
+              <p className="font-sans text-sm text-[#1C2A5D]/60 mt-3">
+                Four phases. Same sequence a real venture fund runs &mdash; not a syllabus, a rep count.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              <StaircaseIllustration />
-
-              <ol className="space-y-3">
-                {JOURNEY_STEPS.map((step, idx) => (
-                  <li
-                    key={step}
-                    className="flex items-center gap-4 bg-white border border-[#1C2A5D]/8 rounded-sm px-5 py-3.5 shadow-sm hover:shadow-md hover:border-[#C89A3C]/40 transition-all duration-300"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-[#C89A3C]/10 border border-[#C89A3C]/30 flex items-center justify-center text-[#C89A3C] font-mono text-xs font-bold shrink-0">
-                      {String(idx + 1).padStart(2, "0")}
-                    </div>
-                    <span className="font-sans text-sm font-semibold text-[#1C2A5D]">{step}</span>
-                  </li>
-                ))}
-                <li className="flex items-center gap-4 bg-[#1C2A5D] text-white rounded-sm px-5 py-4 mt-4 shadow-md">
-                  <div className="h-8 w-8 rounded-full bg-[#C89A3C]/20 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-4 w-4 text-[#C89A3C]" />
+            <div className="grid grid-cols-1 md:grid-cols-4 rounded-sm overflow-hidden border border-[#1C2A5D]/10 shadow-sm md:divide-x md:divide-[#1C2A5D]/10">
+              {FELLOWSHIP_PHASES.filter((p) => !p.highlight).map((phase) => (
+                <div key={phase.number} className="bg-white p-6 space-y-3">
+                  <span className="inline-block font-mono text-[9px] font-bold uppercase tracking-widest text-[#1C2A5D] bg-[#F3E4C1] rounded-full px-3 py-1">
+                    {phase.pill}
+                  </span>
+                  <div className="font-mono text-sm font-bold text-[#C89A3C]">{phase.number}</div>
+                  <h4 className="font-serif text-lg font-bold text-[#1C2A5D]">{phase.title}</h4>
+                  <p className="font-sans text-xs text-[#1C2A5D]/65 leading-relaxed">{phase.desc}</p>
+                </div>
+              ))}
+              {FELLOWSHIP_PHASES.filter((p) => p.highlight).map((phase) => (
+                <div key={phase.number} className="bg-[#1C2A5D] p-6 space-y-3 relative">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="inline-block font-mono text-[9px] font-bold uppercase tracking-widest text-[#1C2A5D] bg-[#C89A3C] rounded-full px-3 py-1">
+                      {phase.pill}
+                    </span>
+                    <span className="inline-block font-mono text-[9px] font-bold uppercase tracking-widest text-white border border-white/40 rounded-full px-3 py-1">
+                      {phase.pill2}
+                    </span>
                   </div>
-                  <span className="font-serif text-sm font-bold">Certified Venture Fellow</span>
-                </li>
-              </ol>
+                  <div className="font-mono text-sm font-bold text-[#C89A3C]">{phase.number}</div>
+                  <h4 className="font-serif text-lg font-bold text-white">{phase.title}</h4>
+                  <p className="font-sans text-xs text-white/70 leading-relaxed">{phase.desc}</p>
+                </div>
+              ))}
             </div>
 
-            <p className="font-serif italic text-sm text-[#1C2A5D]/70 text-center max-w-2xl mx-auto mt-12">
-              From your first startup analysis to your final investment recommendation&mdash;every step is designed to help you think like an investor.
-            </p>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 mt-10">
+              <button
+                onClick={handleApplyClick}
+                className="group bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-md transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              >
+                Apply Now <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+              <button
+                onClick={handleBrochureClick}
+                className="bg-white border border-[#1C2A5D]/25 px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider text-[#1C2A5D] hover:bg-[#1C2A5D] hover:text-white hover:border-[#1C2A5D] transition-colors duration-300 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Download className="h-4 w-4" /> Download Brochure
+              </button>
+            </div>
           </div>
         </section>
 
