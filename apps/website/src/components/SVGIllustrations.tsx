@@ -5,7 +5,7 @@
 
 import React from "react";
 import { motion, useTime, useTransform } from "motion/react";
-import logoImage from "../assets/images/dealschool_logo_1781074477214.png";
+import logoImage from "../assets/images/dealschool_logo_1781074477214.jpg";
 
 // Shared micro-floating motion animation props
 export const floatingYAnimation = {
