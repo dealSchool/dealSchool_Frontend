@@ -33,6 +33,7 @@ import {
   FolderPlus, 
   Globe, 
   ChevronRight, 
+  ChevronDown,
   Bookmark, 
   Target, 
   FileSpreadsheet, 
@@ -57,6 +58,115 @@ import {
 } from "lucide-react";
 
 type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation";
+
+interface CurriculumWeek {
+  week: number;
+  title: string;
+  bullets: string[];
+}
+
+const curriculumData: CurriculumWeek[] = [
+  {
+    week: 1,
+    title: "Foundations of Venture",
+    bullets: [
+      "Intro to how the VC ecosystem works: fund structures, stages of a startup's lifecycle",
+      "Core venture terminology and how exits create returns",
+      "Hands-on exercise: assess whether a sample startup is investment-ready",
+    ],
+  },
+  {
+    week: 2,
+    title: "Learning to See Like an Investor",
+    bullets: [
+      "Open discussion unpacking Week 1 concepts and doubts",
+      "Build a shared framework for what makes a startup fundable",
+      "Shadow a live startup-screening sheet to see how VCs evaluate inbound pitches in real time",
+      "Group discussion on what was observed",
+      "Independent screening assignment during the week",
+    ],
+  },
+  {
+    week: 3,
+    title: "Screening in Practice",
+    bullets: [
+      "Fellows run their own screening evaluations on assigned startups",
+      "Present initial findings for feedback",
+      "Structured framework for evaluating startups + debrief of the practical",
+      "Doubt session to close out the module",
+    ],
+  },
+  {
+    week: 4,
+    title: "Live Pitch Calls",
+    bullets: [
+      "Live pitch calls with real founders across the week",
+      "Practice structured note-taking as if evaluating for investment",
+      "Practice asking sharp, relevant questions",
+    ],
+  },
+  {
+    week: 5,
+    title: "Market Sizing & Competitive Mapping",
+    bullets: [
+      "Group debrief of pitch calls: comparing notes, identifying red/green flags",
+      "Calibrate evaluation standards across the cohort",
+      "Intro to market sizing (TAM/SAM/SOM) and competitive landscape mapping",
+      "Group practical: choose a sector, build out market sizing and competitor maps",
+    ],
+  },
+  {
+    week: 6,
+    title: "Final Pitch Evaluations",
+    bullets: [
+      "Internal team discussion to align before final evaluations",
+      "Present evaluated startups for structured feedback",
+      "Feedback covers both pitch quality and investment thesis",
+      "Doubt session ahead of due diligence modules",
+    ],
+  },
+  {
+    week: 7,
+    title: "The Founder's Side",
+    bullets: [
+      "Explore the founder's journey: idea validation, early team, product, growth",
+      "Understand what founders experience while fundraising",
+      "Intro to due diligence: what it covers, the process, and a DD checklist",
+      "Practical exercise applying the DD checklist to a simulated startup",
+    ],
+  },
+  {
+    week: 8,
+    title: "Due Diligence in the Room",
+    bullets: [
+      "Breather day",
+      "Deeper dive into the DD workflow",
+      "Founder/investor role-play run by Middha Ventures' internal team",
+      "See how negotiation and questioning unfold from both sides of the table",
+    ],
+  },
+  {
+    week: 9,
+    title: "Deal Mechanics",
+    bullets: [
+      "How DD findings translate into an investment recommendation / DD report",
+      "Term sheets, shareholders' agreements (SHA), and cap tables",
+      "Investment process and wire transfer mechanics",
+      "Guidance on presenting sourcing and evaluation work",
+      "Final doubt session before the venture simulation",
+    ],
+  },
+  {
+    week: 10,
+    title: "The Venture Simulation",
+    bullets: [
+      "Final venture simulation: source, evaluate, and pitch a startup at a given stage",
+      "Judged live by VC mentors",
+      "Separately present the single best startup evaluated across the fellowship",
+      "Wrap-up: recap of the journey, feedback collection, certification",
+    ],
+  },
+];
 
 const FoundingTeamSection: React.FC<{ className?: string }> = ({ className = "" }) => {
   const founders = [
@@ -214,6 +324,7 @@ function pageFromPathname(pathname: string): AppPage {
 export default function App() {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isBrochureModalOpen, setIsBrochureModalOpen] = useState(false);
+  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activePage, setActivePage] = useState<AppPage>(
     pageFromPathname(window.location.pathname)
   );
@@ -592,7 +703,15 @@ export default function App() {
                         An Initiative by Middha Ventures
                       </span>
                       <p className="font-serif text-lg md:text-xl text-brand-secondary leading-relaxed">
-                        DealSchool is built within the <span className="font-bold text-brand-text">Middha Ventures</span> ecosystem, drawing practical insights from active participation in portfolio companies including <span className="text-brand-accent font-serif font-bold italic">Sochu</span>, <span className="text-brand-accent font-serif font-bold italic">Fitreak</span>, and <span className="text-brand-accent font-serif font-bold italic">Ruskle</span>. The platform reflects real-world experience in screening, evaluating, and supporting early-stage ventures.
+                        Middha Ventures is a Navi Mumbai-based family office actively investing in early-stage startups at the intersection of consumer technology and strategic capital, backing the next wave of ambitious builders.{" "}
+                        <a
+                          href="https://middhaventures.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand-accent hover:underline inline-flex items-center gap-0.5 font-bold"
+                        >
+                          Know more
+                        </a>
                       </p>
                     </div>
                   </div>
@@ -738,7 +857,7 @@ export default function App() {
 
             {/* ----------------- PAGE 3: PROGRAM PAGE ----------------- */}
             {activePage === "program" && (
-              <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8 space-y-16">
+              <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8 space-y-8 md:space-y-10">
                 
                 {/* Intro block */}
                 <div className="max-w-3xl space-y-4">
@@ -755,61 +874,78 @@ export default function App() {
                   </p>
                 </div>
 
-                {/* Sequential Phase Syllabus Grid */}
-                <section className="space-y-6">
-                  <h3 className="font-serif text-xl font-bold text-brand-text border-b border-brand-secondary/10 pb-2">The Four Phases</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    
-                    {/* Phase 1 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">01</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 1 - 2</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 1 — The Ecosystem</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        Build the map before evaluating deals. Understand startups, markets, and macroeconomic venture ecosystems inside robust frameworks.
-                      </p>
-                    </div>
-
-                    {/* Phase 2 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">02</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 3 - 4</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 2 — Screening & Evaluation</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        Shadow real pitch calls. Develop rigorous qualitative screening instincts. Learn exactly how professional investors evaluate opportunities in under 20 minutes.
-                      </p>
-                    </div>
-
-                    {/* Phase 3 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">03</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 5 - 6</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 3 — The Founder Side</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        Understand founders deeply. Shift from evaluating standard slide decks to assessing raw human capabilities, executive limits, and conviction drivers.
-                      </p>
-                    </div>
-
-                    {/* Phase 4 */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 space-y-3 hover:shadow-xs relative">
-                      <div className="absolute top-4 right-6 font-mono text-brand-accent/20 text-4xl font-extrabold select-none">04</div>
-                      <span className="font-mono text-[10px] text-brand-accent font-semibold block uppercase">WEEKS 7 - 10</span>
-                      <h4 className="font-serif text-base font-bold text-brand-text">Phase 4 — Due Diligence & Deal Mechanics</h4>
-                      <p className="font-serif text-xs text-brand-neutral leading-relaxed">
-                        The critical work between the pitch and the investment. Deep dive into raw financial data rooms, custom reference calls, Cap Table dilution, and term sheet mechanics.
-                      </p>
-                    </div>
-
+                {/* The DealSchool Curriculum Section */}
+                <section className="space-y-5">
+                  <div className="border-b border-brand-secondary/10 pb-2">
+                    <span className="font-mono text-xs text-brand-accent font-bold tracking-[0.12em] uppercase block mb-1">
+                      THE DEALSCHOOL CURRICULUM
+                    </span>
+                    <h2 className="font-serif text-3xl md:text-4xl font-bold text-brand-text tracking-tight pb-2">
+                      A 10-Week Venture Capital Fellowship
+                    </h2>
                   </div>
 
-                  {/* Week 10 Specific Box */}
-                  <div className="bg-brand-secondary text-brand-bg rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 border border-brand-accent/15">
+                  {/* Accordion container */}
+                  <div className="space-y-3 max-w-5xl mx-auto">
+                    {curriculumData.map((item) => {
+                      const isExpanded = expandedWeek === item.week;
+                      return (
+                        <div
+                          key={item.week}
+                          className="bg-brand-bg border border-brand-secondary/15 rounded-sm hover:border-brand-accent/40 transition-all duration-300 shadow-xs overflow-hidden"
+                        >
+                          <button
+                            onClick={() => setExpandedWeek(isExpanded ? null : item.week)}
+                            className="group w-full flex items-center justify-between p-5 text-left focus:outline-none focus:ring-2 focus:ring-brand-accent/10 cursor-pointer"
+                            aria-expanded={isExpanded}
+                            aria-controls={`curriculum-week-${item.week}`}
+                          >
+                            <span className="font-serif text-base md:text-lg font-bold flex items-center gap-4">
+                              <span className="text-brand-accent whitespace-nowrap">Week {item.week}</span>
+                              <span className="text-brand-text group-hover:text-brand-accent transition-colors">{item.title}</span>
+                            </span>
+                            <ChevronDown
+                              className={`h-5 w-5 text-brand-accent shrink-0 transition-transform duration-300 ml-4 ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {isExpanded && (
+                              <motion.div
+                                id={`curriculum-week-${item.week}`}
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: "easeInOut" }}
+                              >
+                                <div className="px-5 pb-6 pt-1 border-t border-brand-secondary/5 space-y-3">
+                                  <ul className="list-none space-y-2.5">
+                                    {item.bullets.map((bullet, bulletIdx) => (
+                                      <li key={bulletIdx} className="flex items-start gap-3">
+                                        <CheckCircle2 className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
+                                        <span className="font-sans text-sm text-brand-secondary leading-relaxed">
+                                          {bullet}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Request Brochure Section (Unmodified, just with new text) */}
+                  <div className="bg-brand-secondary text-brand-bg rounded-sm p-6 md:p-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 border border-brand-accent/15 mt-12">
                     <div className="space-y-2 max-w-xl">
-                      <span className="font-mono text-xs text-brand-accent font-bold tracking-widest block uppercase">WEEK 10 SPECIAL</span>
-                      <h4 className="font-serif text-lg font-bold text-white">Week 10 — Something You Must Experience Yourself</h4>
+                      <h4 className="font-serif text-lg font-bold text-white">Request the Program Brochure</h4>
                       <p className="font-serif text-xs text-brand-bg opacity-85 leading-relaxed">
-                        A secretive, immersive concluding weekend. Details of syllabus graduation exercises, live boardroom defensibility scenarios, and network operations are strictly available inside our program brochure.
+                        The Program Brochure provides comprehensive details on the curriculum, practical exercises, live founder interactions, boardroom simulations, networking opportunities, and the overall fellowship experience.
                       </p>
                     </div>
                     <div className="flex items-center">
