@@ -57,7 +57,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation";
+type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "apply-now";
 
 interface CurriculumWeek {
   week: number;
@@ -303,6 +303,7 @@ const PAGE_PATHS: Record<string, AppPage> = {
   "/terms-and-conditions": "terms-and-conditions",
   "/privacy-policy": "privacy-policy",
   "/refund-and-cancellation": "refund-and-cancellation",
+  "/applynow": "apply-now",
 };
 
 const PATH_FROM_PAGE: Record<AppPage, string> = {
@@ -315,6 +316,7 @@ const PATH_FROM_PAGE: Record<AppPage, string> = {
   "terms-and-conditions": "/terms-and-conditions",
   "privacy-policy": "/privacy-policy",
   "refund-and-cancellation": "/refund-and-cancellation",
+  "apply-now": "/applynow",
 };
 
 function pageFromPathname(pathname: string): AppPage {
@@ -322,7 +324,6 @@ function pageFromPathname(pathname: string): AppPage {
 }
 
 export default function App() {
-  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isBrochureModalOpen, setIsBrochureModalOpen] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [activePage, setActivePage] = useState<AppPage>(
@@ -355,7 +356,7 @@ export default function App() {
   const [contactError, setContactError] = useState<string | null>(null);
 
   const handleApplyClick = () => {
-    setIsApplyModalOpen(true);
+    handlePageChange("apply-now");
   };
 
   const handleBrochureClick = () => {
@@ -1254,8 +1255,8 @@ export default function App() {
         />
       )}
 
-      {/* DYNAMIC APPLICATIONS OVERLAY MODAL */}
-      <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
+      {/* Apply Now — rendered at the dedicated /applynow route */}
+      <ApplyModal isOpen={activePage === "apply-now"} onClose={() => handlePageChange("home")} />
 
       {/* PROGRAM BROCHURE REQUEST MODAL */}
       <BrochureModal isOpen={isBrochureModalOpen} onClose={() => setIsBrochureModalOpen(false)} />

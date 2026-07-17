@@ -25,7 +25,6 @@ import {
   Users,
 } from "lucide-react";
 import { DealSchoolLogo } from "./SVGIllustrations";
-import { ApplyModal } from "./ApplyModal";
 import { BrochureModal } from "./BrochureModal";
 
 // Page-specific palette (kept local to this standalone page — see brochure mockup)
@@ -134,11 +133,10 @@ const FAQ_ITEMS = [
 ];
 
 export const LandingPage: React.FC = () => {
-  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isBrochureModalOpen, setIsBrochureModalOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const handleApplyClick = () => setIsApplyModalOpen(true);
+  const handleApplyClick = () => { window.location.href = "/applynow"; };
   const handleBrochureClick = () => setIsBrochureModalOpen(true);
 
   return (
@@ -524,7 +522,6 @@ export const LandingPage: React.FC = () => {
         </div>
       </footer>
 
-      <ApplyModal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} />
       <BrochureModal isOpen={isBrochureModalOpen} onClose={() => setIsBrochureModalOpen(false)} />
     </div>
   );
