@@ -713,6 +713,64 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
+  const handleDeleteDraft = (draftId: string) => {
+    showConfirm(
+      "Are you sure you want to permanently delete this incomplete application?",
+      async () => {
+        if (isActioning) return;
+        setIsActioning(true);
+        try {
+          const token = await getToken();
+          const res = await fetch(`${API_URL}/applications/draft/${draftId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+            throw new Error(err.error || `HTTP ${res.status}`);
+          }
+          setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+          setSelectedDraft(null);
+          showToast("Draft deleted successfully.", "success");
+        } catch (err: any) {
+          console.error("Error deleting draft:", err);
+          showToast(`Delete operation failed: ${err.message}`, "error");
+        } finally {
+          setIsActioning(false);
+        }
+      }
+    );
+  };
+
+  const handleDeleteBrochureRequest = (requestId: string) => {
+    showConfirm(
+      "Are you sure you want to permanently delete this brochure request?",
+      async () => {
+        if (isActioning) return;
+        setIsActioning(true);
+        try {
+          const token = await getToken();
+          const res = await fetch(`${API_URL}/brochure-requests/${requestId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+            throw new Error(err.error || `HTTP ${res.status}`);
+          }
+          setBrochureRequests((prev) => prev.filter((b) => b.id !== requestId));
+          setSelectedBrochureRequest(null);
+          showToast("Brochure request deleted successfully.", "success");
+        } catch (err: any) {
+          console.error("Error deleting brochure request:", err);
+          showToast(`Delete operation failed: ${err.message}`, "error");
+        } finally {
+          setIsActioning(false);
+        }
+      }
+    );
+  };
+
   const handleResendPaymentLink = async (appId: string) => {
     setResendingPaymentLink(true);
     try {
@@ -2284,6 +2342,16 @@ export const AdminDashboard: React.FC = () => {
                               <span className="truncate">{selectedBrochureRequest.contact}</span>
                             </a>
                           </div>
+                          <div className="pt-2 border-t border-dashed border-[#082C6C]/10">
+                            <p className="font-mono text-[8px] text-brand-neutral/40 uppercase tracking-widest mb-2">Danger Zone</p>
+                            <button
+                              onClick={() => handleDeleteBrochureRequest(selectedBrochureRequest.id)}
+                              disabled={isActioning}
+                              className="w-full py-2 bg-transparent hover:bg-red-50 text-red-400 hover:text-red-600 font-mono text-[9px] font-bold uppercase tracking-wider border border-dashed border-red-200 hover:border-red-300 transition-all cursor-pointer flex items-center justify-center gap-1.5 rounded-sm disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete Request
+                            </button>
+                          </div>
                         </div>
                       </>
                   ) : (
@@ -2392,6 +2460,17 @@ export const AdminDashboard: React.FC = () => {
                                   ))}
                               </div>
                             )}
+                          </div>
+
+                          <div className="pt-2 border-t border-dashed border-[#082C6C]/10">
+                            <p className="font-mono text-[8px] text-brand-neutral/40 uppercase tracking-widest mb-2">Danger Zone</p>
+                            <button
+                              onClick={() => handleDeleteDraft(selectedDraft.id)}
+                              disabled={isActioning}
+                              className="w-full py-2 bg-transparent hover:bg-red-50 text-red-400 hover:text-red-600 font-mono text-[9px] font-bold uppercase tracking-wider border border-dashed border-red-200 hover:border-red-300 transition-all cursor-pointer flex items-center justify-center gap-1.5 rounded-sm disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3 w-3" /> Delete Draft
+                            </button>
                           </div>
                         </div>
                       </>
