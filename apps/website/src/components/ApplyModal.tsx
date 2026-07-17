@@ -340,9 +340,11 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
   // Cross-device recovery: check whether this phone number already has a saved draft.
   // Only relevant on a fresh browser/device — skipped once we already hold a draftId.
-  const lookupDraft = async (mobileNumber: string) => {
+  // Returns the outcome so callers that must NOT proceed until this resolves (i.e. the
+  // Step 1 "Continue" handler) can await it directly, instead of racing the blur debounce below.
+  const performDraftLookup = async (mobileNumber: string): Promise<"found" | "none" | "already_applied" | "error"> => {
     const trimmed = mobileNumber.trim();
-    if (!trimmed || draftId) return;
+    if (!trimmed) return "none";
     setDraftLookup({ status: "checking", maskedEmail: null });
     try {
       const res = await fetch(`${API_URL}/applications/draft/lookup`, {
@@ -362,29 +364,42 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
           },
         }));
         setDraftLookup({ status: "idle", maskedEmail: null });
-        return;
+        return "already_applied";
       }
 
       if (!res.ok) {
         setDraftLookup({ status: "idle", maskedEmail: null });
-        return;
+        return "error";
       }
 
       const data = await res.json();
-      setDraftLookup(data.found ? { status: "found", maskedEmail: data.maskedEmail } : { status: "none", maskedEmail: null });
+      if (data.found) {
+        setDraftLookup({ status: "found", maskedEmail: data.maskedEmail });
+        return "found";
+      }
+      setDraftLookup({ status: "none", maskedEmail: null });
+      return "none";
     } catch {
       // Network error — fail silently, this is a UX nicety, not a hard gate
       setDraftLookup({ status: "idle", maskedEmail: null });
+      return "error";
     }
   };
 
+  // Eagerly-triggered version used on phone-field blur, purely so the OTP panel can
+  // appear before the user even reaches for the Continue button. Skipped once a lookup
+  // has already resolved for the current number (status "found"/"none") to avoid
+  // re-prompting after the user dismissed a match, and skipped once we hold a draftId.
   const scheduleDraftLookup = (mobileNumber: string) => {
+    if (draftId || draftLookup.status === "found" || draftLookup.status === "none") return;
     if (draftLookupTimer.current) clearTimeout(draftLookupTimer.current);
-    draftLookupTimer.current = setTimeout(() => lookupDraft(mobileNumber), DUPLICATE_CHECK_DEBOUNCE_MS);
+    draftLookupTimer.current = setTimeout(() => performDraftLookup(mobileNumber), DUPLICATE_CHECK_DEBOUNCE_MS);
   };
 
   const dismissDraftLookup = () => {
-    setDraftLookup({ status: "idle", maskedEmail: null });
+    // "none" (not "idle") — remembers that this phone number was already checked and
+    // dismissed, so Continue proceeds straight to draft creation without re-prompting.
+    setDraftLookup({ status: "none", maskedEmail: null });
     setOtp("");
     setOtpError(null);
   };
@@ -392,7 +407,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const resendDraftOtp = () => {
     setOtp("");
     setOtpError(null);
-    lookupDraft(formData.mobileNumber);
+    performDraftLookup(formData.mobileNumber);
   };
 
   const verifyDraftOtp = async () => {
@@ -499,10 +514,24 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     return true;
   };
 
-  // Step 1 "Continue" — creates (or upserts, if resubmitted in the same session) the server draft
+  // Step 1 "Continue" — creates (or upserts, if resubmitted in the same session) the server draft.
+  // Before doing that, guarantees a draft-lookup has actually resolved for this phone number —
+  // relying on the blur-triggered debounce alone would let a fast typist click Continue before
+  // that 500ms timer even fires, silently skipping cross-device recovery altogether.
   const createOrResumeDraft = async () => {
     setIsSubmitting(true);
     setErrorMessage(null);
+
+    if (!draftId && draftLookup.status !== "found" && draftLookup.status !== "none") {
+      if (draftLookupTimer.current) { clearTimeout(draftLookupTimer.current); draftLookupTimer.current = null; }
+      const outcome = await performDraftLookup(formData.mobileNumber);
+      if (outcome === "found" || outcome === "already_applied") {
+        setIsSubmitting(false);
+        return; // OTP panel or the "already applied" banner is now visible instead
+      }
+      // "none" or "error" — no saved draft (or lookup failed, which is non-fatal) — proceed below
+    }
+
     try {
       const res = await fetch(`${API_URL}/applications/draft`, {
         method: "POST",
