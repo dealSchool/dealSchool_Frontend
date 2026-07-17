@@ -60,6 +60,129 @@ const CharCount: React.FC<{ value: string; max: number }> = ({ value, max }) => 
   );
 };
 
+const INITIAL_FORM_DATA = {
+  fullName: "",
+  mobileNumber: "",
+  email: "",
+  linkedinUrl: "",
+  city: "",
+  currentStatus: "",
+
+  // Student fields
+  collegeName: "",
+  degree: "",
+  graduationYear: "",
+
+  // Recent Graduate fields
+  currentRole: "",
+  companyName: "",
+  degreeEducationalBackground: "",
+
+  // Working Professional fields
+  yearsOfExperience: "",
+
+  // Founder fields
+  startupName: "",
+  industrySector: "",
+  startupLinkedinProfile: "",
+
+  // Freelancer fields
+  areaOfWork: "",
+  freelancerLinkedinProfile: "",
+
+  // Other fields
+  otherStatusSpecify: "",
+
+  // Intent reason
+  primaryReason: "",
+  primaryReasonOther: "",
+
+  // Admissions underwriting (Assessments)
+  assessmentQ1: "",
+  assessmentQ2: "",
+  assessmentQ3: "",
+
+  // Link & discovery
+  resumeLink: "",
+  discoverySource: "",
+  discoverySourceOther: "",
+};
+
+type ApplyFormData = typeof INITIAL_FORM_DATA;
+
+// Same-device resume — remembers the in-progress draft across visits without a server round-trip
+const DRAFT_STORAGE_KEY = "dealschool_apply_draft_v1";
+
+interface StoredDraft {
+  draftId: string;
+  currentStep: number;
+  formData: Partial<ApplyFormData>;
+}
+
+const readStoredDraft = (): StoredDraft | null => {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.draftId) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeStoredDraft = (draft: StoredDraft) => {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // localStorage unavailable (private mode, quota) — same-device resume degrades gracefully
+  }
+};
+
+const clearStoredDraft = () => {
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+};
+
+// Builds the exact `fields` payload the PATCH endpoint expects for a given step,
+// sending only what that step (and the applicant's chosen status branch) actually collects.
+const buildStepFields = (stepNum: number, data: ApplyFormData): Record<string, unknown> => {
+  if (stepNum === 2) {
+    const base: Record<string, unknown> = { currentStatus: data.currentStatus };
+    switch (data.currentStatus) {
+      case "Student":
+        return { ...base, collegeName: data.collegeName, degree: data.degree, graduationYear: data.graduationYear };
+      case "Recent Graduate (0–2 years of experience)":
+        return { ...base, currentRole: data.currentRole, companyName: data.companyName, graduationYear: data.graduationYear, degreeEducationalBackground: data.degreeEducationalBackground };
+      case "Working Professional":
+        return { ...base, currentRole: data.currentRole, companyName: data.companyName, yearsOfExperience: data.yearsOfExperience };
+      case "Founder":
+        return { ...base, startupName: data.startupName, industrySector: data.industrySector, startupLinkedinProfile: data.startupLinkedinProfile };
+      case "Freelancer":
+        return { ...base, areaOfWork: data.areaOfWork, yearsOfExperience: data.yearsOfExperience, freelancerLinkedinProfile: data.freelancerLinkedinProfile };
+      case "Other":
+        return { ...base, otherStatusSpecify: data.otherStatusSpecify };
+      default:
+        return base;
+    }
+  }
+
+  if (stepNum === 3) {
+    return data.primaryReason === "Other"
+      ? { primaryReason: data.primaryReason, primaryReasonOther: data.primaryReasonOther }
+      : { primaryReason: data.primaryReason };
+  }
+
+  if (stepNum === 4) {
+    return { assessmentQ1: data.assessmentQ1, assessmentQ2: data.assessmentQ2, assessmentQ3: data.assessmentQ3 };
+  }
+
+  return {};
+};
+
 export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,57 +208,35 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     phone: null,
   });
 
+  // Server-side draft id — null until Step 1 is saved (POST /applications/draft) or a
+  // cross-device draft is restored via OTP verification
+  const [draftId, setDraftId] = useState<string | null>(null);
+
+  // Cross-device recovery: phone-number lookup + OTP verification state
+  const [draftLookup, setDraftLookup] = useState<{ status: "idle" | "checking" | "found" | "none"; maskedEmail: string | null }>({
+    status: "idle",
+    maskedEmail: null,
+  });
+  const [otp, setOtp] = useState("");
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const draftLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Ref for modal container — used for focus trap
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Form Fields
-  const [formData, setFormData] = useState({
-    fullName: "",
-    mobileNumber: "",
-    email: "",
-    linkedinUrl: "",
-    city: "",
-    currentStatus: "",
+  const [formData, setFormData] = useState<ApplyFormData>(INITIAL_FORM_DATA);
 
-    // Student fields
-    collegeName: "",
-    degree: "",
-    graduationYear: "",
-
-    // Recent Graduate fields
-    currentRole: "",
-    companyName: "",
-    degreeEducationalBackground: "",
-
-    // Working Professional fields
-    yearsOfExperience: "",
-
-    // Founder fields
-    startupName: "",
-    industrySector: "",
-    startupLinkedinProfile: "",
-
-    // Freelancer fields
-    areaOfWork: "",
-    freelancerLinkedinProfile: "",
-
-    // Other fields
-    otherStatusSpecify: "",
-
-    // Intent reason
-    primaryReason: "",
-    primaryReasonOther: "",
-
-    // Admissions underwriting (Assessments)
-    assessmentQ1: "",
-    assessmentQ2: "",
-    assessmentQ3: "",
-
-    // Link & discovery
-    resumeLink: "",
-    discoverySource: "",
-    discoverySourceOther: ""
-  });
+  // Same-device resume — on first mount, pick up any draft left in localStorage
+  // (the modal component stays mounted for the page's lifetime, so this only runs once)
+  useEffect(() => {
+    const stored = readStoredDraft();
+    if (!stored) return;
+    setDraftId(stored.draftId);
+    setFormData((prev) => ({ ...prev, ...stored.formData }));
+    setStep(Math.min(Math.max(stored.currentStep, 1), 5));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus trap + Escape key handler
   useEffect(() => {
@@ -155,7 +256,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        resetAndClose();
+        handleClose();
         return;
       }
       if (e.key !== "Tab") return;
@@ -237,10 +338,101 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }, DUPLICATE_CHECK_DEBOUNCE_MS);
   };
 
+  // Cross-device recovery: check whether this phone number already has a saved draft.
+  // Only relevant on a fresh browser/device — skipped once we already hold a draftId.
+  const lookupDraft = async (mobileNumber: string) => {
+    const trimmed = mobileNumber.trim();
+    if (!trimmed || draftId) return;
+    setDraftLookup({ status: "checking", maskedEmail: null });
+    try {
+      const res = await fetch(`${API_URL}/applications/draft/lookup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileNumber: trimmed }),
+      });
+
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        setDupCheck((prev) => ({
+          ...prev,
+          phone: {
+            checking: false,
+            alreadyApplied: true,
+            message: data.error || "You have already applied to DealSchool. Our team will review your application and get in touch.",
+          },
+        }));
+        setDraftLookup({ status: "idle", maskedEmail: null });
+        return;
+      }
+
+      if (!res.ok) {
+        setDraftLookup({ status: "idle", maskedEmail: null });
+        return;
+      }
+
+      const data = await res.json();
+      setDraftLookup(data.found ? { status: "found", maskedEmail: data.maskedEmail } : { status: "none", maskedEmail: null });
+    } catch {
+      // Network error — fail silently, this is a UX nicety, not a hard gate
+      setDraftLookup({ status: "idle", maskedEmail: null });
+    }
+  };
+
+  const scheduleDraftLookup = (mobileNumber: string) => {
+    if (draftLookupTimer.current) clearTimeout(draftLookupTimer.current);
+    draftLookupTimer.current = setTimeout(() => lookupDraft(mobileNumber), DUPLICATE_CHECK_DEBOUNCE_MS);
+  };
+
+  const dismissDraftLookup = () => {
+    setDraftLookup({ status: "idle", maskedEmail: null });
+    setOtp("");
+    setOtpError(null);
+  };
+
+  const resendDraftOtp = () => {
+    setOtp("");
+    setOtpError(null);
+    lookupDraft(formData.mobileNumber);
+  };
+
+  const verifyDraftOtp = async () => {
+    const trimmed = otp.trim();
+    if (!trimmed) return;
+    setOtpVerifying(true);
+    setOtpError(null);
+    try {
+      const res = await fetch(`${API_URL}/applications/draft/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobileNumber: formData.mobileNumber.trim(), otp: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setOtpError(data.error || "Invalid code. Please try again.");
+        return;
+      }
+
+      const restoredFormData: ApplyFormData = { ...formData, ...data.formData };
+      setFormData(restoredFormData);
+      setDraftId(data.draftId);
+      setDraftLookup({ status: "idle", maskedEmail: null });
+      setOtp("");
+      const nextStep = Math.min(Math.max(Number(data.currentStep) || 1, 1), 5);
+      writeStoredDraft({ draftId: data.draftId, currentStep: nextStep, formData: restoredFormData });
+      setStep(nextStep);
+    } catch {
+      setOtpError("Network error. Please try again.");
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
   // Step validation check gates
   const isStepValid = () => {
     if (step === 1) {
       return (
+        draftLookup.status !== "found" &&
         !dupCheck.email.alreadyApplied &&
         !dupCheck.phone.alreadyApplied &&
         formData.fullName.trim() !== "" &&
@@ -307,16 +499,85 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     return true;
   };
 
+  // Step 1 "Continue" — creates (or upserts, if resubmitted in the same session) the server draft
+  const createOrResumeDraft = async () => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch(`${API_URL}/applications/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: formData.fullName.trim(),
+          mobileNumber: formData.mobileNumber.trim(),
+          email: formData.email.trim(),
+          linkedinUrl: formData.linkedinUrl.trim(),
+          city: formData.city.trim(),
+        }),
+      });
+
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        setDupCheck((prev) => ({
+          ...prev,
+          email: {
+            checking: false,
+            alreadyApplied: true,
+            message: data.error || "You have already applied to DealSchool. Our team will review your application and get in touch.",
+          },
+        }));
+        return;
+      }
+      if (res.status === 429) {
+        setErrorMessage("Too many attempts from your connection. Please wait a few minutes and try again.");
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+        throw new Error(err.error || `Server error (${res.status})`);
+      }
+
+      const { draftId: newDraftId } = await res.json();
+      setDraftId(newDraftId);
+      writeStoredDraft({ draftId: newDraftId, currentStep: 2, formData });
+      setStep(2);
+      setErrorMessage(null);
+    } catch (error: any) {
+      setErrorMessage(error.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Steps 2–4 "Continue" — saves that step's fields, but never blocks navigation on the result
+  const patchDraftStep = (stepNum: number) => {
+    if (!draftId) return;
+    const fields = buildStepFields(stepNum, formData);
+    writeStoredDraft({ draftId, currentStep: stepNum + 1, formData });
+    fetch(`${API_URL}/applications/draft/${draftId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: stepNum, fields }),
+    }).catch((err) => console.error("Draft step save failed (non-fatal):", err));
+  };
+
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isStepValid()) return;
 
-    if (step < 5) {
+    if (step === 1) {
+      createOrResumeDraft();
+      return;
+    }
+
+    if (step >= 2 && step <= 4) {
+      patchDraftStep(step);
       setStep((curr) => curr + 1);
       setErrorMessage(null);
-    } else {
-      submitForm();
+      return;
     }
+
+    submitForm();
   };
 
   const submitForm = async () => {
@@ -329,14 +590,22 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (!draftId) {
+      setIsSubmitting(false);
+      setErrorMessage("Your session could not be found. Please review your details and try again.");
+      setStep(1);
+      return;
+    }
+
     try {
-      // Exclude resumeLink from spread; send only resumeUrl so the backend
-      // receives a single canonical key for the resume URL.
-      const { resumeLink, ...rest } = formData;
-      const res = await fetch(`${API_URL}/applications`, {
+      const res = await fetch(`${API_URL}/applications/draft/${draftId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...rest, resumeUrl: resumeLink }),
+        body: JSON.stringify({
+          resumeUrl: formData.resumeLink,
+          discoverySource: formData.discoverySource,
+          discoverySourceOther: formData.discoverySourceOther,
+        }),
       });
 
       if (res.status === 409) {
@@ -352,6 +621,13 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         setStep(1);
         return;
       }
+      if (res.status === 404) {
+        clearStoredDraft();
+        setDraftId(null);
+        setErrorMessage("Your saved progress could not be found. Please review your details and try again.");
+        setStep(1);
+        return;
+      }
       if (res.status === 429) {
         setErrorMessage("Too many submissions from your connection. Please wait a few minutes and try again.");
         return;
@@ -363,6 +639,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
       const { applicationId } = await res.json();
       setSubmittedDocId(applicationId);
+      clearStoredDraft();
       setStep(6);
     } catch (error: any) {
       console.error("Application submission error:", error.message);
@@ -372,48 +649,31 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const resetAndClose = () => {
-    onClose();
+  // Closing the modal mid-flow (X, backdrop, Escape) keeps the draft intact for same-device
+  // resume — only a completed submission (see handleBackToWebsite) wipes local state.
+  const handleClose = () => {
     if (dupCheckTimers.current.email) clearTimeout(dupCheckTimers.current.email);
     if (dupCheckTimers.current.phone) clearTimeout(dupCheckTimers.current.phone);
-    dupCheckTimers.current = { email: null, phone: null };
+    if (draftLookupTimer.current) clearTimeout(draftLookupTimer.current);
+    onClose();
+  };
+
+  const handleBackToWebsite = () => {
+    handleClose();
+    clearStoredDraft();
     // Wait for exit transition to clean up state
     setTimeout(() => {
       setStep(1);
+      setDraftId(null);
       setResumeLinkError(null);
       setErrorMessage(null);
       setSubmittedDocId("");
       setAgreedToTerms(false);
       setDupCheck({ email: INITIAL_DUPLICATE_FIELD_STATE, phone: INITIAL_DUPLICATE_FIELD_STATE });
-      setFormData({
-        fullName: "",
-        mobileNumber: "",
-        email: "",
-        linkedinUrl: "",
-        city: "",
-        currentStatus: "",
-        collegeName: "",
-        degree: "",
-        graduationYear: "",
-        currentRole: "",
-        companyName: "",
-        degreeEducationalBackground: "",
-        yearsOfExperience: "",
-        startupName: "",
-        industrySector: "",
-        startupLinkedinProfile: "",
-        areaOfWork: "",
-        freelancerLinkedinProfile: "",
-        otherStatusSpecify: "",
-        primaryReason: "",
-        primaryReasonOther: "",
-        assessmentQ1: "",
-        assessmentQ2: "",
-        assessmentQ3: "",
-        resumeLink: "",
-        discoverySource: "",
-        discoverySourceOther: ""
-      });
+      setDraftLookup({ status: "idle", maskedEmail: null });
+      setOtp("");
+      setOtpError(null);
+      setFormData(INITIAL_FORM_DATA);
     }, 300);
   };
 
@@ -426,7 +686,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.5 }}
             exit={{ opacity: 0 }}
-            onClick={resetAndClose}
+            onClick={handleClose}
             className="fixed inset-0 bg-[#111111]/70 backdrop-blur-xs"
             aria-hidden="true"
           />
@@ -445,7 +705,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
               className={`w-full bg-brand-bg border border-brand-secondary/15 rounded-sm shadow-2xl relative ${step === 6 ? 'max-w-md p-8' : 'max-w-2xl p-6 md:p-10'}`}
             >
               <button
-                onClick={resetAndClose}
+                onClick={handleClose}
                 aria-label="Close application form"
                 className="absolute top-4 right-4 p-1.5 rounded-sm hover:bg-brand-secondary/5 text-brand-neutral hover:text-brand-text transition-all cursor-pointer"
                 id="modal-close-btn"
@@ -551,10 +811,16 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               if (dupCheck.phone.alreadyApplied || dupCheck.phone.checking) {
                                 setDupCheck(prev => ({ ...prev, phone: INITIAL_DUPLICATE_FIELD_STATE }));
                               }
+                              if (draftLookup.status !== "idle") {
+                                setDraftLookup({ status: "idle", maskedEmail: null });
+                                setOtp("");
+                                setOtpError(null);
+                              }
                             }}
                             onBlur={() => {
                               if (PHONE_REGEX.test(formData.mobileNumber.trim())) {
                                 scheduleDuplicateCheck("phone", formData.mobileNumber);
+                                if (!draftId) scheduleDraftLookup(formData.mobileNumber);
                               }
                             }}
                             placeholder="+91 98765 43210"
@@ -575,6 +841,12 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           <p className="text-brand-neutral/50 text-[10px] font-mono flex items-center gap-1.5">
                             <Loader2 className="h-3 w-3 animate-spin" />
                             Checking...
+                          </p>
+                        )}
+                        {draftLookup.status === "checking" && (
+                          <p className="text-brand-neutral/50 text-[10px] font-mono flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Checking for a saved application...
                           </p>
                         )}
                       </div>
@@ -659,6 +931,55 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
+                  {/* Cross-device recovery — a saved draft was found for this phone number; OTP gates Continue via isStepValid */}
+                  {draftLookup.status === "found" && (
+                    <div className="flex flex-col gap-3 p-4 bg-brand-secondary/[0.04] border border-brand-secondary/15 rounded-sm">
+                      <div className="flex items-start gap-3">
+                        <FileSpreadsheet className="h-4 w-4 text-brand-accent shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-mono text-[10px] font-bold text-brand-text uppercase tracking-wider">Saved Application Found</p>
+                          <p className="font-sans text-xs text-brand-neutral leading-relaxed mt-1">
+                            We found a previously started application for this number. Enter the code sent to{" "}
+                            <span className="font-semibold text-brand-text">{draftLookup.maskedEmail}</span> to resume where you left off.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 items-start">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                          placeholder="6-digit code"
+                          className="flex-1 bg-white text-brand-text px-3 py-2.5 rounded-sm border border-brand-secondary/15 focus:outline-none focus:border-brand-accent text-sm h-10 tracking-widest font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={verifyDraftOtp}
+                          disabled={otp.trim().length < 4 || otpVerifying}
+                          className="px-4 h-10 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-white font-mono text-[10px] font-bold uppercase rounded-sm transition-all cursor-pointer shrink-0"
+                        >
+                          {otpVerifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Verify"}
+                        </button>
+                      </div>
+                      {otpError && (
+                        <p className="text-red-600 text-[10px] flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          {otpError}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={resendDraftOtp} className="font-mono text-[9px] text-brand-accent hover:underline cursor-pointer">
+                          Resend code
+                        </button>
+                        <button type="button" onClick={dismissDraftLookup} className="font-mono text-[9px] text-brand-neutral hover:underline cursor-pointer">
+                          Not you? Continue as a new applicant
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Duplicate application warning — inline, non-blocking notice (Continue is disabled via isStepValid) */}
                   {(dupCheck.email.alreadyApplied || dupCheck.phone.alreadyApplied) && (
                     <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-sm">
@@ -674,10 +995,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
                   <button
                     type="submit"
-                    disabled={!isStepValid() || dupCheck.email.checking || dupCheck.phone.checking}
+                    disabled={!isStepValid() || dupCheck.email.checking || dupCheck.phone.checking || draftLookup.status === "checking" || isSubmitting}
                     className="w-full py-3.5 bg-brand-secondary hover:bg-brand-dark-blue disabled:opacity-40 disabled:cursor-not-allowed text-[#FAFAF8] font-mono text-xs font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2 mt-2 cursor-pointer rounded-sm"
                   >
-                    Continue to Background <ArrowRight className="h-4 w-4" />
+                    {isSubmitting ? <span>Saving...</span> : <>Continue to Background <ArrowRight className="h-4 w-4" /></>}
                   </button>
                 </form>
               )}
@@ -1431,7 +1752,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
                   {/* CTA */}
                   <button
-                    onClick={resetAndClose}
+                    onClick={handleBackToWebsite}
                     className="px-8 py-3 bg-brand-secondary hover:bg-brand-text text-[#FAFAF8] font-mono text-xs font-bold tracking-wider uppercase transition-colors duration-200 cursor-pointer"
                   >
                     Back to Website

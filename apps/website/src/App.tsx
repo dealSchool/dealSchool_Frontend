@@ -356,7 +356,21 @@ export default function App() {
   const [contactError, setContactError] = useState<string | null>(null);
 
   const handleApplyClick = () => {
+    sessionStorage.setItem("applyReturnPath", PATH_FROM_PAGE[activePage]);
     handlePageChange("apply-now");
+  };
+
+  const handleCloseApply = () => {
+    const returnPath = sessionStorage.getItem("applyReturnPath");
+    sessionStorage.removeItem("applyReturnPath");
+
+    if (returnPath === "/cohort1") {
+      window.location.href = "/cohort1";
+      return;
+    }
+
+    const returnPage = returnPath ? PAGE_PATHS[returnPath] : undefined;
+    handlePageChange(returnPage ?? "home");
   };
 
   const handleBrochureClick = () => {
@@ -1256,7 +1270,7 @@ export default function App() {
       )}
 
       {/* Apply Now — rendered at the dedicated /applynow route */}
-      <ApplyModal isOpen={activePage === "apply-now"} onClose={() => handlePageChange("home")} />
+      <ApplyModal isOpen={activePage === "apply-now"} onClose={handleCloseApply} />
 
       {/* PROGRAM BROCHURE REQUEST MODAL */}
       <BrochureModal isOpen={isBrochureModalOpen} onClose={() => setIsBrochureModalOpen(false)} />

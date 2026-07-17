@@ -78,9 +78,9 @@ export interface FellowshipApplication {
 
   // Payment fields — written only by Cloud Functions (admin SDK)
   paymentStatus?: "link_sent" | "processing" | "error" | "expired" | "failed" | "paid" | "refund_pending" | "refunded" | "refund_failed";
-  rzpPaymentLinkId?: string;   // Razorpay lnk_XXXX
-  rzpPaymentLinkUrl?: string;
-  rzpPaymentId?: string;       // Razorpay pay_XXXX after successful payment
+  paymentOrderId?: string;
+  paymentLinkId?: string;
+  paymentLinkUrl?: string;
   paymentLinkSentAt?: any;
   paidAt?: any;
 
@@ -89,6 +89,58 @@ export interface FellowshipApplication {
   cancellationReason?: string;
   refundPercent?: number; // 0, 50, or 100
   rzpRefundId?: string;
+}
+
+// Response shape of GET /applications/:id (admin-only) — full doc plus linked payment record
+export interface ApplicationPaymentInfo {
+  id: string;
+  applicationId: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone: string;
+  amount: number; // paise
+  currency: string;
+  paymentLinkId: string;
+  paymentLinkUrl: string;
+  status: string;
+  expiresAt: any;
+  refundId?: string;
+  createdAt: any;
+  updatedAt: any;
+  emailSentAt?: any;
+}
+
+export interface ApplicationDetailResponse {
+  application: FellowshipApplication;
+  payment: ApplicationPaymentInfo | null;
+}
+
+// A form-fill-in-progress record from GET /applications/draft — never appears in /applications
+export interface DraftApplication {
+  id: string;
+  mobileNumber: string;
+  email: string;
+  currentStep: number; // 1-5, last step successfully saved
+  formData: Record<string, unknown>;
+  status: "in_progress";
+  label: "in_progress" | "abandoned"; // "abandoned" once 24h+ have passed with no step saved
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface DraftCounts {
+  step1: number;
+  step2: number;
+  step3: number;
+  step4: number;
+  step5: number;
+}
+
+export interface DraftsResponse {
+  drafts: DraftApplication[];
+  hasMore: boolean;
+  nextCursor: string | null;
+  counts?: DraftCounts; // only present on first page (no `after` param)
 }
 
 export interface CohortSettings {

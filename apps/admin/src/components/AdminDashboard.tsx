@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, logOutAdmin } from "@shared/firebase";
-import { FellowshipApplication, ContactMessage, BrochureRequest, PaymentMode } from "@shared/types";
+import {
+  FellowshipApplication, ContactMessage, BrochureRequest, PaymentMode,
+  ApplicationPaymentInfo, DraftApplication, DraftCounts,
+} from "@shared/types";
 import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
 import { CustomSelect } from "./CustomSelect";
@@ -13,6 +16,7 @@ import {
   MessageSquare, KeyRound, CreditCard, RefreshCw,
   ArrowLeft, Phone, MapPin, FileText, Clock,
   Eye, Users, Ban, CalendarCog, Download,
+  Hourglass, Layers,
 } from "lucide-react";
 
 const goToSite = () => {
@@ -45,6 +49,18 @@ const CONTACT_STATUS_CFG: Record<string, { dot: string; label: string; badge: st
   read:     { dot: "bg-brand-neutral/40",  label: "Read",      badge: "bg-gray-50 text-gray-500 border border-gray-200",     darkBadge: "bg-white/15 text-white/70 border border-white/20" },
   archived: { dot: "bg-brand-neutral/20",  label: "Archived",  badge: "bg-gray-50 text-gray-400 border border-gray-150",     darkBadge: "bg-white/10 text-white/50 border border-white/15" },
 };
+
+const DRAFT_STATUS_CFG: Record<string, { dot: string; label: string; badge: string; darkBadge: string }> = {
+  in_progress: { dot: "bg-amber-400", label: "In Progress", badge: "bg-amber-50 text-amber-700 border border-amber-200", darkBadge: "bg-[#D4A62A]/25 text-[#D4A62A] border border-[#D4A62A]/40" },
+  abandoned:   { dot: "bg-gray-400",  label: "Abandoned",   badge: "bg-gray-100 text-gray-600 border border-gray-300",   darkBadge: "bg-white/10 text-white/60 border border-white/20" },
+};
+
+// Turns a formData key like "primaryReasonOther" into "Primary Reason Other"
+const humanizeKey = (key: string): string =>
+  key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
 
 // Reusable section header — left accent bar
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -130,7 +146,7 @@ export const AdminDashboard: React.FC = () => {
     setConfirmModal({ message, onConfirm });
   };
 
-  const [activeTab, setActiveTab] = useState<"applications" | "contacts" | "brochures">("applications");
+  const [activeTab, setActiveTab] = useState<"applications" | "contacts" | "brochures" | "drafts">("applications");
 
   const [appSearch, setAppSearch]         = useState("");
   const [sectorFilter, setSectorFilter]   = useState("all");
@@ -140,8 +156,11 @@ export const AdminDashboard: React.FC = () => {
   const [brochureSearch, setBrochureSearch] = useState("");
 
   const [selectedApp, setSelectedApp]         = useState<FellowshipApplication | null>(null);
+  const [selectedAppPayment, setSelectedAppPayment] = useState<ApplicationPaymentInfo | null>(null);
+  const [selectedAppDetailLoading, setSelectedAppDetailLoading] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactMessage | null>(null);
   const [selectedBrochureRequest, setSelectedBrochureRequest] = useState<BrochureRequest | null>(null);
+  const [selectedDraft, setSelectedDraft] = useState<DraftApplication | null>(null);
 
   const [resendingPaymentLink, setResendingPaymentLink] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
@@ -167,9 +186,18 @@ export const AdminDashboard: React.FC = () => {
   const [brochurePageLoading, setBrochurePageLoading] = useState(false);
   const brochurePageRef                               = useRef(1);
 
+  const [drafts, setDrafts]                         = useState<DraftApplication[]>([]);
+  const [draftPage, setDraftPage]                   = useState(1);
+  const [draftPageCursors, setDraftPageCursors]     = useState<(string | null)[]>([null]);
+  const [draftTotalPages, setDraftTotalPages]       = useState(1);
+  const [draftHasMore, setDraftHasMore]             = useState(false);
+  const [draftPageLoading, setDraftPageLoading]     = useState(false);
+  const draftPageRef                                = useRef(1);
+
   const [appCounts, setAppCounts]         = useState({ total: 0, pending: 0, under_review: 0, accepted: 0, paid: 0 });
   const [contactCounts, setContactCounts] = useState({ total: 0, unread: 0 });
   const [brochureCounts, setBrochureCounts] = useState({ total: 0 });
+  const [draftCounts, setDraftCounts] = useState<DraftCounts>({ step1: 0, step2: 0, step3: 0, step4: 0, step5: 0 });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -337,6 +365,38 @@ export const AdminDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchDraftPage = useCallback(async (
+    page: number,
+    cursors: (string | null)[],
+    signal?: AbortSignal,
+  ) => {
+    if (!auth.currentUser) return;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      if (signal?.aborted) return;
+      const cursor = cursors[page - 1] ?? null;
+      const url    = cursor
+        ? `${API_URL}/applications/draft?limit=50&after=${cursor}`
+        : `${API_URL}/applications/draft?limit=50`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
+      if (res.status === 401) { setIsAdminAuthorized(false); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { drafts: list, hasMore, nextCursor, counts } = await res.json();
+      setDrafts(list as DraftApplication[]);
+      setDraftHasMore(hasMore);
+      if (nextCursor) {
+        setDraftPageCursors((prev) => { const c = [...prev]; c[page] = nextCursor; return c; });
+        setDraftTotalPages((prev) => Math.max(prev, page + 1));
+      } else {
+        setDraftTotalPages(page);
+      }
+      if (counts) setDraftCounts(counts);
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      console.error("Failed to load incomplete applications:", err);
+    }
+  }, []);
+
   const goToAppPage = async (page: number) => {
     if (page === appPage || appPageLoading || page < 1) return;
     if (page > 1 && !appPageCursors[page - 1]) return;
@@ -370,14 +430,27 @@ export const AdminDashboard: React.FC = () => {
     setBrochurePageLoading(false);
   };
 
+  const goToDraftPage = async (page: number) => {
+    if (page === draftPage || draftPageLoading || page < 1) return;
+    if (page > 1 && !draftPageCursors[page - 1]) return;
+    setDraftPageLoading(true);
+    setSelectedDraft(null);
+    await fetchDraftPage(page, draftPageCursors);
+    setDraftPage(page);
+    draftPageRef.current = page;
+    setDraftPageLoading(false);
+  };
+
   useEffect(() => {
     if (!currentUser || !isAdminAuthorized) {
       setApplications([]);
       setContacts([]);
       setBrochureRequests([]);
+      setDrafts([]);
       setAppPage(1); setAppPageCursors([null]); setAppTotalPages(1); setAppHasMore(false);
       setContactPage(1); setContactPageCursors([null]); setContactTotalPages(1); setContactHasMore(false);
       setBrochurePage(1); setBrochurePageCursors([null]); setBrochureTotalPages(1); setBrochureHasMore(false);
+      setDraftPage(1); setDraftPageCursors([null]); setDraftTotalPages(1); setDraftHasMore(false);
       return;
     }
 
@@ -387,20 +460,24 @@ export const AdminDashboard: React.FC = () => {
     const initialAppCursors      = [null] as (string | null)[];
     const initialContactCursors  = [null] as (string | null)[];
     const initialBrochureCursors = [null] as (string | null)[];
+    const initialDraftCursors    = [null] as (string | null)[];
 
     const initialController = new AbortController();
     fetchAppPage(1, initialAppCursors, initialController.signal);
     fetchContactPage(1, initialContactCursors, initialController.signal);
     fetchBrochurePage(1, initialBrochureCursors, initialController.signal);
+    fetchDraftPage(1, initialDraftCursors, initialController.signal);
 
     const appCursorsRef      = { current: initialAppCursors };
     const contactCursorsRef  = { current: initialContactCursors };
     const brochureCursorsRef = { current: initialBrochureCursors };
+    const draftCursorsRef    = { current: initialDraftCursors };
 
     const syncCursors = () => {
       setAppPageCursors((c) => { appCursorsRef.current = c; return c; });
       setContactPageCursors((c) => { contactCursorsRef.current = c; return c; });
       setBrochurePageCursors((c) => { brochureCursorsRef.current = c; return c; });
+      setDraftPageCursors((c) => { draftCursorsRef.current = c; return c; });
     };
 
     let pollController: AbortController | null = null;
@@ -411,6 +488,7 @@ export const AdminDashboard: React.FC = () => {
       fetchAppPage(appPageRef.current, appCursorsRef.current, pollController.signal);
       fetchContactPage(contactPageRef.current, contactCursorsRef.current, pollController.signal);
       fetchBrochurePage(brochurePageRef.current, brochureCursorsRef.current, pollController.signal);
+      fetchDraftPage(draftPageRef.current, draftCursorsRef.current, pollController.signal);
     }, 15000);
 
     return () => {
@@ -418,14 +496,44 @@ export const AdminDashboard: React.FC = () => {
       pollController?.abort();
       clearInterval(interval);
     };
-  }, [currentUser, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage]);
+  }, [currentUser, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage, fetchDraftPage]);
+
+  // Fetch the full applicant record (every field + linked payment) whenever a row is opened —
+  // the paginated list response only carries a trimmed subset of fields.
+  useEffect(() => {
+    if (!selectedApp?.id) { setSelectedAppPayment(null); return; }
+    const appId = selectedApp.id;
+    const controller = new AbortController();
+    setSelectedAppDetailLoading(true);
+    (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${API_URL}/applications/${appId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { application, payment } = await res.json();
+        setSelectedApp((prev) => (prev && prev.id === appId ? { ...prev, ...application } : prev));
+        setSelectedAppPayment(payment ?? null);
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.error("Failed to load application detail:", err);
+      } finally {
+        if (!controller.signal.aborted) setSelectedAppDetailLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [selectedApp?.id]);
 
   const handleLogout = async () => {
     try {
       await logOutAdmin();
       setSelectedApp(null);
+      setSelectedAppPayment(null);
       setSelectedContact(null);
       setSelectedBrochureRequest(null);
+      setSelectedDraft(null);
     } catch (err: any) {
       console.error("Logout failure:", err);
     }
@@ -445,7 +553,7 @@ export const AdminDashboard: React.FC = () => {
         applicantName: String(app.fullName || "this applicant"),
         applicantEmail: String(app.email || ""),
         feeDisplay,
-        rzpPaymentId: String((app as any).rzpPaymentId || ""),
+        rzpPaymentId: String(app.paymentOrderId || app.paymentLinkId || ""),
       });
       return;
     }
@@ -899,9 +1007,9 @@ export const AdminDashboard: React.FC = () => {
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1">
-          {(["applications", "contacts", "brochures"] as const).map((tab) => {
-            const count = tab === "applications" ? applications.length : tab === "contacts" ? contacts.length : brochureRequests.length;
-            const label = tab === "applications" ? `Applications` : tab === "contacts" ? `Messages` : `Brochures`;
+          {(["applications", "drafts", "contacts", "brochures"] as const).map((tab) => {
+            const count = tab === "applications" ? applications.length : tab === "contacts" ? contacts.length : tab === "brochures" ? brochureRequests.length : drafts.length;
+            const label = tab === "applications" ? `Applications` : tab === "contacts" ? `Messages` : tab === "brochures" ? `Brochures` : `Incomplete`;
             const active = activeTab === tab;
             return (
               <button
@@ -911,6 +1019,7 @@ export const AdminDashboard: React.FC = () => {
                   if (tab !== "applications") setSelectedApp(null);
                   if (tab !== "contacts") setSelectedContact(null);
                   if (tab !== "brochures") setSelectedBrochureRequest(null);
+                  if (tab !== "drafts") setSelectedDraft(null);
                 }}
                 className={`flex items-center gap-2 px-5 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold ${
                   active
@@ -1144,6 +1253,106 @@ export const AdminDashboard: React.FC = () => {
               </>
             )}
 
+            {/* DRAFTS (Incomplete Applications) tab */}
+            {activeTab === "drafts" && (
+              <>
+                {/* Step breakdown stat tiles */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {([1, 2, 3, 4, 5] as const).map((step) => (
+                    <div
+                      key={step}
+                      className="bg-[#082C6C] border border-white/10 rounded-sm px-4 py-4 flex items-center gap-3 shadow-sm hover:bg-[#0a3580] transition-colors cursor-default"
+                    >
+                      <div className="h-9 w-9 rounded-md bg-[#D4A62A]/15 flex items-center justify-center shrink-0">
+                        <Layers className="h-4 w-4 text-[#D4A62A]" />
+                      </div>
+                      <div className="min-w-0 flex flex-col gap-1.5">
+                        <span className="block font-serif text-[24px] font-black leading-none text-white">
+                          {draftCounts[`step${step}` as keyof DraftCounts]}
+                        </span>
+                        <span className="block font-mono text-[9px] text-white/40 uppercase tracking-[0.09em] truncate">Stuck at Step {step}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Empty */}
+                {drafts.length === 0 && (
+                  <div className="bg-white border border-brand-secondary/10 p-12 text-center rounded-sm shadow-sm">
+                    <p className="font-serif text-base font-bold text-brand-text">No Incomplete Applications</p>
+                    <p className="font-sans text-xs text-brand-neutral mt-1">Everyone who started the form has either finished it or hasn't saved a step yet.</p>
+                  </div>
+                )}
+
+                {/* Draft list */}
+                {drafts.length > 0 && (
+                  <div className="bg-white border border-brand-secondary/10 rounded-sm overflow-hidden shadow-sm divide-y divide-brand-secondary/8">
+                    {drafts.map((d) => {
+                      const isSelected = selectedDraft?.id === d.id;
+                      const sc = DRAFT_STATUS_CFG[d.label] ?? DRAFT_STATUS_CFG.in_progress;
+                      const name = (d.formData?.fullName as string | undefined) || d.email || d.mobileNumber || "Unnamed applicant";
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => setSelectedDraft(d)}
+                          className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-all ${
+                            isSelected
+                              ? "bg-[#082C6C]/[0.06] border-l-[3px] border-l-[#D4A62A]"
+                              : "border-l-[3px] border-l-transparent hover:bg-[#082C6C]/[0.03]"
+                          }`}
+                        >
+                          <div className="w-9 h-9 rounded-full bg-brand-secondary/10 flex items-center justify-center shrink-0 ring-2 ring-brand-secondary/15">
+                            <span className="font-mono text-[11px] font-black text-brand-secondary">{getInitials(name)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-sans text-sm font-semibold text-brand-text truncate max-w-[180px]">{name}</span>
+                              <span className="font-mono text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-full bg-brand-secondary/10 text-brand-secondary flex items-center gap-1">
+                                <Layers className="h-2.5 w-2.5" /> Step {d.currentStep} of 5
+                              </span>
+                              <span className={`font-mono text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-full ${sc.badge}`}>
+                                {sc.label}
+                              </span>
+                            </div>
+                            <p className="font-sans text-xs text-brand-neutral truncate mt-0.5">
+                              <span className="opacity-70">{d.email || "—"}</span>
+                              <span className="mx-1 opacity-40">·</span>
+                              <span className="font-mono opacity-70">{d.mobileNumber || "—"}</span>
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right hidden sm:block">
+                            <span className="font-mono text-[9px] text-brand-neutral block">{renderShortDate(d.updatedAt)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {draftTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-1 flex-wrap pt-1">
+                    <button onClick={() => goToDraftPage(draftPage - 1)} disabled={draftPage === 1 || draftPageLoading}
+                      className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                      Prev
+                    </button>
+                    {Array.from({ length: draftTotalPages }, (_, i) => i + 1).map((p) => (
+                      <button key={p} onClick={() => goToDraftPage(p)} disabled={draftPageLoading}
+                        className={`w-8 h-8 font-mono text-[10px] font-bold rounded-sm border transition-all cursor-pointer ${
+                          p === draftPage ? "bg-brand-secondary text-white border-brand-secondary" : "bg-white border-brand-secondary/20 text-brand-neutral hover:bg-brand-secondary/5"
+                        }`}>
+                        {draftPageLoading && p === draftPage ? <RefreshCw className="h-3 w-3 animate-spin mx-auto" /> : p}
+                      </button>
+                    ))}
+                    <button onClick={() => goToDraftPage(draftPage + 1)} disabled={!draftHasMore || draftPageLoading}
+                      className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                      Next
+                    </button>
+                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {draftPage} of {draftTotalPages}{draftHasMore ? "+" : ""}</span>
+                  </div>
+                )}
+              </>
+            )}
+
             {/* CONTACTS tab */}
             {activeTab === "contacts" && (
               <>
@@ -1338,13 +1547,13 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* ── DETAIL DRAWER ── */}
-          {((activeTab === "applications" && selectedApp !== null) || (activeTab === "contacts" && selectedContact !== null) || (activeTab === "brochures" && selectedBrochureRequest !== null)) && (
+          {((activeTab === "applications" && selectedApp !== null) || (activeTab === "contacts" && selectedContact !== null) || (activeTab === "brochures" && selectedBrochureRequest !== null) || (activeTab === "drafts" && selectedDraft !== null)) && (
           <div className="fixed inset-0 z-50 flex" style={{ animation: "fadeInBackdrop 0.2s ease-out" }}>
             {/* Blurred left half — click to dismiss */}
             <div
               className="w-[42%] h-full cursor-pointer"
               style={{ backdropFilter: "blur(4px) brightness(0.68)", backgroundColor: "rgba(6, 26, 66, 0.30)" }}
-              onClick={() => { setSelectedApp(null); setSelectedContact(null); setSelectedBrochureRequest(null); }}
+              onClick={() => { setSelectedApp(null); setSelectedContact(null); setSelectedBrochureRequest(null); setSelectedDraft(null); }}
             />
             {/* Drawer panel — right half */}
             <div className="w-[58%] h-full flex flex-col bg-white shadow-2xl border-l border-[#082C6C]/20 overflow-hidden" style={{ animation: "slideInRight 0.28s cubic-bezier(0.25,0.46,0.45,0.94)" }}>
@@ -1410,6 +1619,11 @@ export const AdminDashboard: React.FC = () => {
                                 >
                                   {selectedApp.id}
                                 </span>
+                                {selectedAppDetailLoading && (
+                                  <span className="flex items-center gap-1 font-mono text-[8px] text-white/40 uppercase tracking-wider">
+                                    <RefreshCw className="h-2.5 w-2.5 animate-spin" /> Loading full profile…
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1546,7 +1760,8 @@ export const AdminDashboard: React.FC = () => {
                               label="Discovery"
                               value={selectedApp.discoverySource === "Other" ? selectedApp.discoverySourceOther : selectedApp.discoverySource}
                             />
-                            <InfoRow label="Submitted" value={renderShortDate(selectedApp.createdAt)} mono />
+                            <InfoRow label="Submitted" value={renderTimestamp(selectedApp.createdAt)} mono />
+                            <InfoRow label="Last Updated" value={renderTimestamp(selectedApp.updatedAt)} mono />
                           </div>
 
                           {/* Resume */}
@@ -1637,16 +1852,16 @@ export const AdminDashboard: React.FC = () => {
                                   )}
                                 </div>
 
-                                {selectedApp.rzpPaymentId && (
+                                {selectedApp.paymentOrderId && (
                                   <div>
-                                    <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-1">Payment ID</span>
+                                    <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-1">Order ID</span>
                                     <div className="flex items-center gap-2">
                                       <code className="font-mono text-[10px] text-brand-secondary bg-[#FAFAF8] border border-brand-secondary/10 px-2 py-1 rounded-sm flex-1 truncate">
-                                        {selectedApp.rzpPaymentId}
+                                        {selectedApp.paymentOrderId}
                                       </code>
                                       <button
                                         type="button"
-                                        onClick={() => { navigator.clipboard.writeText(selectedApp.rzpPaymentId || ""); showToast("Payment ID copied!", "success"); }}
+                                        onClick={() => { navigator.clipboard.writeText(selectedApp.paymentOrderId || ""); showToast("Order ID copied!", "success"); }}
                                         className="font-mono text-[9px] text-brand-accent hover:underline cursor-pointer shrink-0"
                                       >
                                         Copy
@@ -1655,9 +1870,62 @@ export const AdminDashboard: React.FC = () => {
                                   </div>
                                 )}
 
-                                {selectedApp.paidAt && (
-                                  <InfoRow label="Paid At" value={renderTimestamp(selectedApp.paidAt)} mono />
+                                {selectedApp.paymentLinkId && (
+                                  <div>
+                                    <span className="block font-mono text-[9px] uppercase tracking-wider text-brand-neutral mb-1">Payment Link ID</span>
+                                    <div className="flex items-center gap-2">
+                                      <code className="font-mono text-[10px] text-brand-secondary bg-[#FAFAF8] border border-brand-secondary/10 px-2 py-1 rounded-sm flex-1 truncate">
+                                        {selectedApp.paymentLinkId}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => { navigator.clipboard.writeText(selectedApp.paymentLinkId || ""); showToast("Payment link ID copied!", "success"); }}
+                                        className="font-mono text-[9px] text-brand-accent hover:underline cursor-pointer shrink-0"
+                                      >
+                                        Copy
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
+
+                                {selectedApp.paymentLinkUrl && (
+                                  <a
+                                    href={selectedApp.paymentLinkUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 font-mono text-[10px] text-brand-accent hover:underline truncate"
+                                  >
+                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{selectedApp.paymentLinkUrl}</span>
+                                  </a>
+                                )}
+
+                                {(selectedAppPayment?.amount != null || selectedAppPayment?.currency) && (
+                                  <InfoRow
+                                    label="Amount"
+                                    value={
+                                      selectedAppPayment?.amount != null
+                                        ? `₹${(selectedAppPayment.amount / 100).toFixed(0)} ${selectedAppPayment.currency || ""}`.trim()
+                                        : undefined
+                                    }
+                                    mono
+                                  />
+                                )}
+
+                                <div className="grid grid-cols-2 gap-2.5">
+                                  {selectedApp.paymentLinkSentAt && (
+                                    <InfoRow label="Link Sent" value={renderTimestamp(selectedApp.paymentLinkSentAt)} mono />
+                                  )}
+                                  {selectedApp.paidAt && (
+                                    <InfoRow label="Paid At" value={renderTimestamp(selectedApp.paidAt)} mono />
+                                  )}
+                                  {selectedAppPayment?.expiresAt && (
+                                    <InfoRow label="Link Expires" value={renderTimestamp(selectedAppPayment.expiresAt)} mono />
+                                  )}
+                                  {selectedAppPayment?.refundId && (
+                                    <InfoRow label="Refund ID" value={selectedAppPayment.refundId} mono />
+                                  )}
+                                </div>
 
                                 {["expired", "error", "failed"].includes(selectedApp.paymentStatus || "") && (
                                   <button
@@ -2028,6 +2296,115 @@ export const AdminDashboard: React.FC = () => {
                       </p>
                       <p className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-wider">
                         {filteredBrochureRequests.length} request{filteredBrochureRequests.length !== 1 ? "s" : ""} in view
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── DRAFT (INCOMPLETE APPLICATION) DETAIL ── */}
+              {activeTab === "drafts" && (
+                <>
+                  {selectedDraft ? (
+                      <>
+                        {/* Header */}
+                        <div className="shrink-0 border-b border-white/10" style={{ background: "linear-gradient(135deg, #061a42 0%, #0D3B8E 100%)" }}>
+                          <div className="flex items-center justify-between px-5 pt-4">
+                            <span className="font-mono text-[8px] text-white/25 uppercase tracking-[0.14em]">Incomplete Application</span>
+                            <button
+                              onClick={() => setSelectedDraft(null)}
+                              className="h-7 w-7 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+                              title="Close"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="flex items-start gap-4 px-5 pt-3 pb-5">
+                            <div className="w-14 h-14 rounded-full bg-white/15 border-2 border-[#D4A62A]/70 flex items-center justify-center shrink-0 shadow-lg">
+                              <span className="font-serif text-lg font-black text-white">
+                                {getInitials((selectedDraft.formData?.fullName as string | undefined) || selectedDraft.email || "?")}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <h3 className="font-serif text-xl font-bold text-white leading-tight">
+                                  {(selectedDraft.formData?.fullName as string | undefined) || "Unnamed applicant"}
+                                </h3>
+                                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                  <span className={`font-mono text-[9px] px-2.5 py-1 font-bold uppercase tracking-wider rounded-full ${(DRAFT_STATUS_CFG[selectedDraft.label] ?? DRAFT_STATUS_CFG.in_progress).darkBadge}`}>
+                                    {(DRAFT_STATUS_CFG[selectedDraft.label] ?? DRAFT_STATUS_CFG.in_progress).label}
+                                  </span>
+                                  <span className="font-mono text-[9px] px-2.5 py-1 font-bold uppercase tracking-wider rounded-full flex items-center gap-1 bg-white/10 text-white/70 border border-white/20">
+                                    <Layers className="h-2.5 w-2.5" /> Step {selectedDraft.currentStep} of 5
+                                  </span>
+                                </div>
+                              </div>
+                              {selectedDraft.email && (
+                                <a href={`mailto:${selectedDraft.email}`} className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1">
+                                  <Mail className="h-3 w-3" /> {selectedDraft.email}
+                                </a>
+                              )}
+                              <div className="flex items-center gap-3 font-mono text-[9px] text-white/35 flex-wrap">
+                                {selectedDraft.mobileNumber && <span className="flex items-center gap-1"><Phone className="h-2.5 w-2.5" />{selectedDraft.mobileNumber}</span>}
+                                <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" />Last saved {renderShortDate(selectedDraft.updatedAt)}</span>
+                              </div>
+                              <div className="mt-1.5 flex items-center gap-1.5">
+                                <span className="font-mono text-[9px] text-white/30 uppercase tracking-wider">ID:</span>
+                                <span
+                                  className="font-mono text-[9px] text-white/50 cursor-pointer hover:text-[#D4A62A] transition-colors"
+                                  title="Click to copy"
+                                  onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(selectedDraft.id); showToast("Draft ID copied!", "success"); }}
+                                >
+                                  {selectedDraft.id}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Scrollable content */}
+                        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-5 bg-[#F8F7F5]">
+                          <div>
+                            <SectionLabel>Timeline</SectionLabel>
+                            <div className="grid grid-cols-2 gap-3">
+                              <InfoRow label="Created" value={renderTimestamp(selectedDraft.createdAt)} mono />
+                              <InfoRow label="Last Saved" value={renderTimestamp(selectedDraft.updatedAt)} mono />
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-brand-secondary/15 rounded-sm p-4 space-y-3 shadow-sm">
+                            <div className="flex items-center gap-2 pb-2 border-b border-brand-secondary/10">
+                              <div className="w-[3px] h-3.5 bg-[#D4A62A] rounded-full shrink-0" />
+                              <span className="font-mono text-[9px] text-[#082C6C] uppercase tracking-[0.1em] font-bold">Fields Filled So Far</span>
+                            </div>
+                            {Object.entries(selectedDraft.formData || {}).filter(([, v]) => v !== undefined && v !== null && v !== "").length === 0 ? (
+                              <p className="font-sans text-xs text-brand-neutral italic">No step data saved yet.</p>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2.5">
+                                {Object.entries(selectedDraft.formData || {})
+                                  .filter(([, v]) => v !== undefined && v !== null && v !== "")
+                                  .map(([key, value]) => (
+                                    <InfoRow
+                                      key={key}
+                                      label={humanizeKey(key)}
+                                      value={typeof value === "string" ? value : JSON.stringify(value)}
+                                    />
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-2">
+                      <div className="h-10 w-10 rounded-full bg-brand-secondary/5 flex items-center justify-center">
+                        <Hourglass className="h-5 w-5 text-brand-neutral/30" />
+                      </div>
+                      <p className="font-serif italic text-sm text-brand-neutral">
+                        Select a drop-off to view saved fields
+                      </p>
+                      <p className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-wider">
+                        {drafts.length} incomplete application{drafts.length !== 1 ? "s" : ""} in view
                       </p>
                     </div>
                   )}

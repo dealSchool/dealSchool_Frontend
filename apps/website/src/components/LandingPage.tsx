@@ -136,7 +136,10 @@ export const LandingPage: React.FC = () => {
   const [isBrochureModalOpen, setIsBrochureModalOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const handleApplyClick = () => { window.location.href = "/applynow"; };
+  const handleApplyClick = () => {
+    sessionStorage.setItem("applyReturnPath", "/cohort1");
+    window.location.href = "/applynow";
+  };
   const handleBrochureClick = () => setIsBrochureModalOpen(true);
 
   return (
