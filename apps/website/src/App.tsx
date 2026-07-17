@@ -202,7 +202,7 @@ const FoundingTeamSection: React.FC<{ className?: string }> = ({ className = "" 
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 mb-8 border-b border-brand-secondary/10">
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-text tracking-tight">
-            Founding Team
+            Core Team
           </h2>
 
           
@@ -465,7 +465,7 @@ export default function App() {
                       </h1>
 
                       <p className="font-serif text-base md:text-lg text-brand-neutral leading-relaxed max-w-xl opacity-90">
-                        DealSchool is a 10-week, cohort-based VC fellowship. You won&apos;t be taught about startups. You&apos;ll screen them, sit inside pitch calls, run due diligence, talk directly to founders, and make actual investment calls. Not slides. Not theory. The real thing.
+                        DealSchool is a 10-week, cohort-based VC fellowship built around the actual venture capital workflow. You&apos;ll observe live pitch calls, evaluate startups, practice due diligence, analyze investment opportunities, and see how experienced investors think before every investment decision. No case studies. No simulations. Just real venture capital.
                       </p>
 
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-6">
@@ -563,7 +563,7 @@ export default function App() {
 
                     <div className="text-center mt-12 bg-brand-secondary text-brand-bg rounded-sm p-8 border border-brand-accent/20">
                       <p className="font-serif italic text-lg md:text-xl font-bold">
-                        &ldquo;It&apos;s a fellowship. With real investors. Real startups. Real decisions.&rdquo;
+                        &ldquo;It&apos;s a fellowship. With Real investors. Real startups. Real decisions.&rdquo;
                       </p>
                     </div>
                   </div>
@@ -787,7 +787,7 @@ export default function App() {
 
                   <div className="max-w-[800px] text-left">
                     <p className="font-serif text-base md:text-lg leading-relaxed text-brand-secondary">
-                      While traditional programs such as the <span className="font-bold text-brand-text">CFA®</span> focus on public markets and portfolio management, and <span className="font-bold text-brand-text">MBA Finance</span> programs emphasize corporate finance and business administration, <span className="text-brand-accent font-bold">DealSchool</span> is designed around the realities of early-stage investing. The curriculum focuses on founder evaluation, technical diligence, venture economics, and live deal execution—providing practical exposure to how venture capital decisions are made.
+                      While traditional programs such as the <span className="font-bold text-brand-text">CFA®</span> focus on public markets and portfolio management, and <span className="font-bold text-brand-text">MBA Finance</span> programs emphasize corporate finance and business administration, <span className="text-brand-accent font-bold">DealSchool</span> is designed around the realities of early-stage investing. The curriculum focuses on founder evaluation, technical diligence, venture economics, and live deal execution, providing practical exposure to how venture capital decisions are made.
                     </p>
                   </div>
                 </section>
@@ -1046,7 +1046,7 @@ export default function App() {
                           <Globe className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
                           <div>
                             <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">PROGRAM STRUCTURE</span>
-                            <span className="font-bold text-brand-text">Online-First</span>
+                            <span className="font-bold text-brand-text">Online</span>
                           </div>
                         </div>
                       </div>
@@ -1170,7 +1170,7 @@ export default function App() {
                               <span>Routing Message Pipeline...</span>
                             ) : (
                               <>
-                                Submit Secure Query <ArrowRight className="h-4 w-4 text-brand-accent" />
+                                Submit Query <ArrowRight className="h-4 w-4 text-brand-accent" />
                               </>
                             )}
                           </button>
