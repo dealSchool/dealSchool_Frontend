@@ -488,7 +488,7 @@ export default function App() {
                           onClick={handleApplyClick}
                           className="bg-brand-secondary text-brand-bg px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-brand-secondary/25 hover:bg-brand-dark-blue transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                         >
-                          Apply for the Next Cohort <ArrowRight className="h-4 w-4 text-brand-accent" />
+                          Apply for Cohort 1 <ArrowRight className="h-4 w-4 text-brand-accent" />
                         </button>
                         <button
                           onClick={() => handlePageChange("program")}
@@ -863,7 +863,7 @@ export default function App() {
                     onClick={handleApplyClick}
                     className="px-8 py-4 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer"
                   >
-                    Apply for Next Cohort
+                    Apply for Cohort 1
                   </button>
                 </div>
 
