@@ -506,7 +506,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
     }
 
     if (step === 5) {
-      const resumeOk = isValidUrl(formData.resumeLink) && formData.resumeLink.trim() !== "";
+      const resumeOk = formData.resumeLink.trim() === "" || isValidUrl(formData.resumeLink);
       const sourceOk = formData.discoverySource !== "" && (formData.discoverySource !== "Other" || formData.discoverySourceOther.trim() !== "");
       return resumeOk && sourceOk && agreedToTerms;
     }
@@ -1601,7 +1601,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {/* Resume URL */}
                     <div className="space-y-1.5">
                       <label htmlFor="resumeLink" className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                        Resume Link <span className="text-brand-accent">*</span>
+                        Resume Link <span className="text-brand-neutral/60 font-normal">(Optional)</span>
                       </label>
                       <div className="relative">
                         <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
@@ -1609,7 +1609,6 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           id="resumeLink"
                           type="url"
                           name="resumeLink"
-                          required
                           maxLength={LIMITS.resumeLink}
                           value={formData.resumeLink}
                           onChange={(e) => {
