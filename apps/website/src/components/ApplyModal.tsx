@@ -191,6 +191,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
   // Resume Link State
   const [resumeLinkError, setResumeLinkError] = useState<string | null>(null);
+  const [termsError, setTermsError] = useState<string | null>(null);
 
   // Terms & Conditions acknowledgement (required before final submission)
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -452,53 +453,16 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
         !dupCheck.phone.alreadyApplied &&
         formData.fullName.trim() !== "" &&
         PHONE_REGEX.test(formData.mobileNumber.trim()) &&
-        EMAIL_REGEX.test(formData.email.trim()) &&
-        formData.city.trim() !== ""
+        EMAIL_REGEX.test(formData.email.trim())
       );
     }
 
     if (step === 2) {
-      if (!formData.currentStatus) return false;
-
-      switch (formData.currentStatus) {
-        case "Student":
-          return (
-            formData.collegeName.trim() !== "" &&
-            formData.degree.trim() !== "" &&
-            formData.graduationYear.trim() !== ""
-          );
-        case "Recent Graduate (0–2 years of experience)":
-          return (
-            formData.currentRole.trim() !== "" &&
-            formData.companyName.trim() !== "" &&
-            formData.graduationYear.trim() !== "" &&
-            formData.degreeEducationalBackground.trim() !== ""
-          );
-        case "Working Professional":
-          return (
-            formData.currentRole.trim() !== "" &&
-            formData.companyName.trim() !== "" &&
-            formData.yearsOfExperience.trim() !== ""
-          );
-        case "Founder":
-          return (
-            formData.startupName.trim() !== "" &&
-            formData.industrySector.trim() !== ""
-          );
-        case "Freelancer":
-          return (
-            formData.areaOfWork.trim() !== "" &&
-            formData.yearsOfExperience.trim() !== ""
-          );
-        case "Other":
-          return formData.otherStatusSpecify.trim() !== "";
-        default:
-          return false;
-      }
+      return true;
     }
 
     if (step === 3) {
-      return formData.primaryReason !== "" && (formData.primaryReason !== "Other" || formData.primaryReasonOther.trim() !== "");
+      return true;
     }
 
     if (step === 4) {
@@ -507,8 +471,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
 
     if (step === 5) {
       const resumeOk = formData.resumeLink.trim() === "" || isValidUrl(formData.resumeLink);
-      const sourceOk = formData.discoverySource !== "" && (formData.discoverySource !== "Other" || formData.discoverySourceOther.trim() !== "");
-      return resumeOk && sourceOk && agreedToTerms;
+      return resumeOk && agreedToTerms;
     }
 
     return true;
@@ -612,6 +575,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
   const submitForm = async () => {
     setIsSubmitting(true);
     setErrorMessage(null);
+    setTermsError(null);
 
     if (!isStepValid()) {
       setIsSubmitting(false);
@@ -634,6 +598,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
           resumeUrl: formData.resumeLink,
           discoverySource: formData.discoverySource,
           discoverySourceOther: formData.discoverySourceOther,
+          agreedToTerms: agreedToTerms,
         }),
       });
 
@@ -663,6 +628,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+        if (res.status === 400 && err.error === "You must agree to the Terms & Conditions") {
+          setTermsError(err.error);
+          return;
+        }
         throw new Error(err.error || `Server error (${res.status})`);
       }
 
@@ -695,6 +664,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
       setStep(1);
       setDraftId(null);
       setResumeLinkError(null);
+      setTermsError(null);
       setErrorMessage(null);
       setSubmittedDocId("");
       setAgreedToTerms(false);
@@ -941,14 +911,13 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       {/* City */}
                       <div className="space-y-1.5">
                         <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                          City / Location <span className="text-brand-accent">*</span>
+                          City / Location <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                         </label>
                         <div className="relative">
                           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral/60 pointer-events-none" />
                           <input
                             type="text"
                             name="city"
-                            required
                             maxLength={LIMITS.city}
                             value={formData.city}
                             onChange={handleInputChange}
@@ -1051,7 +1020,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {/* Status Select */}
                     <div className="space-y-1.5">
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                        Current Status <span className="text-brand-accent">*</span>
+                        Current Status <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                       </label>
                       <CustomSelect
                         value={formData.currentStatus}
@@ -1085,11 +1054,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           className="space-y-3 pt-2 border-t border-brand-secondary/5"
                         >
                           <div className="space-y-1">
-                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">College Name <span className="text-brand-accent">*</span></label>
+                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">College Name <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                             <input
                               type="text"
                               name="collegeName"
-                              required
                               maxLength={LIMITS.collegeName}
                               value={formData.collegeName}
                               onChange={handleInputChange}
@@ -1099,11 +1067,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Degree <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Degree <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="degree"
-                               required
                                maxLength={LIMITS.degree}
                                value={formData.degree}
                                onChange={handleInputChange}
@@ -1112,11 +1079,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Graduation Year <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Graduation Year <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="graduationYear"
-                               required
                                maxLength={LIMITS.graduationYear}
                                inputMode="numeric"
                                pattern="\d{4}"
@@ -1140,11 +1106,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Current Role <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Current Role <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="currentRole"
-                               required
                                maxLength={LIMITS.currentRole}
                                value={formData.currentRole}
                                onChange={handleInputChange}
@@ -1153,11 +1118,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Company Name <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Company Name <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="companyName"
-                               required
                                maxLength={LIMITS.companyName}
                                value={formData.companyName}
                                onChange={handleInputChange}
@@ -1168,11 +1132,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Graduation Year <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Graduation Year <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="graduationYear"
-                               required
                                maxLength={LIMITS.graduationYear}
                                inputMode="numeric"
                                pattern="\d{4}"
@@ -1183,11 +1146,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Degree / Educational Background <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Degree / Educational Background <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="degreeEducationalBackground"
-                               required
                                maxLength={LIMITS.degreeBackground}
                                value={formData.degreeEducationalBackground}
                                onChange={handleInputChange}
@@ -1209,11 +1171,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Current Role <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Current Role <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="currentRole"
-                               required
                                maxLength={LIMITS.currentRole}
                                value={formData.currentRole}
                                onChange={handleInputChange}
@@ -1222,11 +1183,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Company Name <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Company Name <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="companyName"
-                               required
                                maxLength={LIMITS.companyName}
                                value={formData.companyName}
                                onChange={handleInputChange}
@@ -1236,7 +1196,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Years of Experience <span className="text-brand-accent">*</span></label>
+                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Years of Experience <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                             <CustomSelect
                               value={formData.yearsOfExperience}
                               onChange={(value) => setFormData((prev) => ({ ...prev, yearsOfExperience: value }))}
@@ -1262,11 +1222,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Startup Name <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Startup Name <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="startupName"
-                               required
                                maxLength={LIMITS.startupName}
                                value={formData.startupName}
                                onChange={handleInputChange}
@@ -1275,11 +1234,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Industry / Sector <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Industry / Sector <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="industrySector"
-                               required
                                maxLength={LIMITS.industrySector}
                                value={formData.industrySector}
                                onChange={handleInputChange}
@@ -1313,11 +1271,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                         >
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Area of Work <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Area of Work <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <input
                                type="text"
                                name="areaOfWork"
-                               required
                                maxLength={LIMITS.areaOfWork}
                                value={formData.areaOfWork}
                                onChange={handleInputChange}
@@ -1326,7 +1283,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Years of Experience <span className="text-brand-accent">*</span></label>
+                              <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Years of Experience <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                               <CustomSelect
                                 value={formData.yearsOfExperience}
                                 onChange={(value) => setFormData((prev) => ({ ...prev, yearsOfExperience: value }))}
@@ -1364,11 +1321,10 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                           className="pt-2 border-t border-brand-secondary/5"
                         >
                           <div className="space-y-1">
-                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Please Specify <span className="text-brand-accent">*</span></label>
+                            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase">Please Specify <span className="text-brand-neutral/40 font-normal">(Optional)</span></label>
                             <input
                               type="text"
                               name="otherStatusSpecify"
-                              required
                               maxLength={LIMITS.otherStatus}
                               value={formData.otherStatusSpecify}
                               onChange={handleInputChange}
@@ -1414,14 +1370,14 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                       Motivation & Intent
                     </h4>
                     <p className="font-sans text-xs text-brand-neutral leading-relaxed">
-                      This helps us align the program to your primary goal. One selection required.
+                      This helps us align the program to your primary goal.
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                        Primary reason for joining DealSchool <span className="text-brand-accent">*</span>
+                        Primary reason for joining DealSchool <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                       </label>
                       <CustomSelect
                         value={formData.primaryReason}
@@ -1443,12 +1399,11 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {formData.primaryReason === "Other" && (
                       <div className="space-y-1.5">
                         <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                          Please Specify <span className="text-brand-accent">*</span>
+                          Please Specify <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                         </label>
                         <input
                           type="text"
                           name="primaryReasonOther"
-                          required
                           maxLength={LIMITS.primaryReasonOther}
                           value={formData.primaryReasonOther}
                           onChange={handleInputChange}
@@ -1646,7 +1601,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {/* Discovery Source */}
                     <div className="space-y-1.5">
                       <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                        How did you hear about DealSchool? <span className="text-brand-accent">*</span>
+                        How did you hear about DealSchool? <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                       </label>
                       <CustomSelect
                         value={formData.discoverySource}
@@ -1666,12 +1621,11 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     {formData.discoverySource === "Other" && (
                       <div className="space-y-1.5">
                         <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
-                          Please Specify <span className="text-brand-accent">*</span>
+                          Please Specify <span className="text-brand-neutral/40 font-normal">(Optional)</span>
                         </label>
                         <input
                           type="text"
                           name="discoverySourceOther"
-                          required
                           maxLength={LIMITS.discoveryOther}
                           value={formData.discoverySourceOther}
                           onChange={handleInputChange}
@@ -1683,28 +1637,39 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ isOpen, onClose }) => {
                     )}
 
                     {/* Terms & Conditions consent */}
-                    <div className="flex items-start gap-2.5 pt-1">
-                      <input
-                        id="agreeTerms"
-                        type="checkbox"
-                        required
-                        checked={agreedToTerms}
-                        onChange={(e) => setAgreedToTerms(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border border-brand-secondary/30 text-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20 cursor-pointer"
-                      />
-                      <label htmlFor="agreeTerms" className="font-sans text-xs text-brand-neutral leading-relaxed cursor-pointer select-none">
-                        I have read and agree to the{" "}
-                        <a
-                          href="/terms-and-conditions"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-brand-accent font-semibold underline hover:text-brand-text transition-colors"
-                        >
-                          Terms &amp; Conditions
-                        </a>{" "}
-                        <span className="text-brand-accent">*</span>
-                      </label>
+                    <div className="space-y-1">
+                      <div className="flex items-start gap-2.5 pt-1">
+                        <input
+                          id="agreeTerms"
+                          type="checkbox"
+                          required
+                          checked={agreedToTerms}
+                          onChange={(e) => {
+                            setAgreedToTerms(e.target.checked);
+                            if (e.target.checked) setTermsError(null);
+                          }}
+                          className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border border-brand-secondary/30 text-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20 cursor-pointer"
+                        />
+                        <label htmlFor="agreeTerms" className="font-sans text-xs text-brand-neutral leading-relaxed cursor-pointer select-none">
+                          I have read and agree to the{" "}
+                          <a
+                            href="/terms-and-conditions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-brand-accent font-semibold underline hover:text-brand-text transition-colors"
+                          >
+                            Terms &amp; Conditions
+                          </a>{" "}
+                          <span className="text-brand-accent">*</span>
+                        </label>
+                      </div>
+                      {termsError && (
+                        <p className="text-red-600 text-[10px] flex items-center gap-1 pl-[26px]">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          {termsError}
+                        </p>
+                      )}
                     </div>
                   </div>
 
