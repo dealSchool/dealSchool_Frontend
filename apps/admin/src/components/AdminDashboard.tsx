@@ -23,6 +23,11 @@ const goToSite = () => {
   window.location.href = WEBSITE_URL;
 };
 
+// Background refresh cadence for the admin dashboard's paginated lists.
+// Was 15s across all four tabs at once; that's the dominant source of the
+// project's Firestore read volume (see poll-scoping in AdminDashboard below).
+const POLL_INTERVAL_MS = 60_000;
+
 const getInitials = (name: string): string => {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -147,6 +152,8 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const [activeTab, setActiveTab] = useState<"applications" | "contacts" | "brochures" | "drafts">("applications");
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   const [appSearch, setAppSearch]         = useState("");
   const [sectorFilter, setSectorFilter]   = useState("all");
@@ -480,21 +487,50 @@ export const AdminDashboard: React.FC = () => {
       setDraftPageCursors((c) => { draftCursorsRef.current = c; return c; });
     };
 
+    // Poll only the tab the admin is actually looking at — the other three
+    // just keep their last-fetched snapshot until the admin switches to them
+    // (switching tabs triggers its own immediate refetch, see the tab buttons).
+    // Also pause entirely while the browser tab is hidden/backgrounded, since
+    // nothing is being looked at then either. Both cuts are pure read-volume
+    // reduction: Firestore reads scale with polls x tabs, and most of that
+    // was being spent refreshing views nobody was looking at.
     let pollController: AbortController | null = null;
-    const interval = setInterval(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const pollActiveTab = () => {
       pollController?.abort();
       pollController = new AbortController();
       syncCursors();
-      fetchAppPage(appPageRef.current, appCursorsRef.current, pollController.signal);
-      fetchContactPage(contactPageRef.current, contactCursorsRef.current, pollController.signal);
-      fetchBrochurePage(brochurePageRef.current, brochureCursorsRef.current, pollController.signal);
-      fetchDraftPage(draftPageRef.current, draftCursorsRef.current, pollController.signal);
-    }, 15000);
+      const signal = pollController.signal;
+      switch (activeTabRef.current) {
+        case "applications": fetchAppPage(appPageRef.current, appCursorsRef.current, signal); break;
+        case "contacts":      fetchContactPage(contactPageRef.current, contactCursorsRef.current, signal); break;
+        case "brochures":     fetchBrochurePage(brochurePageRef.current, brochureCursorsRef.current, signal); break;
+        case "drafts":        fetchDraftPage(draftPageRef.current, draftCursorsRef.current, signal); break;
+      }
+    };
+
+    const startPolling = () => {
+      if (interval) return;
+      interval = setInterval(pollActiveTab, POLL_INTERVAL_MS);
+    };
+    const stopPolling = () => {
+      if (interval) { clearInterval(interval); interval = null; }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) stopPolling();
+      else { pollActiveTab(); startPolling(); }
+    };
+
+    if (!document.hidden) startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       initialController.abort();
       pollController?.abort();
-      clearInterval(interval);
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [currentUser, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage, fetchDraftPage]);
 
@@ -1078,6 +1114,13 @@ export const AdminDashboard: React.FC = () => {
                   if (tab !== "contacts") setSelectedContact(null);
                   if (tab !== "brochures") setSelectedBrochureRequest(null);
                   if (tab !== "drafts") setSelectedDraft(null);
+                  // Background polling only refreshes the active tab (see the
+                  // polling effect), so a tab that's been idle in the
+                  // background needs one immediate refetch on switch-to.
+                  if (tab === "applications") fetchAppPage(appPageRef.current, appPageCursors);
+                  else if (tab === "contacts") fetchContactPage(contactPageRef.current, contactPageCursors);
+                  else if (tab === "brochures") fetchBrochurePage(brochurePageRef.current, brochurePageCursors);
+                  else fetchDraftPage(draftPageRef.current, draftPageCursors);
                 }}
                 className={`flex items-center gap-2 px-5 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold ${
                   active
