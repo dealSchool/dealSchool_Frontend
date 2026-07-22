@@ -23,11 +23,6 @@ const goToSite = () => {
   window.location.href = WEBSITE_URL;
 };
 
-// Background refresh cadence for the admin dashboard's paginated lists.
-// Was 15s across all four tabs at once; that's the dominant source of the
-// project's Firestore read volume (see poll-scoping in AdminDashboard below).
-const POLL_INTERVAL_MS = 60_000;
-
 const getInitials = (name: string): string => {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -152,8 +147,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const [activeTab, setActiveTab] = useState<"applications" | "contacts" | "brochures" | "drafts">("applications");
-  const activeTabRef = useRef(activeTab);
-  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   const [appSearch, setAppSearch]         = useState("");
   const [sectorFilter, setSectorFilter]   = useState("all");
@@ -469,70 +462,24 @@ export const AdminDashboard: React.FC = () => {
     const initialBrochureCursors = [null] as (string | null)[];
     const initialDraftCursors    = [null] as (string | null)[];
 
+    // Fetch once on mount/page-load/refresh only. No background timer —
+    // further refreshes happen solely on explicit admin action (switching
+    // tabs re-fetches that tab, see the tab buttons; pagination re-fetches
+    // the requested page, see goTo*Page).
     const initialController = new AbortController();
     fetchAppPage(1, initialAppCursors, initialController.signal);
     fetchContactPage(1, initialContactCursors, initialController.signal);
     fetchBrochurePage(1, initialBrochureCursors, initialController.signal);
     fetchDraftPage(1, initialDraftCursors, initialController.signal);
 
-    const appCursorsRef      = { current: initialAppCursors };
-    const contactCursorsRef  = { current: initialContactCursors };
-    const brochureCursorsRef = { current: initialBrochureCursors };
-    const draftCursorsRef    = { current: initialDraftCursors };
-
-    const syncCursors = () => {
-      setAppPageCursors((c) => { appCursorsRef.current = c; return c; });
-      setContactPageCursors((c) => { contactCursorsRef.current = c; return c; });
-      setBrochurePageCursors((c) => { brochureCursorsRef.current = c; return c; });
-      setDraftPageCursors((c) => { draftCursorsRef.current = c; return c; });
-    };
-
-    // Poll only the tab the admin is actually looking at — the other three
-    // just keep their last-fetched snapshot until the admin switches to them
-    // (switching tabs triggers its own immediate refetch, see the tab buttons).
-    // Also pause entirely while the browser tab is hidden/backgrounded, since
-    // nothing is being looked at then either. Both cuts are pure read-volume
-    // reduction: Firestore reads scale with polls x tabs, and most of that
-    // was being spent refreshing views nobody was looking at.
-    let pollController: AbortController | null = null;
-    let interval: ReturnType<typeof setInterval> | null = null;
-
-    const pollActiveTab = () => {
-      pollController?.abort();
-      pollController = new AbortController();
-      syncCursors();
-      const signal = pollController.signal;
-      switch (activeTabRef.current) {
-        case "applications": fetchAppPage(appPageRef.current, appCursorsRef.current, signal); break;
-        case "contacts":      fetchContactPage(contactPageRef.current, contactCursorsRef.current, signal); break;
-        case "brochures":     fetchBrochurePage(brochurePageRef.current, brochureCursorsRef.current, signal); break;
-        case "drafts":        fetchDraftPage(draftPageRef.current, draftCursorsRef.current, signal); break;
-      }
-    };
-
-    const startPolling = () => {
-      if (interval) return;
-      interval = setInterval(pollActiveTab, POLL_INTERVAL_MS);
-    };
-    const stopPolling = () => {
-      if (interval) { clearInterval(interval); interval = null; }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) stopPolling();
-      else { pollActiveTab(); startPolling(); }
-    };
-
-    if (!document.hidden) startPolling();
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
       initialController.abort();
-      pollController?.abort();
-      stopPolling();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [currentUser, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage, fetchDraftPage]);
+    // Keyed on uid, not the currentUser object reference — onAuthStateChanged
+    // can re-emit a new object for the same signed-in user (e.g. multi-tab
+    // auth sync), which must not re-trigger a fetch with no user action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage, fetchDraftPage]);
 
   // Fetch the full applicant record (every field + linked payment) whenever a row is opened —
   // the paginated list response only carries a trimmed subset of fields.
@@ -1114,9 +1061,8 @@ export const AdminDashboard: React.FC = () => {
                   if (tab !== "contacts") setSelectedContact(null);
                   if (tab !== "brochures") setSelectedBrochureRequest(null);
                   if (tab !== "drafts") setSelectedDraft(null);
-                  // Background polling only refreshes the active tab (see the
-                  // polling effect), so a tab that's been idle in the
-                  // background needs one immediate refetch on switch-to.
+                  // Switching tabs is the action that refreshes that tab's data —
+                  // no background polling, so refetch explicitly here.
                   if (tab === "applications") fetchAppPage(appPageRef.current, appPageCursors);
                   else if (tab === "contacts") fetchContactPage(contactPageRef.current, contactPageCursors);
                   else if (tab === "brochures") fetchBrochurePage(brochurePageRef.current, brochurePageCursors);

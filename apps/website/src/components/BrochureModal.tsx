@@ -26,6 +26,7 @@ export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose })
   const [submitted, setSubmitted] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
 
   // Focus trap + Escape key handler
   useEffect(() => {
@@ -92,8 +93,9 @@ export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid()) return;
+    if (!isFormValid() || submittingRef.current) return;
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -134,6 +136,7 @@ export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose })
       console.error("Brochure request error:", error.message);
       setErrorMessage(error.message || "Submission failed. Please try again.");
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
