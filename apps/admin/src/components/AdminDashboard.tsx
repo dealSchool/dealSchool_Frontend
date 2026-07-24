@@ -16,7 +16,7 @@ import {
   MessageSquare, KeyRound, CreditCard, RefreshCw,
   ArrowLeft, Phone, MapPin, FileText, Clock,
   Eye, Users, Ban, CalendarCog, Download,
-  Hourglass, Layers,
+  Hourglass, Layers, Reply,
 } from "lucide-react";
 
 const goToSite = () => {
@@ -47,6 +47,7 @@ const APP_STATUS_CFG: Record<string, {
 const CONTACT_STATUS_CFG: Record<string, { dot: string; label: string; badge: string; darkBadge: string }> = {
   unread:   { dot: "bg-blue-500",          label: "Unread",    badge: "bg-blue-50 text-blue-700 border border-blue-200",    darkBadge: "bg-sky-400/20 text-sky-300 border border-sky-400/30" },
   read:     { dot: "bg-brand-neutral/40",  label: "Read",      badge: "bg-gray-50 text-gray-500 border border-gray-200",     darkBadge: "bg-white/15 text-white/70 border border-white/20" },
+  replied:  { dot: "bg-emerald-500",       label: "Replied",   badge: "bg-emerald-50 text-emerald-700 border border-emerald-200", darkBadge: "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30" },
   archived: { dot: "bg-brand-neutral/20",  label: "Archived",  badge: "bg-gray-50 text-gray-400 border border-gray-150",     darkBadge: "bg-white/10 text-white/50 border border-white/15" },
 };
 
@@ -102,6 +103,13 @@ export const AdminDashboard: React.FC = () => {
   } | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+
+  const [replyModal, setReplyModal] = useState<{
+    contactId: string;
+    contactName: string;
+  } | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{
     message: string;
@@ -668,6 +676,37 @@ export const AdminDashboard: React.FC = () => {
       showToast(`Status update failed: ${err.message}`, "error");
     } finally {
       setIsActioning(false);
+    }
+  };
+
+  const handleSendContactReply = async () => {
+    if (!replyModal || isSendingReply || !replyMessage.trim()) return;
+    setIsSendingReply(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/contacts/${replyModal.contactId}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: replyMessage.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const { contact: updated, warning } = await res.json();
+      setContacts((prev) => prev.map((c) => c.id === updated.id ? { ...c, ...updated } : c));
+      if (selectedContact?.id === updated.id) setSelectedContact((prev) => prev ? { ...prev, ...updated } : null);
+      // The backend can report success (email sent) alongside a warning (e.g. the
+      // reply couldn't be saved to history) — surface it so the admin doesn't
+      // mistake it for a full failure and resend, duplicating the email.
+      showToast(warning || "Reply sent to " + replyModal.contactName, warning ? "error" : "success");
+      setReplyModal(null);
+      setReplyMessage("");
+    } catch (err: any) {
+      console.error("Error sending contact reply:", err);
+      showToast(`Reply failed: ${err.message}`, "error");
+    } finally {
+      setIsSendingReply(false);
     }
   };
 
@@ -2197,6 +2236,21 @@ export const AdminDashboard: React.FC = () => {
                               {selectedContact.message}
                             </p>
                           </div>
+                          {selectedContact.replies && selectedContact.replies.length > 0 && (
+                            <div className="bg-white rounded-sm border border-emerald-200 p-4 shadow-sm space-y-3 overflow-hidden">
+                              <SectionLabel>Replies Sent</SectionLabel>
+                              {selectedContact.replies.map((reply, i) => (
+                                <div key={i} className="pl-3 border-l-2 border-emerald-300 space-y-1">
+                                  <p className="font-sans text-xs text-brand-neutral leading-relaxed whitespace-pre-wrap break-words">
+                                    {reply.message}
+                                  </p>
+                                  <p className="font-mono text-[9px] text-brand-neutral/50 uppercase tracking-wider">
+                                    {reply.repliedBy} &middot; {renderTimestamp(reply.sentAt)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Pinned footer */}
@@ -2234,6 +2288,13 @@ export const AdminDashboard: React.FC = () => {
                                 <FileText className="h-3 w-3" /> Archive
                               </button>
                             </div>
+                            <button
+                              onClick={() => setReplyModal({ contactId: selectedContact.id, contactName: selectedContact.name })}
+                              disabled={isActioning}
+                              className="w-full py-2.5 text-[10px] font-mono font-bold uppercase tracking-wide rounded-sm border cursor-pointer transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 bg-[#D4A62A] border-[#D4A62A] text-[#082C6C] hover:bg-[#c49722] shadow-sm"
+                            >
+                              <Reply className="h-3 w-3" /> Reply by Email
+                            </button>
                             <div className="pt-2 border-t border-dashed border-[#082C6C]/10">
                               <p className="font-mono text-[8px] text-brand-neutral/40 uppercase tracking-widest mb-2">Danger Zone</p>
                               <button
@@ -2549,6 +2610,57 @@ export const AdminDashboard: React.FC = () => {
               className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all rounded-sm cursor-pointer disabled:opacity-50"
             >
               {isCancelling ? "Processing…" : "Confirm Cancellation"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ════════ CONTACT REPLY MODAL ════════ */}
+    {replyModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(10, 14, 22, 0.72)", backdropFilter: "blur(4px)" }}>
+        <div className="bg-white border border-[#D4A62A]/40 rounded-sm shadow-2xl w-full max-w-md p-7 space-y-5">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 h-10 w-10 rounded-full bg-[#D4A62A]/15 flex items-center justify-center">
+              <Reply className="h-5 w-5 text-[#082C6C]" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg font-bold text-brand-text">
+                Reply to {replyModal.contactName}
+              </h3>
+              <p className="font-sans text-xs text-brand-neutral leading-relaxed">
+                Sent from support@dealschool.in as a reply to their original query. They'll receive it by email.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[9px] text-brand-secondary font-bold uppercase tracking-wider">
+              Your Reply
+            </label>
+            <textarea
+              rows={5}
+              maxLength={5000}
+              value={replyMessage}
+              onChange={(e) => setReplyMessage(e.target.value)}
+              placeholder="Write your response…"
+              className="w-full bg-[#FCFAF6] text-brand-text px-3 py-2.5 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-xs resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setReplyModal(null); setReplyMessage(""); }}
+              disabled={isSendingReply}
+              className="flex-1 py-2.5 bg-white border border-brand-secondary/25 text-brand-secondary font-mono text-xs font-bold uppercase tracking-wider hover:bg-brand-secondary/5 transition-all rounded-sm cursor-pointer disabled:opacity-50"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleSendContactReply}
+              disabled={isSendingReply || !replyMessage.trim()}
+              className="flex-1 py-2.5 bg-[#082C6C] hover:bg-[#0a3785] text-white font-mono text-xs font-bold uppercase tracking-wider transition-all rounded-sm cursor-pointer disabled:opacity-50"
+            >
+              {isSendingReply ? "Sending…" : "Send Reply"}
             </button>
           </div>
         </div>

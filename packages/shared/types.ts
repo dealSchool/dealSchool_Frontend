@@ -171,13 +171,20 @@ export interface PaymentRecord {
   updatedAt: any;
 }
 
+export interface ContactReply {
+  message: string;
+  sentAt: any;
+  repliedBy: string;
+}
+
 export interface ContactMessage {
   id: string;
   name: string;
   email: string;
   subject: string;
   message: string;
-  status: "unread" | "read" | "archived";
+  status: "unread" | "read" | "archived" | "replied";
+  replies?: ContactReply[];
   createdAt: any;
 }
 
