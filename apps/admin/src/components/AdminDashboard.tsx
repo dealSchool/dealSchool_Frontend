@@ -23,6 +23,60 @@ const goToSite = () => {
   window.location.href = WEBSITE_URL;
 };
 
+// Items per page — same page size across every admin tab.
+const TAB_PAGE_SIZE = 10;
+
+// Cursor-based pagination (Firestore `startAfter`) can't jump straight to an
+// arbitrary page — to reach page N you need page N-1's last document. This
+// walks the chain forward silently (no visible list update) until the cursor
+// for `targetPage` is known, then returns the (possibly extended) cursors array.
+async function ensurePageCursors(
+  targetPage: number,
+  cursors: (string | null)[],
+  fetchOnePage: (page: number, cursors: (string | null)[]) => Promise<{ nextCursor: string | null; hasMore: boolean } | null>,
+): Promise<(string | null)[]> {
+  let working = cursors;
+  for (let p = 1; working[targetPage - 1] === undefined && p < targetPage; p++) {
+    if (working[p] !== undefined) continue;
+    const result = await fetchOnePage(p, working);
+    if (!result) break;
+    working = [...working];
+    working[p] = result.nextCursor;
+    if (!result.hasMore) break;
+  }
+  return working;
+}
+
+// Applicant-submitted "URL" fields (LinkedIn, resume link) are free text, not
+// validated at submission — a value like `javascript:...` rendered straight
+// into an <a href> would execute in the admin's session when clicked. Only
+// allow it through as a link if it's actually http(s); otherwise render as
+// inert text.
+const safeHttpUrl = (url: string | undefined | null): string | null => {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+};
+
+// `mailto:${email}` built from applicant-submitted text is vulnerable to
+// mailto URI parameter injection (RFC 6068) — a value like
+// "x@x.com?cc=attacker@evil.com&body=..." passes basic email-format checks
+// but adds a hidden cc/body when an admin's mail client opens the link. Strip
+// anything from the first non-email character onward before using it as a link.
+const mailtoHref = (email: string | undefined | null): string => {
+  const clean = String(email ?? "").split(/[?&\s]/)[0];
+  return `mailto:${clean}`;
+};
+
+const telHref = (phone: string | undefined | null): string => {
+  const clean = String(phone ?? "").replace(/[^0-9+()\-\s]/g, "");
+  return `tel:${clean}`;
+};
+
 const getInitials = (name: string): string => {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -175,21 +229,18 @@ export const AdminDashboard: React.FC = () => {
 
   const [appPage, setAppPage]                       = useState(1);
   const [appPageCursors, setAppPageCursors]         = useState<(string | null)[]>([null]);
-  const [appTotalPages, setAppTotalPages]           = useState(1);
   const [appHasMore, setAppHasMore]                 = useState(false);
   const [appPageLoading, setAppPageLoading]         = useState(false);
   const appPageRef                                  = useRef(1);
 
   const [contactPage, setContactPage]               = useState(1);
   const [contactPageCursors, setContactPageCursors] = useState<(string | null)[]>([null]);
-  const [contactTotalPages, setContactTotalPages]   = useState(1);
   const [contactHasMore, setContactHasMore]         = useState(false);
   const [contactPageLoading, setContactPageLoading] = useState(false);
   const contactPageRef                              = useRef(1);
 
   const [brochurePage, setBrochurePage]               = useState(1);
   const [brochurePageCursors, setBrochurePageCursors] = useState<(string | null)[]>([null]);
-  const [brochureTotalPages, setBrochureTotalPages]   = useState(1);
   const [brochureHasMore, setBrochureHasMore]         = useState(false);
   const [brochurePageLoading, setBrochurePageLoading] = useState(false);
   const brochurePageRef                               = useRef(1);
@@ -197,13 +248,14 @@ export const AdminDashboard: React.FC = () => {
   const [drafts, setDrafts]                         = useState<DraftApplication[]>([]);
   const [draftPage, setDraftPage]                   = useState(1);
   const [draftPageCursors, setDraftPageCursors]     = useState<(string | null)[]>([null]);
-  const [draftTotalPages, setDraftTotalPages]       = useState(1);
   const [draftHasMore, setDraftHasMore]             = useState(false);
   const [draftPageLoading, setDraftPageLoading]     = useState(false);
   const draftPageRef                                = useRef(1);
 
-  const [appCounts, setAppCounts]         = useState({ total: 0, pending: 0, under_review: 0, accepted: 0, paid: 0 });
-  const [contactCounts, setContactCounts] = useState({ total: 0, unread: 0 });
+  const [appCounts, setAppCounts]         = useState({
+    total: 0, pending: 0, under_review: 0, interview_invited: 0, accepted: 0, declined: 0, cancelled: 0, paid: 0,
+  });
+  const [contactCounts, setContactCounts] = useState({ total: 0, unread: 0, read: 0, archived: 0, replied: 0 });
   const [brochureCounts, setBrochureCounts] = useState({ total: 0 });
   const [draftCounts, setDraftCounts] = useState<DraftCounts>({ step1: 0, step2: 0, step3: 0, step4: 0, step5: 0 });
 
@@ -278,34 +330,39 @@ export const AdminDashboard: React.FC = () => {
     page: number,
     cursors: (string | null)[],
     signal?: AbortSignal,
-  ) => {
-    if (!auth.currentUser) { setDbLoading(false); return; }
+    silent = false,
+  ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
+    if (!auth.currentUser) { setDbLoading(false); return null; }
     try {
       const token = await auth.currentUser.getIdToken();
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/applications?limit=10&after=${cursor}`
-        : `${API_URL}/applications?limit=10`;
+        ? `${API_URL}/applications?limit=${TAB_PAGE_SIZE}&after=${cursor}`
+        : `${API_URL}/applications?limit=${TAB_PAGE_SIZE}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
-      if (res.status === 401) { setIsAdminAuthorized(false); setDbError("Access denied."); setDbLoading(false); return; }
+      if (res.status === 401) { setIsAdminAuthorized(false); setDbError("Access denied."); setDbLoading(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { applications: list, hasMore, nextCursor, counts } = await res.json();
-      setApplications(list as FellowshipApplication[]);
-      setAppHasMore(hasMore);
+      if (!silent) {
+        setApplications(list as FellowshipApplication[]);
+        setAppHasMore(hasMore);
+        setDbLoading(false);
+      }
       if (nextCursor) {
         setAppPageCursors((prev) => { const c = [...prev]; c[page] = nextCursor; return c; });
-        setAppTotalPages((prev) => Math.max(prev, page + 1));
-      } else {
-        setAppTotalPages(page);
       }
-      if (counts) setAppCounts(counts);
-      setDbLoading(false);
+      if (counts) {
+        const total = counts.pending + counts.under_review + counts.interview_invited
+          + counts.accepted + counts.declined + (counts.cancelled ?? 0);
+        setAppCounts((prev) => ({ ...prev, ...counts, total }));
+      }
+      return { nextCursor: nextCursor ?? null, hasMore };
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
+      if (err?.name === "AbortError") return null;
       console.error("Failed to load applications:", err);
-      setDbError("Failed to load applications. Please refresh.");
-      setDbLoading(false);
+      if (!silent) { setDbError("Failed to load applications. Please refresh."); setDbLoading(false); }
+      return null;
     }
   }, []);
 
@@ -313,31 +370,36 @@ export const AdminDashboard: React.FC = () => {
     page: number,
     cursors: (string | null)[],
     signal?: AbortSignal,
-  ) => {
-    if (!auth.currentUser) return;
+    silent = false,
+  ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
+    if (!auth.currentUser) return null;
     try {
       const token = await auth.currentUser.getIdToken();
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/contacts?limit=10&after=${cursor}`
-        : `${API_URL}/contacts?limit=10`;
+        ? `${API_URL}/contacts?limit=${TAB_PAGE_SIZE}&after=${cursor}`
+        : `${API_URL}/contacts?limit=${TAB_PAGE_SIZE}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
-      if (res.status === 401) { setIsAdminAuthorized(false); return; }
+      if (res.status === 401) { setIsAdminAuthorized(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { contacts: list, hasMore, nextCursor, counts } = await res.json();
-      setContacts(list as ContactMessage[]);
-      setContactHasMore(hasMore);
+      if (!silent) {
+        setContacts(list as ContactMessage[]);
+        setContactHasMore(hasMore);
+      }
       if (nextCursor) {
         setContactPageCursors((prev) => { const c = [...prev]; c[page] = nextCursor; return c; });
-        setContactTotalPages((prev) => Math.max(prev, page + 1));
-      } else {
-        setContactTotalPages(page);
       }
-      if (counts) setContactCounts(counts);
+      if (counts) {
+        const total = counts.unread + counts.read + counts.archived + (counts.replied ?? 0);
+        setContactCounts((prev) => ({ ...prev, ...counts, total }));
+      }
+      return { nextCursor: nextCursor ?? null, hasMore };
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
+      if (err?.name === "AbortError") return null;
       console.error("Failed to load contacts:", err);
+      return null;
     }
   }, []);
 
@@ -345,31 +407,33 @@ export const AdminDashboard: React.FC = () => {
     page: number,
     cursors: (string | null)[],
     signal?: AbortSignal,
-  ) => {
-    if (!auth.currentUser) return;
+    silent = false,
+  ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
+    if (!auth.currentUser) return null;
     try {
       const token = await auth.currentUser.getIdToken();
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/brochure-requests?limit=10&after=${cursor}`
-        : `${API_URL}/brochure-requests?limit=10`;
+        ? `${API_URL}/brochure-requests?limit=${TAB_PAGE_SIZE}&after=${cursor}`
+        : `${API_URL}/brochure-requests?limit=${TAB_PAGE_SIZE}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
-      if (res.status === 401) { setIsAdminAuthorized(false); return; }
+      if (res.status === 401) { setIsAdminAuthorized(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { requests: list, hasMore, nextCursor, total } = await res.json();
-      setBrochureRequests(list as BrochureRequest[]);
-      setBrochureHasMore(hasMore);
+      if (!silent) {
+        setBrochureRequests(list as BrochureRequest[]);
+        setBrochureHasMore(hasMore);
+      }
       if (nextCursor) {
         setBrochurePageCursors((prev) => { const c = [...prev]; c[page] = nextCursor; return c; });
-        setBrochureTotalPages((prev) => Math.max(prev, page + 1));
-      } else {
-        setBrochureTotalPages(page);
       }
       if (total !== undefined) setBrochureCounts({ total });
+      return { nextCursor: nextCursor ?? null, hasMore };
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
+      if (err?.name === "AbortError") return null;
       console.error("Failed to load brochure requests:", err);
+      return null;
     }
   }, []);
 
@@ -377,40 +441,45 @@ export const AdminDashboard: React.FC = () => {
     page: number,
     cursors: (string | null)[],
     signal?: AbortSignal,
-  ) => {
-    if (!auth.currentUser) return;
+    silent = false,
+  ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
+    if (!auth.currentUser) return null;
     try {
       const token = await auth.currentUser.getIdToken();
-      if (signal?.aborted) return;
+      if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/applications/draft?limit=50&after=${cursor}`
-        : `${API_URL}/applications/draft?limit=50`;
+        ? `${API_URL}/applications/draft?limit=${TAB_PAGE_SIZE}&after=${cursor}`
+        : `${API_URL}/applications/draft?limit=${TAB_PAGE_SIZE}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
-      if (res.status === 401) { setIsAdminAuthorized(false); return; }
+      if (res.status === 401) { setIsAdminAuthorized(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { drafts: list, hasMore, nextCursor, counts } = await res.json();
-      setDrafts(list as DraftApplication[]);
-      setDraftHasMore(hasMore);
+      if (!silent) {
+        setDrafts(list as DraftApplication[]);
+        setDraftHasMore(hasMore);
+      }
       if (nextCursor) {
         setDraftPageCursors((prev) => { const c = [...prev]; c[page] = nextCursor; return c; });
-        setDraftTotalPages((prev) => Math.max(prev, page + 1));
-      } else {
-        setDraftTotalPages(page);
       }
       if (counts) setDraftCounts(counts);
+      return { nextCursor: nextCursor ?? null, hasMore };
     } catch (err: any) {
-      if (err?.name === "AbortError") return;
+      if (err?.name === "AbortError") return null;
       console.error("Failed to load incomplete applications:", err);
+      return null;
     }
   }, []);
 
   const goToAppPage = async (page: number) => {
+    // appTotalPages is a hint derived from aggregate counts, not ground truth —
+    // never let it block advancing to a page the backend's own hasMore flag confirms exists.
     if (page === appPage || appPageLoading || page < 1) return;
-    if (page > 1 && !appPageCursors[page - 1]) return;
+    if (page > appTotalPages && !(page === appPage + 1 && appHasMore)) return;
     setAppPageLoading(true);
     setSelectedApp(null);
-    await fetchAppPage(page, appPageCursors);
+    const cursors = await ensurePageCursors(page, appPageCursors, (p, c) => fetchAppPage(p, c, undefined, true));
+    await fetchAppPage(page, cursors);
     setAppPage(page);
     appPageRef.current = page;
     setAppPageLoading(false);
@@ -418,10 +487,11 @@ export const AdminDashboard: React.FC = () => {
 
   const goToContactPage = async (page: number) => {
     if (page === contactPage || contactPageLoading || page < 1) return;
-    if (page > 1 && !contactPageCursors[page - 1]) return;
+    if (page > contactTotalPages && !(page === contactPage + 1 && contactHasMore)) return;
     setContactPageLoading(true);
     setSelectedContact(null);
-    await fetchContactPage(page, contactPageCursors);
+    const cursors = await ensurePageCursors(page, contactPageCursors, (p, c) => fetchContactPage(p, c, undefined, true));
+    await fetchContactPage(page, cursors);
     setContactPage(page);
     contactPageRef.current = page;
     setContactPageLoading(false);
@@ -429,10 +499,11 @@ export const AdminDashboard: React.FC = () => {
 
   const goToBrochurePage = async (page: number) => {
     if (page === brochurePage || brochurePageLoading || page < 1) return;
-    if (page > 1 && !brochurePageCursors[page - 1]) return;
+    if (page > brochureTotalPages && !(page === brochurePage + 1 && brochureHasMore)) return;
     setBrochurePageLoading(true);
     setSelectedBrochureRequest(null);
-    await fetchBrochurePage(page, brochurePageCursors);
+    const cursors = await ensurePageCursors(page, brochurePageCursors, (p, c) => fetchBrochurePage(p, c, undefined, true));
+    await fetchBrochurePage(page, cursors);
     setBrochurePage(page);
     brochurePageRef.current = page;
     setBrochurePageLoading(false);
@@ -440,10 +511,11 @@ export const AdminDashboard: React.FC = () => {
 
   const goToDraftPage = async (page: number) => {
     if (page === draftPage || draftPageLoading || page < 1) return;
-    if (page > 1 && !draftPageCursors[page - 1]) return;
+    if (page > draftTotalPages && !(page === draftPage + 1 && draftHasMore)) return;
     setDraftPageLoading(true);
     setSelectedDraft(null);
-    await fetchDraftPage(page, draftPageCursors);
+    const cursors = await ensurePageCursors(page, draftPageCursors, (p, c) => fetchDraftPage(p, c, undefined, true));
+    await fetchDraftPage(page, cursors);
     setDraftPage(page);
     draftPageRef.current = page;
     setDraftPageLoading(false);
@@ -455,10 +527,10 @@ export const AdminDashboard: React.FC = () => {
       setContacts([]);
       setBrochureRequests([]);
       setDrafts([]);
-      setAppPage(1); setAppPageCursors([null]); setAppTotalPages(1); setAppHasMore(false);
-      setContactPage(1); setContactPageCursors([null]); setContactTotalPages(1); setContactHasMore(false);
-      setBrochurePage(1); setBrochurePageCursors([null]); setBrochureTotalPages(1); setBrochureHasMore(false);
-      setDraftPage(1); setDraftPageCursors([null]); setDraftTotalPages(1); setDraftHasMore(false);
+      setAppPage(1); setAppPageCursors([null]); setAppHasMore(false);
+      setContactPage(1); setContactPageCursors([null]); setContactHasMore(false);
+      setBrochurePage(1); setBrochurePageCursors([null]); setBrochureHasMore(false);
+      setDraftPage(1); setDraftPageCursors([null]); setDraftHasMore(false);
       return;
     }
 
@@ -922,6 +994,13 @@ export const AdminDashboard: React.FC = () => {
   const acceptedApps    = appCounts.accepted;
   const paidApps        = appCounts.paid;
   const unreadContacts  = contactCounts.unread;
+  const draftTotal      = draftCounts.step1 + draftCounts.step2 + draftCounts.step3 + draftCounts.step4 + draftCounts.step5;
+
+  // ── Pagination totals — derived from server-side aggregate counts, not the current page's list length ──
+  const appTotalPages       = Math.max(1, Math.ceil(totalApps / TAB_PAGE_SIZE));
+  const contactTotalPages   = Math.max(1, Math.ceil(contactCounts.total / TAB_PAGE_SIZE));
+  const brochureTotalPages  = Math.max(1, Math.ceil(brochureCounts.total / TAB_PAGE_SIZE));
+  const draftTotalPages     = Math.max(1, Math.ceil(draftTotal / TAB_PAGE_SIZE));
 
   // ── Not authorized screen ────────────────────────────────────────────────────
   if (!isAdminAuthorized) {
@@ -1088,7 +1167,7 @@ export const AdminDashboard: React.FC = () => {
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1">
           {(["applications", "drafts", "contacts", "brochures"] as const).map((tab) => {
-            const count = tab === "applications" ? applications.length : tab === "contacts" ? contacts.length : tab === "brochures" ? brochureRequests.length : drafts.length;
+            const count = tab === "applications" ? totalApps : tab === "contacts" ? contactCounts.total : tab === "brochures" ? brochureCounts.total : draftTotal;
             const label = tab === "applications" ? `Applications` : tab === "contacts" ? `Messages` : tab === "brochures" ? `Brochures` : `Incomplete`;
             const active = activeTab === tab;
             return (
@@ -1333,7 +1412,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
                       Next
                     </button>
-                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {appPage} of {appTotalPages}{appHasMore ? "+" : ""}</span>
+                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {appPage} of {appTotalPages}</span>
                   </div>
                 )}
               </>
@@ -1433,7 +1512,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
                       Next
                     </button>
-                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {draftPage} of {draftTotalPages}{draftHasMore ? "+" : ""}</span>
+                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {draftPage} of {draftTotalPages}</span>
                   </div>
                 )}
               </>
@@ -1538,6 +1617,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
                       Next
                     </button>
+                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {contactPage} of {contactTotalPages}</span>
                   </div>
                 )}
               </>
@@ -1626,6 +1706,7 @@ export const AdminDashboard: React.FC = () => {
                       className="px-3 py-1.5 border border-brand-secondary/20 text-brand-neutral font-mono text-[10px] uppercase tracking-wider hover:bg-white transition-all rounded-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
                       Next
                     </button>
+                    <span className="font-mono text-[9px] text-brand-neutral ml-1">Page {brochurePage} of {brochureTotalPages}</span>
                   </div>
                 )}
               </>
@@ -1686,7 +1767,7 @@ export const AdminDashboard: React.FC = () => {
                                 </div>
                               </div>
                               <a
-                                href={`mailto:${selectedApp.email}`}
+                                href={mailtoHref(selectedApp.email)}
                                 className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1"
                               >
                                 <Mail className="h-3 w-3" /> {selectedApp.email}
@@ -1726,15 +1807,21 @@ export const AdminDashboard: React.FC = () => {
                               <InfoRow label="City" value={selectedApp.city} />
                             </div>
                             {selectedApp.linkedinUrl && (
-                              <a
-                                href={selectedApp.linkedinUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-2.5 flex items-center gap-1.5 font-mono text-[10px] text-brand-accent hover:underline truncate"
-                              >
-                                <ExternalLink className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{selectedApp.linkedinUrl}</span>
-                              </a>
+                              safeHttpUrl(selectedApp.linkedinUrl) ? (
+                                <a
+                                  href={safeHttpUrl(selectedApp.linkedinUrl)!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-2.5 flex items-center gap-1.5 font-mono text-[10px] text-brand-accent hover:underline truncate"
+                                >
+                                  <ExternalLink className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{selectedApp.linkedinUrl}</span>
+                                </a>
+                              ) : (
+                                <span className="mt-2.5 flex items-center gap-1.5 font-mono text-[10px] text-red-600 truncate" title="Not a valid http(s) link — not rendered as clickable">
+                                  <span className="truncate">{selectedApp.linkedinUrl}</span>
+                                </span>
+                              )
                             )}
                           </div>
 
@@ -1771,9 +1858,9 @@ export const AdminDashboard: React.FC = () => {
                               <div className="grid grid-cols-2 gap-2.5">
                                 <InfoRow label="Startup" value={selectedApp.startupName} />
                                 <InfoRow label="Sector" value={selectedApp.industrySector} />
-                                {selectedApp.startupLinkedinProfile && (
+                                {selectedApp.startupLinkedinProfile && safeHttpUrl(selectedApp.startupLinkedinProfile) && (
                                   <div className="col-span-2">
-                                    <a href={selectedApp.startupLinkedinProfile} target="_blank" rel="noopener noreferrer"
+                                    <a href={safeHttpUrl(selectedApp.startupLinkedinProfile)!} target="_blank" rel="noopener noreferrer"
                                       className="font-mono text-[10px] text-brand-accent hover:underline flex items-center gap-1">
                                       <ExternalLink className="h-3 w-3" /> Startup LinkedIn
                                     </a>
@@ -1785,9 +1872,9 @@ export const AdminDashboard: React.FC = () => {
                               <div className="grid grid-cols-2 gap-2.5">
                                 <InfoRow label="Area of Work" value={selectedApp.areaOfWork} />
                                 <InfoRow label="Experience" value={selectedApp.yearsOfExperience} />
-                                {selectedApp.freelancerLinkedinProfile && (
+                                {selectedApp.freelancerLinkedinProfile && safeHttpUrl(selectedApp.freelancerLinkedinProfile) && (
                                   <div className="col-span-2">
-                                    <a href={selectedApp.freelancerLinkedinProfile} target="_blank" rel="noopener noreferrer"
+                                    <a href={safeHttpUrl(selectedApp.freelancerLinkedinProfile)!} target="_blank" rel="noopener noreferrer"
                                       className="font-mono text-[10px] text-brand-accent hover:underline flex items-center gap-1">
                                       <ExternalLink className="h-3 w-3" /> LinkedIn Portfolio
                                     </a>
@@ -1854,9 +1941,10 @@ export const AdminDashboard: React.FC = () => {
                           <div>
                             <SectionLabel>Resume</SectionLabel>
                             {(selectedApp.resumeLink || selectedApp.resumeUrl) ? (
+                              safeHttpUrl(selectedApp.resumeLink || selectedApp.resumeUrl) ? (
                               <div className="flex gap-2">
                                 <a
-                                  href={selectedApp.resumeLink || selectedApp.resumeUrl}
+                                  href={safeHttpUrl(selectedApp.resumeLink || selectedApp.resumeUrl)!}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex-1 py-2 bg-[#FAFAF8] border border-brand-accent/25 text-brand-accent font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm flex items-center justify-center gap-1.5 hover:bg-brand-accent/5 transition-colors cursor-pointer"
@@ -1874,6 +1962,9 @@ export const AdminDashboard: React.FC = () => {
                                   Copy
                                 </button>
                               </div>
+                              ) : (
+                                <p className="font-sans text-xs text-red-600 italic">Provided value isn't a valid http(s) link — not rendered as clickable: {selectedApp.resumeLink || selectedApp.resumeUrl}</p>
+                              )
                             ) : (
                               <p className="font-sans text-xs text-brand-neutral italic">None provided</p>
                             )}
@@ -2209,7 +2300,7 @@ export const AdminDashboard: React.FC = () => {
                                 </span>
                               </div>
                               <a
-                                href={`mailto:${selectedContact.email}`}
+                                href={mailtoHref(selectedContact.email)}
                                 className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1"
                               >
                                 <Mail className="h-3 w-3" /> {selectedContact.email}
@@ -2352,7 +2443,7 @@ export const AdminDashboard: React.FC = () => {
                                 {selectedBrochureRequest.name}
                               </h3>
                               <a
-                                href={`mailto:${selectedBrochureRequest.email}`}
+                                href={mailtoHref(selectedBrochureRequest.email)}
                                 className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1"
                               >
                                 <Mail className="h-3 w-3" /> {selectedBrochureRequest.email}
@@ -2378,14 +2469,14 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="flex gap-2.5">
                             <a
-                              href={`mailto:${selectedBrochureRequest.email}`}
+                              href={mailtoHref(selectedBrochureRequest.email)}
                               className="flex-1 min-w-0 py-2.5 px-3 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[11px] font-bold rounded-sm transition-all flex items-center justify-center gap-1.5"
                             >
                               <Mail className="h-3.5 w-3.5 shrink-0" />
                               <span className="truncate">{selectedBrochureRequest.email}</span>
                             </a>
                             <a
-                              href={`tel:${selectedBrochureRequest.contact}`}
+                              href={telHref(selectedBrochureRequest.contact)}
                               className="flex-1 min-w-0 py-2.5 px-3 bg-white border border-[#082C6C]/20 text-[#082C6C] hover:bg-[#082C6C]/5 font-mono text-[11px] font-bold rounded-sm transition-all flex items-center justify-center gap-1.5"
                             >
                               <Phone className="h-3.5 w-3.5 shrink-0" />
@@ -2458,7 +2549,7 @@ export const AdminDashboard: React.FC = () => {
                                 </div>
                               </div>
                               {selectedDraft.email && (
-                                <a href={`mailto:${selectedDraft.email}`} className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1">
+                                <a href={mailtoHref(selectedDraft.email)} className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1">
                                   <Mail className="h-3 w-3" /> {selectedDraft.email}
                                 </a>
                               )}
