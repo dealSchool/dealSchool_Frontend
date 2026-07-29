@@ -226,6 +226,7 @@ export const AdminDashboard: React.FC = () => {
 
   const [resendingPaymentLink, setResendingPaymentLink] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
+  const [isExportingApplicants, setIsExportingApplicants] = useState(false);
 
   const [appPage, setAppPage]                       = useState(1);
   const [appPageCursors, setAppPageCursors]         = useState<(string | null)[]>([null]);
@@ -702,6 +703,44 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
+  // Exports every applicant — full submissions (tracked through pending →
+  // auditing → interview → accepted/declined/cancelled, with payment status)
+  // plus in-progress/abandoned drafts (with their step number) — as one CSV.
+  const handleExportApplicants = async () => {
+    if (isExportingApplicants) return;
+    setIsExportingApplicants(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/applications/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+      const filename = filenameMatch?.[1] || `applicants-export-${new Date().toISOString().slice(0, 10)}.csv`;
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      showToast("Applicant export downloaded.", "success");
+    } catch (err: any) {
+      console.error("Error exporting applicants:", err);
+      showToast(`Export failed: ${err.message}`, "error");
+    } finally {
+      setIsExportingApplicants(false);
+    }
+  };
+
   const handleForceDeleteApplication = async () => {
     if (!paymentWarningModal || isActioning) return;
     const { appId } = paymentWarningModal;
@@ -1165,6 +1204,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* ── Tabs ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-1">
           {(["applications", "drafts", "contacts", "brochures"] as const).map((tab) => {
             const count = tab === "applications" ? totalApps : tab === "contacts" ? contactCounts.total : tab === "brochures" ? brochureCounts.total : draftTotal;
@@ -1201,6 +1241,17 @@ export const AdminDashboard: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+          <button
+            onClick={handleExportApplicants}
+            disabled={isExportingApplicants}
+            title="Export every applicant — submitted applications with status, plus in-progress/abandoned drafts with step number — as CSV"
+            className="flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold border border-brand-secondary/20 text-brand-secondary hover:text-white hover:bg-[#082C6C] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className={`h-3.5 w-3.5 ${isExportingApplicants ? "animate-bounce" : ""}`} />
+            {isExportingApplicants ? "Exporting…" : "Export All"}
+          </button>
         </div>
 
         {/* ── DB Error ── */}
