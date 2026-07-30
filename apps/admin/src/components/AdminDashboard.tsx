@@ -703,9 +703,12 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
-  // Exports every applicant — full submissions (tracked through pending →
-  // auditing → interview → accepted/declined/cancelled, with payment status)
-  // plus in-progress/abandoned drafts (with their step number) — as one CSV.
+  // Exports everything as one CSV, in 4 sections: submitted applications
+  // (tracked through pending → auditing → interview → accepted/declined/
+  // cancelled, with payment status), in-progress/abandoned drafts (with step
+  // number), contact messages (with reply history), and brochure requests.
+  // The backend streams the whole thing, so this can take a few seconds on
+  // a large dataset — the response only finishes once every row has arrived.
   const handleExportApplicants = async () => {
     if (isExportingApplicants) return;
     setIsExportingApplicants(true);
@@ -721,7 +724,7 @@ export const AdminDashboard: React.FC = () => {
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
-      const filename = filenameMatch?.[1] || `applicants-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      const filename = filenameMatch?.[1] || `dealschool-export-${new Date().toISOString().slice(0, 10)}.csv`;
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -732,7 +735,7 @@ export const AdminDashboard: React.FC = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      showToast("Applicant export downloaded.", "success");
+      showToast("Export downloaded — applications, drafts, messages & brochure requests.", "success");
     } catch (err: any) {
       console.error("Error exporting applicants:", err);
       showToast(`Export failed: ${err.message}`, "error");
@@ -1246,7 +1249,7 @@ export const AdminDashboard: React.FC = () => {
           <button
             onClick={handleExportApplicants}
             disabled={isExportingApplicants}
-            title="Export every applicant — submitted applications with status, plus in-progress/abandoned drafts with step number — as CSV"
+            title="Export everything as CSV — submitted applications (with status), in-progress/abandoned drafts (with step), contact messages, and brochure requests"
             className="flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold border border-brand-secondary/20 text-brand-secondary hover:text-white hover:bg-[#082C6C] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className={`h-3.5 w-3.5 ${isExportingApplicants ? "animate-bounce" : ""}`} />
