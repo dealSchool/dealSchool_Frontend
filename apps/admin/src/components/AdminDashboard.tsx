@@ -93,6 +93,7 @@ const APP_STATUS_CFG: Record<string, {
   pending:           { dot: "bg-amber-400",       label: "Pending",   badge: "bg-amber-50 text-amber-700 border border-amber-200",      darkBadge: "bg-[#D4A62A]/25 text-[#D4A62A] border border-[#D4A62A]/40",      avatarRing: "ring-amber-300",   avatarBg: "bg-[#D4A62A]/10",   avatarText: "text-[#D4A62A]" },
   under_review:      { dot: "bg-brand-secondary",  label: "Auditing",  badge: "bg-blue-50 text-blue-700 border border-blue-200",         darkBadge: "bg-sky-400/20 text-sky-300 border border-sky-400/30",             avatarRing: "ring-blue-400",    avatarBg: "bg-brand-secondary/10",    avatarText: "text-brand-secondary" },
   interview_invited: { dot: "bg-purple-500",       label: "Interview", badge: "bg-purple-50 text-purple-700 border border-purple-200",   darkBadge: "bg-purple-400/20 text-purple-300 border border-purple-400/30",    avatarRing: "ring-purple-400",  avatarBg: "bg-purple-100",  avatarText: "text-purple-700" },
+  interview_completed: { dot: "bg-indigo-500",     label: "Interview Completed", badge: "bg-indigo-50 text-indigo-700 border border-indigo-200", darkBadge: "bg-indigo-400/20 text-indigo-300 border border-indigo-400/30", avatarRing: "ring-indigo-400", avatarBg: "bg-indigo-100", avatarText: "text-indigo-700" },
   accepted:          { dot: "bg-emerald-500",      label: "Accepted",  badge: "bg-emerald-50 text-emerald-700 border border-emerald-200",darkBadge: "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30", avatarRing: "ring-emerald-400", avatarBg: "bg-emerald-100", avatarText: "text-emerald-700" },
   declined:          { dot: "bg-red-500",          label: "Declined",  badge: "bg-red-50 text-red-600 border border-red-200",            darkBadge: "bg-red-400/20 text-red-300 border border-red-400/30",             avatarRing: "ring-red-400",     avatarBg: "bg-red-100",     avatarText: "text-red-700" },
   cancelled:         { dot: "bg-gray-400",         label: "Cancelled", badge: "bg-gray-100 text-gray-600 border border-gray-300",        darkBadge: "bg-white/10 text-white/60 border border-white/20",                avatarRing: "ring-gray-300",    avatarBg: "bg-gray-100",    avatarText: "text-gray-600" },
@@ -254,7 +255,7 @@ export const AdminDashboard: React.FC = () => {
   const draftPageRef                                = useRef(1);
 
   const [appCounts, setAppCounts]         = useState({
-    total: 0, pending: 0, under_review: 0, interview_invited: 0, accepted: 0, declined: 0, cancelled: 0, paid: 0,
+    total: 0, pending: 0, under_review: 0, interview_invited: 0, interview_completed: 0, accepted: 0, declined: 0, cancelled: 0, paid: 0,
   });
   const [contactCounts, setContactCounts] = useState({ total: 0, unread: 0, read: 0, archived: 0, replied: 0 });
   const [brochureCounts, setBrochureCounts] = useState({ total: 0 });
@@ -355,7 +356,7 @@ export const AdminDashboard: React.FC = () => {
       }
       if (counts) {
         const total = counts.pending + counts.under_review + counts.interview_invited
-          + counts.accepted + counts.declined + (counts.cancelled ?? 0);
+          + (counts.interview_completed ?? 0) + counts.accepted + counts.declined + (counts.cancelled ?? 0);
         setAppCounts((prev) => ({ ...prev, ...counts, total }));
       }
       return { nextCursor: nextCursor ?? null, hasMore };
@@ -625,6 +626,7 @@ export const AdminDashboard: React.FC = () => {
     const confirmMessages: Record<string, string> = {
       under_review:      "Move to Auditing? A status update email will be sent to the applicant.",
       interview_invited: "Invite to Interview? A notification email will be sent to the applicant.",
+      interview_completed: "Mark interview as completed? A WhatsApp notification will be sent to the applicant.",
       accepted:          "Accept as Fellow? A Cashfree payment link will be created and emailed to the applicant.",
       declined:          "Decline this application? A rejection email will be sent to the applicant.",
     };
@@ -1335,6 +1337,7 @@ export const AdminDashboard: React.FC = () => {
                         { value: "pending", label: "Pending" },
                         { value: "under_review", label: "Auditing" },
                         { value: "interview_invited", label: "Interview" },
+                        { value: "interview_completed", label: "Interview Completed" },
                         { value: "accepted", label: "Accepted" },
                         { value: "declined", label: "Declined" },
                         { value: "cancelled", label: "Cancelled" },
@@ -2247,6 +2250,21 @@ export const AdminDashboard: React.FC = () => {
                                 <MessageSquare className="h-3 w-3" /> Interview
                               </button>
                             </div>
+
+                            {/* Mark Interview Completed — only relevant once an interview has been scheduled */}
+                            {(selectedApp.status === "interview_invited" || selectedApp.status === "interview_completed") && (
+                              <button
+                                onClick={() => handleUpdateAppStatus(selectedApp.id, "interview_completed")}
+                                disabled={isActioning}
+                                className={`w-full py-2.5 text-[10px] font-mono font-bold uppercase tracking-wide rounded-sm border cursor-pointer transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 ${
+                                  selectedApp.status === "interview_completed"
+                                    ? "bg-indigo-700 text-white border-indigo-700 shadow-sm"
+                                    : "bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                }`}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Mark Interview Completed
+                              </button>
+                            )}
 
                             {/* Accept — primary CTA */}
                             <button

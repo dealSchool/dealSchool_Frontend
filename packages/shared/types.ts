@@ -72,7 +72,7 @@ export interface FellowshipApplication {
   discoverySource: string;
   discoverySourceOther?: string;
 
-  status: "pending" | "under_review" | "interview_invited" | "accepted" | "declined" | "cancelled";
+  status: "pending" | "under_review" | "interview_invited" | "interview_completed" | "accepted" | "declined" | "cancelled";
   createdAt: any;
   updatedAt: any;
 
