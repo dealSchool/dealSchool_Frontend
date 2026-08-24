@@ -21,6 +21,7 @@ import { TermsAndConditionsPage } from "./components/TermsAndConditionsPage";
 import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { RefundCancellationPage } from "./components/RefundCancellationPage";
 import { FAQPage } from "./components/FAQPage";
+import { MentorsPage } from "./components/MentorsPage";
 import { CustomSelect } from "./components/CustomSelect";
 import { API_URL } from "@shared/config";
 import tusshaarImg from "./assets/Tusshaar.jpg.jpeg";
@@ -57,7 +58,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type AppPage = "home" | "about" | "program" | "team" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "apply-now";
+type AppPage = "home" | "about" | "program" | "team" | "mentors" | "contact" | "faq" | "terms-and-conditions" | "privacy-policy" | "refund-and-cancellation" | "apply-now";
 
 interface CurriculumWeek {
   week: number;
@@ -298,6 +299,7 @@ const PAGE_PATHS: Record<string, AppPage> = {
   "/about": "about",
   "/program": "program",
   "/team": "team",
+  "/mentors": "mentors",
   "/contact": "contact",
   "/faq": "faq",
   "/terms-and-conditions": "terms-and-conditions",
@@ -311,6 +313,7 @@ const PATH_FROM_PAGE: Record<AppPage, string> = {
   about: "/about",
   program: "/program",
   team: "/team",
+  mentors: "/mentors",
   contact: "/contact",
   faq: "/faq",
   "terms-and-conditions": "/terms-and-conditions",
@@ -1007,6 +1010,13 @@ export default function App() {
                 <FoundingTeamSection />
 
               </div>
+            )}
+
+            {activePage === "mentors" && (
+              <MentorsPage
+                onApplyClick={handleApplyClick}
+                onChangePage={handlePageChange}
+              />
             )}
 
 

@@ -14,6 +14,7 @@ interface FooterPanelProps {
       | "about"
       | "program"
       | "team"
+      | "mentors"
       | "contact"
       | "faq"
       | "terms-and-conditions"
@@ -68,6 +69,7 @@ export const FooterPanel: React.FC<FooterPanelProps> = ({ onChangePage }) => {
                 { label: "About", id: "about" as const },
                 { label: "Program", id: "program" as const },
                 { label: "Team", id: "team" as const },
+                { label: "Mentors", id: "mentors" as const },
                 { label: "Contact", id: "contact" as const },
                 { label: "FAQ", id: "faq" as const },
               ].map((link) => (
