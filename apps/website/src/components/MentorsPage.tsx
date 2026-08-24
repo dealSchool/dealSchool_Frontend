@@ -6,6 +6,7 @@
 import React, { useEffect } from "react";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import prernaImg from "../assets/Prernaranjan.jpeg";
+import deeptiImg from "../assets/DeeptiGupta.jpeg";
 
 interface MentorsPageProps {
   onApplyClick?: () => void;
@@ -41,6 +42,17 @@ const MENTORS: Mentor[] = [
       "Prerna Ranjan is the founder of Verra Lex, bringing over eight years of experience advising startups, growth-stage companies, investors, and enterprises.",
       "Previously with top-tier Indian law firms Khaitan & Co and J. Sagar Associates, Prerna specializes in high-value investments, M&A, cross-border transactions, and regulatory compliance. Known for delivering clear, commercial, and risk-managed advice, she partners closely with founders and business teams to align legal strategy with commercial growth.",
       "Based in Bangalore, she advises clients pan-India and internationally.",
+    ],
+  },
+  {
+    img: deeptiImg,
+    name: "Deepti Gupta",
+    role: "Founder & CEO, Fitreak",
+    bio: [
+      "Meet Deepti Gupta — Founder & CEO of Fitreak.",
+      "With experience in marketing and a journey into entrepreneurship, Deepti brings a founder's perspective on building a company from the ground up — from validating an idea and building the early team to shaping the product and driving growth.",
+      "At DealSchool, she'll take you beyond the pitch deck to explore what founders experience while fundraising, how investors evaluate businesses, and what it really takes to build an investable company.",
+      "Learn the founder journey. See through the investor lens.",
     ],
   },
 ];
