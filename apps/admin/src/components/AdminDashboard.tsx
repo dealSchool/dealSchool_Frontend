@@ -16,7 +16,7 @@ import {
   MessageSquare, KeyRound, CreditCard, RefreshCw,
   ArrowLeft, Phone, MapPin, FileText, Clock,
   Eye, Users, Ban, CalendarCog, Download,
-  Hourglass, Layers, Reply,
+  Hourglass, Layers, Reply, BellRing,
 } from "lucide-react";
 
 const goToSite = () => {
@@ -226,6 +226,7 @@ export const AdminDashboard: React.FC = () => {
   const [selectedDraft, setSelectedDraft] = useState<DraftApplication | null>(null);
 
   const [resendingPaymentLink, setResendingPaymentLink] = useState(false);
+  const [sendingPaymentReminder, setSendingPaymentReminder] = useState(false);
   const [isActioning, setIsActioning] = useState(false);
   const [isExportingApplicants, setIsExportingApplicants] = useState(false);
 
@@ -948,6 +949,32 @@ export const AdminDashboard: React.FC = () => {
       showToast(`Create link failed: ${err.message}`, "error");
     } finally {
       setResendingPaymentLink(false);
+    }
+  };
+
+  // Manual, on-demand version of the WhatsApp reminder /cron/payment-reminder
+  // already sends automatically 24h after an unpaid link — lets an admin fire
+  // it immediately instead of waiting on that threshold. Gated behind
+  // showConfirm(...) at the call site since it's an irreversible WhatsApp
+  // send, same as the interview_completed/accepted status-change confirms.
+  const handleSendPaymentReminder = async (appId: string) => {
+    setSendingPaymentReminder(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/payment/send-reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ applicationId: appId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      showToast("Payment reminder sent!", "success");
+    } catch (err: any) {
+      showToast(`Reminder failed: ${err.message}`, "error");
+    } finally {
+      setSendingPaymentReminder(false);
     }
   };
 
@@ -2169,6 +2196,21 @@ export const AdminDashboard: React.FC = () => {
                                   >
                                     <RefreshCw className={`h-3 w-3 ${resendingPaymentLink ? "animate-spin" : ""}`} />
                                     {resendingPaymentLink ? "Sending…" : "Resend Payment Link"}
+                                  </button>
+                                )}
+                                {selectedApp.paymentStatus === "link_sent" && (
+                                  <button
+                                    onClick={() =>
+                                      showConfirm(
+                                        "Send a WhatsApp payment reminder to this applicant now?",
+                                        async () => { await handleSendPaymentReminder(selectedApp.id); }
+                                      )
+                                    }
+                                    disabled={sendingPaymentReminder}
+                                    className="w-full py-2.5 bg-brand-secondary hover:bg-brand-dark-blue text-white font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <BellRing className={`h-3 w-3 ${sendingPaymentReminder ? "animate-pulse" : ""}`} />
+                                    {sendingPaymentReminder ? "Sending…" : "Send Payment Reminder"}
                                   </button>
                                 )}
                                 {!selectedApp.paymentStatus && (
