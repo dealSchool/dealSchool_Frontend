@@ -7,6 +7,7 @@ import React, { useEffect } from "react";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import prernaImg from "../assets/Prernaranjan.jpeg";
 import deeptiImg from "../assets/DeeptiGupta.jpeg";
+import chiragImg from "../assets/Chirag.png";
 
 interface MentorsPageProps {
   onApplyClick?: () => void;
@@ -53,6 +54,17 @@ const MENTORS: Mentor[] = [
       "With experience in marketing and a journey into entrepreneurship, Deepti brings a founder's perspective on building a company from the ground up — from validating an idea and building the early team to shaping the product and driving growth.",
       "At DealSchool, she'll take you beyond the pitch deck to explore what founders experience while fundraising, how investors evaluate businesses, and what it really takes to build an investable company.",
       "Learn the founder journey. See through the investor lens.",
+    ],
+  },
+  {
+    img: chiragImg,
+    name: "Chirag Thakker",
+    role: "Managing Partner, Middha Ventures",
+    bio: [
+      "Meet Chirag Thakker — Managing Partner at Middha Ventures & Founder of Alpha Seed Venture.",
+      "With 15+ years across the startup ecosystem — and having been a founder himself — Chirag brings an investor's perspective on evaluating early-stage businesses, from understanding founders and their teams to assessing opportunities, growth potential, and investment readiness.",
+      "At DealSchool, he'll take you deeper into how investors evaluate startups, and what they look for while making investment decisions.",
+      "Learn how investors think. Understand what makes a startup investable.",
     ],
   },
 ];
