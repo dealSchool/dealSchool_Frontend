@@ -8,6 +8,7 @@ import { ArrowUpRight, ExternalLink } from "lucide-react";
 import prernaImg from "../assets/Prernaranjan.jpeg";
 import deeptiImg from "../assets/DeeptiGupta.jpeg";
 import chiragImg from "../assets/Chirag.png";
+import aakashImg from "../assets/Aakashsood.png";
 
 interface MentorsPageProps {
   onApplyClick?: () => void;
@@ -65,6 +66,16 @@ const MENTORS: Mentor[] = [
       "With 15+ years across the startup ecosystem — and having been a founder himself — Chirag brings an investor's perspective on evaluating early-stage businesses, from understanding founders and their teams to assessing opportunities, growth potential, and investment readiness.",
       "At DealSchool, he'll take you deeper into how investors evaluate startups, and what they look for while making investment decisions.",
       "Learn how investors think. Understand what makes a startup investable.",
+    ],
+  },
+  {
+    img: aakashImg,
+    name: "Aakash Sood",
+    role: "Analyst, Equanimity Investments",
+    bio: [
+      "Meet Aakash Sood — Analyst, Equanimity Investments.",
+      "From public markets to early-stage investing at Equanimity Investments, Aakash looks past the pitch deck to evaluate real fundamentals, market potential, and founding teams.",
+      "At DealSchool, he's bringing this sharp investment analyst lens to help aspiring investment analysts master deal analysis, understand decision-making, and build a long-term perspective on tech-driven businesses.",
     ],
   },
 ];
