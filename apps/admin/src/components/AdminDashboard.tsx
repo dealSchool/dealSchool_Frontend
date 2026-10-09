@@ -3,7 +3,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, logOutAdmin } from "@shared/firebase";
 import {
   FellowshipApplication, ContactMessage, BrochureRequest, PaymentMode,
-  ApplicationPaymentInfo, DraftApplication, DraftCounts,
+  ApplicationPaymentInfo, DraftApplication, DraftCounts, CohortInfo, CohortsResponse,
 } from "@shared/types";
 import { AdminChangePassword } from "./AdminChangePassword";
 import { CohortSettingsPanel } from "./CohortSettingsPanel";
@@ -118,6 +118,22 @@ const humanizeKey = (key: string): string =>
     .replace(/^./, (c) => c.toUpperCase())
     .trim();
 
+// Small pill showing which cohort a record belongs to (set by the backend; 1, 2, 3…)
+const CohortBadge: React.FC<{ cohort?: number; dark?: boolean }> = ({ cohort, dark }) => {
+  if (!cohort) return null;
+  return (
+    <span
+      className={`font-mono text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-full whitespace-nowrap ${
+        dark
+          ? "bg-white/10 text-white/70 border border-white/20"
+          : "bg-[#082C6C]/10 text-[#082C6C] border border-[#082C6C]/20"
+      }`}
+    >
+      Cohort {cohort}
+    </span>
+  );
+};
+
 // Reusable section header — left accent bar
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="flex items-center gap-2 mb-3">
@@ -210,6 +226,14 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const [activeTab, setActiveTab] = useState<"applications" | "contacts" | "brochures" | "drafts">("applications");
+
+  // Cohort filter shared by all four tabs: "all" or a cohort number as a string.
+  // The page fetchers below are useCallback(…, []), so they read the value from
+  // the ref (always current) instead of closing over stale state.
+  const [cohorts, setCohorts]             = useState<CohortInfo[]>([]);
+  const [cohortFilter, setCohortFilter]   = useState("all");
+  const cohortFilterRef                   = useRef("all");
+  const cohortReloadRef                   = useRef<AbortController | null>(null);
 
   const [appSearch, setAppSearch]         = useState("");
   const [sectorFilter, setSectorFilter]   = useState("all");
@@ -329,6 +353,9 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // "&cohort=2" when a specific cohort is selected, "" for All — appended to every list URL.
+  const cohortParam = () => (cohortFilterRef.current === "all" ? "" : `&cohort=${encodeURIComponent(cohortFilterRef.current)}`);
+
   const fetchAppPage = useCallback(async (
     page: number,
     cursors: (string | null)[],
@@ -336,17 +363,19 @@ export const AdminDashboard: React.FC = () => {
     silent = false,
   ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
     if (!auth.currentUser) { setDbLoading(false); return null; }
+    const cohortAtStart = cohortFilterRef.current;
     try {
       const token = await auth.currentUser.getIdToken();
       if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/applications?limit=${TAB_PAGE_SIZE}&after=${cursor}`
-        : `${API_URL}/applications?limit=${TAB_PAGE_SIZE}`;
+        ? `${API_URL}/applications?limit=${TAB_PAGE_SIZE}&after=${cursor}${cohortParam()}`
+        : `${API_URL}/applications?limit=${TAB_PAGE_SIZE}${cohortParam()}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); setDbError("Access denied."); setDbLoading(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { applications: list, hasMore, nextCursor, counts } = await res.json();
+      if (cohortAtStart !== cohortFilterRef.current) return null; // cohort changed while loading — drop the stale response
       if (!silent) {
         setApplications(list as FellowshipApplication[]);
         setAppHasMore(hasMore);
@@ -376,17 +405,19 @@ export const AdminDashboard: React.FC = () => {
     silent = false,
   ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
     if (!auth.currentUser) return null;
+    const cohortAtStart = cohortFilterRef.current;
     try {
       const token = await auth.currentUser.getIdToken();
       if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/contacts?limit=${TAB_PAGE_SIZE}&after=${cursor}`
-        : `${API_URL}/contacts?limit=${TAB_PAGE_SIZE}`;
+        ? `${API_URL}/contacts?limit=${TAB_PAGE_SIZE}&after=${cursor}${cohortParam()}`
+        : `${API_URL}/contacts?limit=${TAB_PAGE_SIZE}${cohortParam()}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { contacts: list, hasMore, nextCursor, counts } = await res.json();
+      if (cohortAtStart !== cohortFilterRef.current) return null;
       if (!silent) {
         setContacts(list as ContactMessage[]);
         setContactHasMore(hasMore);
@@ -413,17 +444,19 @@ export const AdminDashboard: React.FC = () => {
     silent = false,
   ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
     if (!auth.currentUser) return null;
+    const cohortAtStart = cohortFilterRef.current;
     try {
       const token = await auth.currentUser.getIdToken();
       if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/brochure-requests?limit=${TAB_PAGE_SIZE}&after=${cursor}`
-        : `${API_URL}/brochure-requests?limit=${TAB_PAGE_SIZE}`;
+        ? `${API_URL}/brochure-requests?limit=${TAB_PAGE_SIZE}&after=${cursor}${cohortParam()}`
+        : `${API_URL}/brochure-requests?limit=${TAB_PAGE_SIZE}${cohortParam()}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { requests: list, hasMore, nextCursor, total } = await res.json();
+      if (cohortAtStart !== cohortFilterRef.current) return null;
       if (!silent) {
         setBrochureRequests(list as BrochureRequest[]);
         setBrochureHasMore(hasMore);
@@ -447,17 +480,19 @@ export const AdminDashboard: React.FC = () => {
     silent = false,
   ): Promise<{ nextCursor: string | null; hasMore: boolean } | null> => {
     if (!auth.currentUser) return null;
+    const cohortAtStart = cohortFilterRef.current;
     try {
       const token = await auth.currentUser.getIdToken();
       if (signal?.aborted) return null;
       const cursor = cursors[page - 1] ?? null;
       const url    = cursor
-        ? `${API_URL}/applications/draft?limit=${TAB_PAGE_SIZE}&after=${cursor}`
-        : `${API_URL}/applications/draft?limit=${TAB_PAGE_SIZE}`;
+        ? `${API_URL}/applications/draft?limit=${TAB_PAGE_SIZE}&after=${cursor}${cohortParam()}`
+        : `${API_URL}/applications/draft?limit=${TAB_PAGE_SIZE}${cohortParam()}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal });
       if (res.status === 401) { setIsAdminAuthorized(false); return null; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { drafts: list, hasMore, nextCursor, counts } = await res.json();
+      if (cohortAtStart !== cohortFilterRef.current) return null;
       if (!silent) {
         setDrafts(list as DraftApplication[]);
         setDraftHasMore(hasMore);
@@ -473,6 +508,46 @@ export const AdminDashboard: React.FC = () => {
       return null;
     }
   }, []);
+
+  // Cohort list for the filter dropdown (GET /cohorts). Reloaded after the
+  // Cohort Settings panel creates a new cohort or switches the active one.
+  const loadCohorts = useCallback(async () => {
+    if (!auth.currentUser) return;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`${API_URL}/cohorts`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: CohortsResponse = await res.json();
+      setCohorts(data.cohorts);
+    } catch (err) {
+      console.error("Failed to load cohorts:", err);
+    }
+  }, []);
+
+  // Switching the cohort filter restarts all four tabs from page 1 (each tab's
+  // cursors/counts belong to the previous filter) and refetches them.
+  const handleCohortFilterChange = (value: string) => {
+    if (value === cohortFilterRef.current) return;
+    cohortFilterRef.current = value;
+    setCohortFilter(value);
+
+    cohortReloadRef.current?.abort();
+    const controller = new AbortController();
+    cohortReloadRef.current = controller;
+
+    setSelectedApp(null); setSelectedContact(null); setSelectedBrochureRequest(null); setSelectedDraft(null);
+    setAppPage(1);       appPageRef.current = 1;       setAppPageCursors([null]);
+    setContactPage(1);   contactPageRef.current = 1;   setContactPageCursors([null]);
+    setBrochurePage(1);  brochurePageRef.current = 1;  setBrochurePageCursors([null]);
+    setDraftPage(1);     draftPageRef.current = 1;     setDraftPageCursors([null]);
+
+    setDbError(null);
+    setDbLoading(true);
+    fetchAppPage(1, [null], controller.signal);
+    fetchContactPage(1, [null], controller.signal);
+    fetchBrochurePage(1, [null], controller.signal);
+    fetchDraftPage(1, [null], controller.signal);
+  };
 
   const goToAppPage = async (page: number) => {
     // appTotalPages is a hint derived from aggregate counts, not ground truth —
@@ -563,6 +638,11 @@ export const AdminDashboard: React.FC = () => {
     // auth sync), which must not re-trigger a fetch with no user action.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, isAdminAuthorized, fetchAppPage, fetchContactPage, fetchBrochurePage, fetchDraftPage]);
+
+  useEffect(() => {
+    if (!isAdminAuthorized) { setCohorts([]); return; }
+    loadCohorts();
+  }, [isAdminAuthorized, loadCohorts]);
 
   // Fetch the full applicant record (every field + linked payment) whenever a row is opened —
   // the paginated list response only carries a trimmed subset of fields.
@@ -717,7 +797,8 @@ export const AdminDashboard: React.FC = () => {
     setIsExportingApplicants(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${API_URL}/applications/export`, {
+      const exportQuery = cohortFilter === "all" ? "" : `?cohort=${encodeURIComponent(cohortFilter)}`;
+      const res = await fetch(`${API_URL}/applications/export${exportQuery}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -738,7 +819,12 @@ export const AdminDashboard: React.FC = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      showToast("Export downloaded — applications, drafts, messages & brochure requests.", "success");
+      showToast(
+        cohortFilter === "all"
+          ? "Export downloaded — applications, drafts, messages & brochure requests."
+          : `Export downloaded for Cohort ${cohortFilter} — applications, drafts, messages & brochure requests.`,
+        "success",
+      );
     } catch (err: any) {
       console.error("Error exporting applicants:", err);
       showToast(`Export failed: ${err.message}`, "error");
@@ -1275,15 +1361,32 @@ export const AdminDashboard: React.FC = () => {
           })}
         </div>
 
-          <button
-            onClick={handleExportApplicants}
-            disabled={isExportingApplicants}
-            title="Export everything as CSV — submitted applications (with status), in-progress/abandoned drafts (with step), contact messages, and brochure requests"
-            className="flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold border border-brand-secondary/20 text-brand-secondary hover:text-white hover:bg-[#082C6C] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className={`h-3.5 w-3.5 ${isExportingApplicants ? "animate-bounce" : ""}`} />
-            {isExportingApplicants ? "Exporting…" : "Export All"}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Cohort filter — applies to all four tabs, the counts above and the export */}
+            <div className="relative min-w-[170px]">
+              <CustomSelect
+                value={cohortFilter}
+                onChange={handleCohortFilterChange}
+                placeholder="Cohort · All"
+                font="mono"
+                className="bg-white text-brand-text pl-3 pr-3 py-2 border border-brand-secondary/20 focus:outline-none focus:border-[#082C6C] text-xs h-[34px] rounded-sm tracking-wide hover:border-brand-secondary/40 transition-colors"
+                chevronClassName="h-3.5 w-3.5 text-brand-secondary/40"
+                options={[
+                  { value: "all", label: "Cohort · All" },
+                  ...cohorts.map((c) => ({ value: String(c.cohort), label: `${c.name}${c.isActive ? " (Active)" : ""}` })),
+                ]}
+              />
+            </div>
+            <button
+              onClick={handleExportApplicants}
+              disabled={isExportingApplicants}
+              title="Export everything as CSV — submitted applications (with status), in-progress/abandoned drafts (with step), contact messages, and brochure requests. Follows the selected cohort."
+              className="flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer rounded-sm font-bold border border-brand-secondary/20 text-brand-secondary hover:text-white hover:bg-[#082C6C] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className={`h-3.5 w-3.5 ${isExportingApplicants ? "animate-bounce" : ""}`} />
+              {isExportingApplicants ? "Exporting…" : cohortFilter === "all" ? "Export All" : `Export Cohort ${cohortFilter}`}
+            </button>
+          </div>
         </div>
 
         {/* ── DB Error ── */}
@@ -1392,10 +1495,10 @@ export const AdminDashboard: React.FC = () => {
                 {!dbLoading && filteredApps.length > 0 && (
                 <div className="bg-white border border-brand-secondary/15 rounded-sm overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[780px] border-collapse">
+                    <table className="w-full min-w-[860px] border-collapse">
                       <thead>
                         <tr style={{ background: "linear-gradient(90deg, #061a42 0%, #082C6C 60%, #0D3B8E 100%)" }}>
-                          {["Name / ID", "Email", "City", "Current Role", "Company", "Status"].map((col) => (
+                          {["Name / ID", "Email", "City", "Current Role", "Company", "Status", "Cohort"].map((col) => (
                             <th key={col} className="px-4 py-3 text-left font-mono text-[9px] font-bold text-white/60 uppercase tracking-[0.09em] whitespace-nowrap select-none">
                               {col}
                             </th>
@@ -1467,6 +1570,10 @@ export const AdminDashboard: React.FC = () => {
                                     </span>
                                   )}
                                 </div>
+                              </td>
+                              {/* Cohort */}
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                {app.cohort ? <CohortBadge cohort={app.cohort} /> : <span className="text-brand-neutral/30 italic text-xs">—</span>}
                               </td>
                             </tr>
                           );
@@ -1562,6 +1669,7 @@ export const AdminDashboard: React.FC = () => {
                               <span className={`font-mono text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-full ${sc.badge}`}>
                                 {sc.label}
                               </span>
+                              <CohortBadge cohort={d.cohort} />
                             </div>
                             <p className="font-sans text-xs text-brand-neutral truncate mt-0.5">
                               <span className="opacity-70">{d.email || "—"}</span>
@@ -1667,6 +1775,7 @@ export const AdminDashboard: React.FC = () => {
                             <span className={`font-mono text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-full ${sc.badge}`}>
                               {sc.label}
                             </span>
+                            <CohortBadge cohort={c.cohort} />
                           </div>
                           <p className="font-sans text-xs text-brand-neutral truncate mt-0.5">
                             <span className="font-medium text-brand-secondary">{c.subject}</span>
@@ -1756,6 +1865,7 @@ export const AdminDashboard: React.FC = () => {
                                 {b.city}
                               </span>
                             )}
+                            <CohortBadge cohort={b.cohort} />
                           </div>
                           <p className="font-sans text-xs text-brand-neutral truncate mt-0.5">
                             <span className="opacity-70">{b.email}</span>
@@ -1840,6 +1950,7 @@ export const AdminDashboard: React.FC = () => {
                                   {selectedApp.fullName}
                                 </h3>
                                 <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                  <CohortBadge cohort={selectedApp.cohort} dark />
                                   <span className={`font-mono text-[9px] px-2.5 py-1 font-bold uppercase tracking-wider rounded-full ${appSC.darkBadge}`}>
                                     {appSC.label}
                                   </span>
@@ -2409,9 +2520,12 @@ export const AdminDashboard: React.FC = () => {
                                 <h3 className="font-serif text-xl font-bold text-white leading-tight">
                                   {selectedContact.name}
                                 </h3>
-                                <span className={`font-mono text-[9px] px-2.5 py-1 font-bold uppercase tracking-wider rounded-full shrink-0 ${contactSC.darkBadge}`}>
-                                  {contactSC.label}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                  <CohortBadge cohort={selectedContact.cohort} dark />
+                                  <span className={`font-mono text-[9px] px-2.5 py-1 font-bold uppercase tracking-wider rounded-full shrink-0 ${contactSC.darkBadge}`}>
+                                    {contactSC.label}
+                                  </span>
+                                </div>
                               </div>
                               <a
                                 href={mailtoHref(selectedContact.email)}
@@ -2553,9 +2667,12 @@ export const AdminDashboard: React.FC = () => {
                               </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-serif text-xl font-bold text-white leading-tight mb-1.5">
-                                {selectedBrochureRequest.name}
-                              </h3>
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <h3 className="font-serif text-xl font-bold text-white leading-tight">
+                                  {selectedBrochureRequest.name}
+                                </h3>
+                                <CohortBadge cohort={selectedBrochureRequest.cohort} dark />
+                              </div>
                               <a
                                 href={mailtoHref(selectedBrochureRequest.email)}
                                 className="font-mono text-[10px] text-white/55 hover:text-[#D4A62A] transition-colors flex items-center gap-1.5 mb-1"
@@ -2654,6 +2771,7 @@ export const AdminDashboard: React.FC = () => {
                                   {(selectedDraft.formData?.fullName as string | undefined) || "Unnamed applicant"}
                                 </h3>
                                 <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                  <CohortBadge cohort={selectedDraft.cohort} dark />
                                   <span className={`font-mono text-[9px] px-2.5 py-1 font-bold uppercase tracking-wider rounded-full ${(DRAFT_STATUS_CFG[selectedDraft.label] ?? DRAFT_STATUS_CFG.in_progress).darkBadge}`}>
                                     {(DRAFT_STATUS_CFG[selectedDraft.label] ?? DRAFT_STATUS_CFG.in_progress).label}
                                   </span>
@@ -2765,6 +2883,7 @@ export const AdminDashboard: React.FC = () => {
         paymentMode={paymentMode}
         paymentModeSaving={paymentModeSaving}
         onTogglePaymentMode={handlePaymentModeToggle}
+        onCohortsChanged={loadCohorts}
       />
     )}
 

@@ -73,6 +73,7 @@ export interface FellowshipApplication {
   discoverySourceOther?: string;
 
   status: "pending" | "under_review" | "interview_invited" | "interview_completed" | "accepted" | "declined" | "cancelled";
+  cohort?: number; // which cohort this application belongs to (1, 2, 3…) — set by the backend, never by the client
   createdAt: any;
   updatedAt: any;
 
@@ -98,6 +99,7 @@ export interface ApplicationPaymentInfo {
   applicantName: string;
   applicantEmail: string;
   applicantPhone: string;
+  cohort?: number;
   amount: number; // paise
   currency: string;
   paymentLinkId: string;
@@ -123,6 +125,7 @@ export interface DraftApplication {
   currentStep: number; // 1-5, last step successfully saved
   formData: Record<string, unknown>;
   status: "in_progress";
+  cohort?: number;
   label: "in_progress" | "abandoned"; // "abandoned" once 24h+ have passed with no step saved
   createdAt: any;
   updatedAt: any;
@@ -144,10 +147,31 @@ export interface DraftsResponse {
 }
 
 export interface CohortSettings {
+  cohort?: number;       // the cohort these settings describe (the active one unless ?cohort= was passed)
+  name?: string;         // e.g. "Cohort 2"
+  isActive?: boolean;
+  activeCohort?: number;
+  seats?: number | null;
   startDate: string;   // ISO-8601
   feePaise: number;
   feeInRupees: number;
   feeDisplay: string;  // e.g. "₹1000"
+}
+
+// One row of GET /cohorts — feeds the cohort filter dropdown
+export interface CohortInfo {
+  cohort: number;
+  name: string;
+  isActive: boolean;
+  startDate: string;   // ISO-8601
+  seats: number | null;
+  feeInRupees: number;
+  feeDisplay: string;
+}
+
+export interface CohortsResponse {
+  activeCohort: number;
+  cohorts: CohortInfo[];
 }
 
 export type PaymentMode = "sandbox" | "live";
@@ -184,6 +208,7 @@ export interface ContactMessage {
   subject: string;
   message: string;
   status: "unread" | "read" | "archived" | "replied";
+  cohort?: number;
   replies?: ContactReply[];
   createdAt: any;
 }
@@ -195,6 +220,7 @@ export interface BrochureRequest {
   email: string;
   city: string;
   ip: string;
+  cohort?: number;
   createdAt: any;
   updatedAt: any;
 }
