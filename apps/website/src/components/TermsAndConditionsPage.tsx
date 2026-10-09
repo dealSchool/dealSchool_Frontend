@@ -318,7 +318,7 @@ export const TermsAndConditionsPage: React.FC<TermsAndConditionsPageProps> = ({
             onClick={onApplyClick}
             className="bg-brand-secondary text-brand-bg px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider hover:bg-brand-dark-blue transition-all duration-300 flex items-center gap-2 cursor-pointer rounded-sm"
           >
-            Apply for Cohort 1 <ArrowUpRight className="h-4 w-4 text-brand-accent" />
+            Apply for Cohort 2 <ArrowUpRight className="h-4 w-4 text-brand-accent" />
           </button>
         )}
       </div>

@@ -9,6 +9,7 @@ import './index.css';
 // directly in the browser's address bar.
 const STANDALONE_ROUTES: Record<string, ComponentType> = {
   '/cohort1': LandingPage,
+  '/cohort2': LandingPage,
 };
 
 const normalizedPath = window.location.pathname.replace(/\/+$/, '') || '/';

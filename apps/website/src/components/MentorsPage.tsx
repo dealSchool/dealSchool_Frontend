@@ -9,6 +9,8 @@ import prernaImg from "../assets/Prernaranjan.jpeg";
 import deeptiImg from "../assets/DeeptiGupta.jpeg";
 import chiragImg from "../assets/Chirag.png";
 import aakashImg from "../assets/Aakashsood.png";
+import anishImg from "../assets/images/AnishPillai.png";
+import jagjitImg from "../assets/images/JagjitMahabal.png";
 
 interface MentorsPageProps {
   onApplyClick?: () => void;
@@ -36,6 +38,28 @@ interface Mentor {
 }
 
 const MENTORS: Mentor[] = [
+  {
+    img: anishImg,
+    name: "Anish Pillai",
+    role: "Director, MindShift Partners LLC",
+    bio: [
+      "Ex-UBS, Ex-BlackRock. He advises organisations on Strategy, Governance and operations.",
+      "At DealSchool, he brings 20+ years of experience into Competitor Mapping and Market Sizing.",
+    ],
+  },
+  {
+    img: jagjitImg,
+    name: "Jagjit Mahabal",
+    role: "Co-founder, Stragility Consulting",
+    bio: [
+      "A balance sheet can tell you a lot about a business. But knowing what to look for is a different skill.",
+      "Jagjit brings 25+ years across finance, strategy and operations, with experience spanning Mahindra & Mahindra, Emerson and fast-growing businesses across F&B, retail and FMCG.",
+      "At Travel Food Services, he helped build the finance function as the business scaled across India and the Middle East, working across brands including KFC, Pizza Hut, Domino’s, Café Coffee Day and The Coffee Bean & Tea Leaf. He has also led financial operations across the Europe, Middle East & Africa region.",
+      "Today, as Co-founder of Stragility Consulting, he works with businesses on CFO services and financial management.",
+      "At DealSchool, he brings that real-world perspective to the fellows, helping them understand the financial thinking behind growth, investment and business decisions.",
+      "Because the numbers are only the starting point.",
+    ],
+  },
   {
     img: prernaImg,
     name: "Prerna Ranjan",
@@ -207,7 +231,7 @@ export const MentorsPage: React.FC<MentorsPageProps> = ({ onApplyClick, onChange
             onClick={onApplyClick}
             className="bg-brand-secondary text-brand-bg px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider hover:bg-brand-dark-blue transition-all duration-300 flex items-center gap-2 cursor-pointer rounded-sm"
           >
-            Apply for Cohort 1 <ArrowUpRight className="h-4 w-4 text-brand-accent" />
+            Apply for Cohort 2 <ArrowUpRight className="h-4 w-4 text-brand-accent" />
           </button>
         )}
       </div>

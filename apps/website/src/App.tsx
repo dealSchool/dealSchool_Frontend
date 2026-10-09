@@ -367,8 +367,8 @@ export default function App() {
     const returnPath = sessionStorage.getItem("applyReturnPath");
     sessionStorage.removeItem("applyReturnPath");
 
-    if (returnPath === "/cohort1") {
-      window.location.href = "/cohort1";
+    if (returnPath === "/cohort1" || returnPath === "/cohort2") {
+      window.location.href = returnPath;
       return;
     }
 
@@ -491,7 +491,7 @@ export default function App() {
                           onClick={handleApplyClick}
                           className="bg-brand-secondary text-brand-bg px-8 py-4 font-mono font-bold text-xs uppercase tracking-wider shadow-lg shadow-brand-secondary/25 hover:bg-brand-dark-blue transition-all duration-300 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                         >
-                          Apply for Cohort 1 <ArrowRight className="h-4 w-4 text-brand-accent" />
+                          Apply for Cohort 2 <ArrowRight className="h-4 w-4 text-brand-accent" />
                         </button>
                         <button
                           onClick={() => handlePageChange("program")}
@@ -523,7 +523,7 @@ export default function App() {
 
                       <div className="p-6 space-y-1 border border-brand-secondary/10 bg-brand-bg rounded-sm shadow-sm">
   <div className="font-serif text-5xl md:text-6xl font-black text-brand-accent">
-    ₹18K<span className="align-super text-xl md:text-2xl">*</span>
+    ₹20K<span className="align-super text-xl md:text-2xl">*</span>
   </div>
 
   <div className="font-sans font-bold text-sm text-brand-text uppercase tracking-wider">
@@ -749,7 +749,7 @@ export default function App() {
                         Cohort seats fill fast. We cap it at 20.
                       </span>
                       <h2 className="font-serif text-4xl sm:text-5xl md:text-[54px] font-black tracking-tight leading-[1.05] text-white">
-                        Applications for Cohort 1 <br />are now open.
+                        Applications for Cohort 2 <br />are now open.
                       </h2>
                       <p className="font-serif text-sm sm:text-base text-brand-bg/70 max-w-lg mx-auto leading-relaxed">
                         If you&apos;ve been waiting for the right moment to step into venture capital, this is it.
@@ -866,7 +866,7 @@ export default function App() {
                     onClick={handleApplyClick}
                     className="px-8 py-4 bg-brand-accent text-white font-mono text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#B24122] transition-all cursor-pointer"
                   >
-                    Apply for Cohort 1
+                    Apply for Cohort 2
                   </button>
                 </div>
 
@@ -1144,7 +1144,7 @@ export default function App() {
                               placeholder="Select a subject"
                               className="bg-white text-brand-text px-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 text-sm h-11 transition-all"
                               options={[
-                                { value: "Application Inquiry", label: "Application Inquiry — Cohort 1" },
+                                { value: "Application Inquiry", label: "Application Inquiry — Cohort 2" },
                                 { value: "Syllabus/Brochure Request", label: "Venture Curriculum / Brochure" },
                                 { value: "Operator Collaboration", label: "Partner / Mentor Engagement" },
                                 { value: "Other", label: "General Question" },

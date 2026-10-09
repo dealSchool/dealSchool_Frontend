@@ -179,7 +179,7 @@ export const CertificateKeyIllustration: React.FC = () => {
 
           {/* Authentic Completion Text */}
           <text x="30" y="215" fill="#D4A62A" fontFamily="Helvetica, Arial, sans-serif" fontSize="11" fontWeight="bold" letterSpacing="0.05em">
-            COHORT 1 COMPLETION
+            COHORT 2 COMPLETION
           </text>
           <text x="30" y="232" fill="#5F6368" fontFamily="Helvetica, Arial, sans-serif" fontSize="9">
             Middha Ventures Fellowship Credentials

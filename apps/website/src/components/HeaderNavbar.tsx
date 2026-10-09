@@ -33,7 +33,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     { label: "Home", id: "home" as const },
     { label: "About", id: "about" as const },
     { label: "Program", id: "program" as const },
-    { label: "Team", id: "team" as const },
+    // Team page is hidden from the menu for now (page + /team route still exist) — restore this line to show it again.
+    // { label: "Team", id: "team" as const },
     { label: "Mentors", id: "mentors" as const },
     { label: "Contact", id: "contact" as const },
     { label: "FAQ", id: "faq" as const },

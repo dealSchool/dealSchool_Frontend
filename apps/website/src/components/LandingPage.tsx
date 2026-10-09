@@ -103,6 +103,7 @@ const FELLOWSHIP_OUTCOMES = [
 ];
 
 const COHORT_STATS = [
+  { icon: CalendarDays, label: "Starts", value: "10 Oct" },
   { icon: CalendarDays, label: "Duration", value: "10 Weeks" },
   { icon: Globe, label: "Format", value: "Live Online" },
   { icon: Clock, label: "Commitment", value: "Weekend Sessions" },
@@ -137,7 +138,8 @@ export const LandingPage: React.FC = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const handleApplyClick = () => {
-    sessionStorage.setItem("applyReturnPath", "/cohort1");
+    // Return to whichever cohort page the visitor applied from (/cohort1 or /cohort2).
+    sessionStorage.setItem("applyReturnPath", window.location.pathname.replace(/\/+$/, "") || "/cohort2");
     window.location.href = "/applynow";
   };
   const handleBrochureClick = () => setIsBrochureModalOpen(true);
@@ -399,7 +401,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="bg-white border border-[#1C2A5D]/10 rounded-sm p-8 md:p-10 shadow-md">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {COHORT_STATS.map(({ icon: Icon, label, value }) => (
                   <div
                     key={label}
@@ -420,7 +422,7 @@ export const LandingPage: React.FC = () => {
                     All-In Price
                   </span>
                   <div className="font-serif text-4xl font-black text-white">
-                    &#8377;18,000<span className="align-super text-lg text-[#C89A3C]">*</span>
+                    &#8377;20,000<span className="align-super text-lg text-[#C89A3C]">*</span>
                   </div>
                   <div className="font-sans text-[11px] text-white/60">*Exclusive of GST</div>
                 </div>
@@ -498,7 +500,7 @@ export const LandingPage: React.FC = () => {
                 onClick={handleApplyClick}
                 className="group px-10 py-5 bg-[#C89A3C] hover:bg-[#B8862E] text-[#1C2A5D] font-mono text-xs font-bold tracking-widest uppercase rounded-sm transition-all shadow-md inline-flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
-                Apply for Cohort 1 <ArrowRight className="h-4 w-4 text-[#1C2A5D] group-hover:translate-x-0.5 transition-transform" />
+                Apply for Cohort 2 <ArrowRight className="h-4 w-4 text-[#1C2A5D] group-hover:translate-x-0.5 transition-transform" />
               </button>
               <button
                 onClick={handleBrochureClick}
