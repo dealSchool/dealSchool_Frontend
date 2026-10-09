@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Calendar, IndianRupee, CheckCircle2, AlertTriangle, Loader2, Plus, Users } from "lucide-react";
 import { auth } from "@shared/firebase";
 import { CohortSettings, CohortInfo, CohortsResponse, PaymentMode } from "@shared/types";
@@ -33,6 +33,10 @@ export const CohortSettingsPanel: React.FC<Props> = ({
   const [cohorts, setCohorts] = useState<CohortInfo[]>([]);
   const [switchTo, setSwitchTo] = useState("");
   const [switching, setSwitching] = useState(false);
+  // Synchronous re-entry guards — state updates are async, so a fast double click
+  // could otherwise fire the request twice (and create two cohorts).
+  const switchingRef = useRef(false);
+  const startingNewRef = useRef(false);
 
   // "Start new cohort" form — creates the next cohort and makes it active.
   const [showNewCohort, setShowNewCohort] = useState(false);
@@ -59,15 +63,30 @@ export const CohortSettingsPanel: React.FC<Props> = ({
 
   // Loads the ACTIVE cohort's settings (GET /settings/cohort) and the cohort list (GET /cohorts).
   const loadAll = async () => {
-    const [data, list]: [CohortSettings, CohortsResponse] = await Promise.all([
-      authedFetch("/settings/cohort"),
-      authedFetch("/cohorts"),
+    const [settingsRes, listRes] = await Promise.allSettled([
+      authedFetch("/settings/cohort") as Promise<CohortSettings>,
+      authedFetch("/cohorts") as Promise<CohortsResponse>,
     ]);
+    // The settings form is the essential part — only its failure blocks the panel.
+    // If the cohort list can't load, the form still works and the cohort tools stay hidden.
+    if (settingsRes.status === "rejected") throw settingsRes.reason;
+    const data = settingsRes.value;
     setCurrent(data);
-    setStartDate(data.startDate ? data.startDate.slice(0, 10) : "");
+    setStartDate(data.startDateLocal ?? (data.startDate ? data.startDate.slice(0, 10) : ""));
     setFeeInRupees(data.feeInRupees != null ? String(data.feeInRupees) : "");
-    setCohorts(list.cohorts);
-    setSwitchTo(String(list.activeCohort));
+    if (listRes.status === "fulfilled") {
+      setCohorts(listRes.value.cohorts);
+      setSwitchTo(String(listRes.value.activeCohort));
+    } else {
+      console.error("Failed to load cohorts:", listRes.reason);
+    }
+  };
+
+  // "2026-12-01" → "01 Dec 2026" without a timezone round-trip (new Date("2026-12-01") is UTC and can show the day before).
+  const formatLocalDate = (s: CohortSettings): string => {
+    const m = s.startDateLocal ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.startDateLocal) : null;
+    const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s.startDate);
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   };
 
   useEffect(() => {
@@ -88,7 +107,8 @@ export const CohortSettingsPanel: React.FC<Props> = ({
 
   const handleSwitchActive = async () => {
     const target = Number(switchTo);
-    if (!Number.isInteger(target) || target === activeCohortNumber) return;
+    if (!Number.isInteger(target) || target === activeCohortNumber || switchingRef.current) return;
+    switchingRef.current = true;
     setError(null);
     setSwitching(true);
     try {
@@ -103,6 +123,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
     } catch (err: any) {
       setError(err.message || "Failed to switch the active cohort.");
     } finally {
+      switchingRef.current = false;
       setSwitching(false);
     }
   };
@@ -119,6 +140,8 @@ export const CohortSettingsPanel: React.FC<Props> = ({
       return;
     }
 
+    if (startingNewRef.current) return;
+    startingNewRef.current = true;
     setStartingNew(true);
     try {
       const created = await authedFetch("/cohorts", {
@@ -141,6 +164,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
       setError(err.message || "Failed to start the new cohort.");
       setConfirmingNew(false);
     } finally {
+      startingNewRef.current = false;
       setStartingNew(false);
     }
   };
@@ -179,7 +203,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
       }
       const data = await res.json();
       setCurrent((prev) => ({ ...(prev ?? {}), ...data, startDate: data.startDate, feePaise: data.feePaise, feeInRupees: data.feeInRupees, feeDisplay: data.feeDisplay }));
-      setStartDate(data.startDate.slice(0, 10));
+      setStartDate(data.startDateLocal ?? data.startDate.slice(0, 10));
       setFeeInRupees(String(data.feeInRupees));
       showToast("Cohort settings updated.", "success");
     } catch (err: any) {
@@ -270,7 +294,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
                 <div>
                   Current start date:{" "}
                   <span className="font-bold text-brand-text">
-                    {new Date(current.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                    {formatLocalDate(current)}
                   </span>
                 </div>
                 <div>

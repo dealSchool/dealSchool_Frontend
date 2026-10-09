@@ -402,10 +402,13 @@ export const LandingPage: React.FC = () => {
 
             <div className="bg-white border border-[#1C2A5D]/10 rounded-sm p-8 md:p-10 shadow-md">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {COHORT_STATS.map(({ icon: Icon, label, value }) => (
+                {COHORT_STATS.map(({ icon: Icon, label, value }, idx) => (
                   <div
                     key={label}
-                    className="text-center space-y-2 border border-[#1C2A5D]/8 rounded-sm p-4"
+                    // With an odd number of tiles the last one would sit alone on the left in the 2-column mobile grid — centre it full-width there.
+                    className={`text-center space-y-2 border border-[#1C2A5D]/8 rounded-sm p-4 ${
+                      idx === COHORT_STATS.length - 1 && COHORT_STATS.length % 2 === 1 ? "col-span-2 md:col-span-1" : ""
+                    }`}
                   >
                     <div className="mx-auto h-9 w-9 rounded-full bg-[#C89A3C]/10 flex items-center justify-center">
                       <Icon className="h-4 w-4 text-[#C89A3C]" />

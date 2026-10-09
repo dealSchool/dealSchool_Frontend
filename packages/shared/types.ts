@@ -153,6 +153,7 @@ export interface CohortSettings {
   activeCohort?: number;
   seats?: number | null;
   startDate: string;   // ISO-8601
+  startDateLocal?: string; // "YYYY-MM-DD" in the server's calendar — use this (not startDate.slice) for date inputs
   feePaise: number;
   feeInRupees: number;
   feeDisplay: string;  // e.g. "₹1000"
@@ -164,6 +165,7 @@ export interface CohortInfo {
   name: string;
   isActive: boolean;
   startDate: string;   // ISO-8601
+  startDateLocal?: string; // "YYYY-MM-DD" in the server's calendar
   seats: number | null;
   feeInRupees: number;
   feeDisplay: string;
