@@ -16,7 +16,8 @@ interface BrochureModalProps {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTACT_REGEX = /^\d{7,15}$/;
 
-// Static brochure PDF served from public/
+// Static brochure PDF served from public/. The file name is kept stable on purpose (old links in emails/WhatsApp
+// still point at it) — replace the file's contents to update the brochure, e.g. for a new cohort.
 const BROCHURE_PDF_URL = "/Long%20form%20brochure%20deal%20school.pdf";
 
 export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose }) => {
@@ -85,7 +86,7 @@ export const BrochureModal: React.FC<BrochureModalProps> = ({ isOpen, onClose })
   const downloadBrochure = () => {
     const link = document.createElement("a");
     link.href = BROCHURE_PDF_URL;
-    link.download = "Long form brochure deal school.pdf";
+    link.download = "Deal School Brochure Cohort 2.pdf";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
