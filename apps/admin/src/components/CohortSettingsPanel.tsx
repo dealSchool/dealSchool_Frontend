@@ -27,6 +27,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [feeInRupees, setFeeInRupees] = useState("");
+  const [seats, setSeats] = useState("");
   const [current, setCurrent] = useState<CohortSettings | null>(null);
 
   // Multi-cohort: every cohort that exists + which one new applications are attached to.
@@ -74,6 +75,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
     setCurrent(data);
     setStartDate(data.startDateLocal ?? (data.startDate ? data.startDate.slice(0, 10) : ""));
     setFeeInRupees(data.feeInRupees != null ? String(data.feeInRupees) : "");
+    setSeats(data.seats != null ? String(data.seats) : "");
     if (listRes.status === "fulfilled") {
       setCohorts(listRes.value.cohorts);
       setSwitchTo(String(listRes.value.activeCohort));
@@ -173,7 +175,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
     e.preventDefault();
     setError(null);
 
-    const body: { startDate?: string; feeInRupees?: number } = {};
+    const body: { startDate?: string; feeInRupees?: number; seats?: number } = {};
     if (startDate) body.startDate = startDate;
     if (feeInRupees.trim() !== "") {
       const fee = Number(feeInRupees);
@@ -183,8 +185,16 @@ export const CohortSettingsPanel: React.FC<Props> = ({
       }
       body.feeInRupees = fee;
     }
-    if (!body.startDate && body.feeInRupees === undefined) {
-      setError("Change the start date or fee before saving.");
+    if (seats.trim() !== "") {
+      const n = Number(seats);
+      if (!Number.isInteger(n) || n < 1 || n > 100000) {
+        setError("Seats must be a whole number (e.g. 20).");
+        return;
+      }
+      body.seats = n;
+    }
+    if (!body.startDate && body.feeInRupees === undefined && body.seats === undefined) {
+      setError("Change the start date, fee or seats before saving.");
       return;
     }
 
@@ -205,6 +215,7 @@ export const CohortSettingsPanel: React.FC<Props> = ({
       setCurrent((prev) => ({ ...(prev ?? {}), ...data, startDate: data.startDate, feePaise: data.feePaise, feeInRupees: data.feeInRupees, feeDisplay: data.feeDisplay }));
       setStartDate(data.startDateLocal ?? data.startDate.slice(0, 10));
       setFeeInRupees(String(data.feeInRupees));
+      setSeats(data.seats != null ? String(data.seats) : "");
       showToast("Cohort settings updated.", "success");
     } catch (err: any) {
       setError(err.message || "Failed to update cohort settings.");
@@ -300,6 +311,9 @@ export const CohortSettingsPanel: React.FC<Props> = ({
                 <div>
                   Current fee: <span className="font-bold text-brand-text">{current.feeDisplay}</span>
                 </div>
+                <div>
+                  Seats: <span className="font-bold text-brand-text">{current.seats ?? "not set"}</span>
+                </div>
               </div>
             )}
 
@@ -338,6 +352,27 @@ export const CohortSettingsPanel: React.FC<Props> = ({
               </div>
               <p className="text-[10px] text-brand-neutral/50 font-sans">
                 Only affects new payment links created after saving — already-quoted applicants keep their price.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block font-mono text-[10px] text-brand-neutral uppercase font-bold">
+                Seats
+              </label>
+              <div className="relative">
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-neutral pointer-events-none" />
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={seats}
+                  onChange={(e) => setSeats(e.target.value)}
+                  placeholder="20"
+                  className="w-full bg-[#FCFAF6] text-brand-text pl-9 pr-3 py-3 border border-brand-secondary/15 rounded-sm focus:outline-none focus:border-brand-accent text-sm"
+                />
+              </div>
+              <p className="text-[10px] text-brand-neutral/50 font-sans">
+                Shown in reminder messages, e.g. “Cohort 2 has only 20 seats.” It doesn&apos;t limit applications.
               </p>
             </div>
 
