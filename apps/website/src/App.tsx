@@ -32,7 +32,6 @@ import {
   BarChart4, 
   UserCheck, 
   FolderPlus, 
-  Globe, 
   ChevronRight, 
   ChevronDown,
   Bookmark, 
@@ -45,7 +44,6 @@ import {
   ArrowRight,
   TrendingUp,
   Sparkles,
-  MapPin,
   Mail,
   CheckCircle2,
   XCircle,
@@ -1023,7 +1021,7 @@ export default function App() {
             {/* ----------------- PAGE 5: CONTACT PAGE ----------------- */}
             {activePage === "contact" && (
               <div className="py-16 md:py-24 max-w-7xl mx-auto px-4 md:px-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   
                   {/* Left Column (Details & Info) */}
                   <div className="lg:col-span-5 space-y-8">
@@ -1040,41 +1038,6 @@ export default function App() {
                       <p className="font-serif text-sm md:text-base text-brand-neutral leading-relaxed">
                         Applications, mentor collaborations, or simply understanding whether DealSchool is the right fit.
                       </p>
-                    </div>
-
-                    {/* Operational Details Docket card */}
-                    <div className="bg-brand-bg border border-brand-secondary/15 rounded-sm p-6 shadow-xs space-y-4">
-                      <div className="font-mono text-[9px] text-brand-accent font-bold tracking-widest block uppercase border-b border-brand-secondary/5 pb-1">
-                        DOCKET NO: DS-CONTACT-HQ
-                      </div>
-
-                      <div className="space-y-3 font-sans text-xs">
-                        <div className="flex items-start gap-3">
-                          <Mail className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">EMAIL ADMISSIONS DESK</span>
-                            <a href="mailto:support@dealschool.in" className="font-bold text-brand-text underline hover:text-brand-accent transition-colors">
-                              support@dealschool.in
-                            </a>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">ADDRESS</span>
-                            <span className="font-bold text-brand-text">Navi Mumbai, Maharashtra, India</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                          <Globe className="h-4 w-4 text-brand-accent mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="block text-brand-neutral uppercase font-mono text-[8px] tracking-wider">PROGRAM STRUCTURE</span>
-                            <span className="font-bold text-brand-text">Online</span>
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
 
